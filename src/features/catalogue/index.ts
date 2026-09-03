@@ -4,6 +4,9 @@
  * here rather than reaching into this feature's internals.
  */
 export { fetchAvailability } from './api/fetch-availability';
+export { findByCode } from './api/find-by-code';
+export { searchProducts } from './api/search-products';
+export { suggest } from './api/suggest';
 export { ProductBadge, type ProductBadgeProps } from './components/ProductBadge';
 export { ProductCard, type ProductCardProps } from './components/ProductCard';
 export {
@@ -13,6 +16,23 @@ export {
   type ProductBadgeKind,
   type ProductCardWithAvailability,
 } from './lib/product-card';
+export {
+  clearFilters,
+  EMPTY_QUERY,
+  hasActiveFilters,
+  listActiveFilters,
+  PARAM_KEYS,
+  parseCatalogueQuery,
+  removeActiveFilter,
+  setInStockOnly,
+  setPage,
+  setPriceRange,
+  setSort,
+  toggleFacetValue,
+  toQueryString,
+  toSearchParams,
+  type ActiveFilter,
+} from './lib/search-params';
 export {
   availabilityListSchema,
   availabilityStatusSchema,
@@ -26,3 +46,20 @@ export {
   type ProductCard as ProductCardData,
   type ProductType,
 } from './schemas/product-card.schema';
+export {
+  catalogueQuerySchema,
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_SORT,
+  FACET_KEYS,
+  resultPageSchema,
+  searchFacetsSchema,
+  SORT_OPTIONS,
+  suggestionsSchema,
+  type CatalogueQuery,
+  type FacetEntry,
+  type FacetKey,
+  type ResultPage,
+  type SearchFacets,
+  type SortOption,
+  type Suggestions,
+} from './schemas/search.schema';
