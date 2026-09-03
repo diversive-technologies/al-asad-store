@@ -1,0 +1,49 @@
+{
+  "name": "al-asad-storefront",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.102.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.545.0",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.4",
+    "msw": "^2.15.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "tailwindcss": "^4.3.3",
+    "typescript": "6.0.3",
+    "vitest": "^3.2.4"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "msw@2.15.0": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

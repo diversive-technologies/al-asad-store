@@ -1,0 +1,112 @@
+@import 'tailwindcss';
+
+/**
+ * SSOT-01 — THE design token source.
+ *
+ * Hard-coded hex values, arbitrary pixel values and magic z-indexes in
+ * components are PROHIBITED (STY-02). Every colour, radius and spacing value a
+ * component uses resolves from this block, so rebranding is a one-file change.
+ *
+ * PLACEHOLDER PALETTE. The hues below are a neutral, warm starting point chosen
+ * to read plausibly for ethnic apparel; they are not brand-derived. Replacing
+ * them with the real brand values requires editing only this block.
+ */
+@theme {
+  /* Brand — deep jade */
+  --color-brand-50: oklch(0.96 0.02 165);
+  --color-brand-100: oklch(0.92 0.04 165);
+  --color-brand-300: oklch(0.75 0.07 165);
+  --color-brand-500: oklch(0.55 0.09 165);
+  --color-brand-600: oklch(0.47 0.09 165);
+  --color-brand-700: oklch(0.39 0.08 165);
+
+  /* Accent — warm gold, for badges and promotional marks */
+  --color-accent-400: oklch(0.82 0.11 75);
+  --color-accent-500: oklch(0.74 0.13 75);
+
+  /* Status */
+  --color-danger-500: oklch(0.58 0.2 25);
+  --color-success-500: oklch(0.6 0.13 150);
+
+  /*
+   * Semantic surface and text tokens. Components reference these, never the raw
+   * palette above, so dark mode is a token swap rather than a per-component
+   * edit (STY-09).
+   */
+  --color-surface: oklch(0.99 0.004 90);
+  --color-surface-muted: oklch(0.97 0.006 90);
+  --color-surface-strong: oklch(0.93 0.008 90);
+  --color-fg: oklch(0.22 0.01 90);
+  --color-fg-muted: oklch(0.52 0.01 90);
+  --color-on-brand: oklch(0.99 0.005 90);
+  --color-border: oklch(0.89 0.008 90);
+
+  --radius-card: 0.5rem;
+  --radius-pill: 9999px;
+
+  --spacing-gutter: 1.5rem;
+
+  /*
+   * I18N-11 — the stack covers both scripts. `--font-latin` and `--font-urdu`
+   * are supplied by next/font in the root layout (NEXT-10).
+   */
+  --font-sans: var(--font-latin), ui-sans-serif, system-ui, sans-serif;
+  --font-urdu: var(--font-nastaliq), 'Noto Nastaliq Urdu', serif;
+}
+
+/*
+ * Z-index is not a Tailwind v4 theme namespace, so the scale is exposed as
+ * explicit utilities. This keeps `z-modal` legal and `z-[1300]` prohibited.
+ */
+@utility z-dropdown {
+  z-index: 1000;
+}
+@utility z-modal {
+  z-index: 1300;
+}
+@utility z-toast {
+  z-index: 1500;
+}
+
+/* STY-09 — dark mode redefines semantic tokens once; components stay theme-agnostic. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: oklch(0.19 0.008 90);
+    --color-surface-muted: oklch(0.23 0.008 90);
+    --color-surface-strong: oklch(0.28 0.009 90);
+    --color-fg: oklch(0.96 0.005 90);
+    --color-fg-muted: oklch(0.72 0.008 90);
+    --color-border: oklch(0.34 0.009 90);
+  }
+}
+
+/*
+ * I18N-11 — Nastaliq requires materially more leading than Latin. Applying one
+ * Latin-tuned line-height to both scripts is PROHIBITED, so the value is a
+ * variable keyed off the document language rather than a utility class.
+ */
+:root {
+  --leading-script: 1.55;
+}
+
+html[lang='ur'] {
+  --leading-script: 2.05;
+  font-family: var(--font-urdu);
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  line-height: var(--leading-script);
+}
+
+html[lang='ur'] body {
+  font-family: var(--font-urdu);
+}
+
+/* STY-10 — a visible focus ring is never removed without an equivalent replacement. */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
