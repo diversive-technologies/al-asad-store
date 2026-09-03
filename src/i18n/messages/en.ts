@@ -3,8 +3,9 @@
  * other locale is typed against `Messages`, so a missing Urdu key is a compile
  * error rather than a blank string in production (I18N-10).
  *
- * I18N-06: each entry is a whole sentence. Fragments that callers would
- * concatenate are PROHIBITED — word order differs between the two languages.
+ * I18N-06: each entry is a whole sentence or a whole label. Fragments that
+ * callers would concatenate are PROHIBITED — word order differs between the two
+ * languages.
  */
 export const en = {
   site: {
@@ -14,12 +15,16 @@ export const en = {
   nav: {
     home: 'Home',
     catalogue: 'Catalogue',
+    unstitched: 'Unstitched',
+    stitched: 'Stitched',
     search: 'Search',
     bag: 'Bag',
     signIn: 'Sign in',
     skipToContent: 'Skip to content',
-    primary: 'Primary',
-    footer: 'Footer',
+    primaryLabel: 'Primary navigation',
+    footerLabel: 'Footer navigation',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
   },
   common: {
     switchToUrdu: 'اردو',
@@ -27,20 +32,60 @@ export const en = {
     languageGroupLabel: 'Language',
     loading: 'Loading…',
     retry: 'Try again',
+    viewAll: 'View all',
+    submit: 'Submit',
   },
-  foundation: {
-    heading: 'Foundation is running',
-    body: 'The registries, typed API client, mock layer and bidirectional layout are in place. Storefront modules build on top of this.',
-    backendLabel: 'Backend',
-    backendReachable: 'Reachable',
-    backendVersionLabel: 'Contract version',
-    mockLabel: 'Source',
-    mockEnabled: 'Mocked at the HTTP boundary',
-    mockDisabled: 'Live Java service',
-    directionLabel: 'Direction',
-    sampleAmountLabel: 'Sample price',
-    primaryAction: 'Primary action',
-    secondaryAction: 'Secondary action',
+  product: {
+    newBadge: 'New',
+    discountBadge: 'Sale',
+    lowStockBadge: 'Low stock',
+    soldOutBadge: 'Sold out',
+    setLabel: 'Set',
+    pieceCountLabel: 'Pieces',
+    originalPriceLabel: 'Was',
+    metreageLabel: 'Fabric length',
+    colourLabel: 'Colour',
+    imageAlt: 'Product photograph',
+  },
+  home: {
+    metaTitle: 'Ethnic apparel, stitched and unstitched',
+    metaDescription:
+      'Lawn, cotton and chiffon in stitched and unstitched form. Delivered across Pakistan, cash on delivery available.',
+    railScrollLabel: 'Scroll products',
+  },
+  newsletter: {
+    heading: 'New arrivals, before anyone else',
+    body: 'One message when a collection launches. Nothing else.',
+    emailLabel: 'Email address',
+    emailPlaceholder: 'you@example.com',
+    subscribeCta: 'Subscribe',
+    successMessage: 'You are on the list. Look out for the next launch.',
+    invalidEmail: 'Enter a valid email address.',
+  },
+  auth: {
+    signInHeading: 'Sign in',
+    signInBody: 'A placeholder sign-in while the real authentication is designed.',
+    mobileLabel: 'Mobile number',
+    mobilePlaceholder: '03xx xxxxxxx',
+    signInCta: 'Continue',
+    invalidMobile: 'Enter a valid Pakistani mobile number.',
+    signedInAs: 'Signed in',
+    signOut: 'Sign out',
+    placeholderNotice:
+      'This screen is a placeholder. It creates a mock session and stores no credentials.',
+  },
+  footer: {
+    helpHeading: 'Help',
+    shopHeading: 'Shop',
+    fabricGlossary: 'Fabric glossary',
+    paymentGuide: 'Payment guide',
+    sizeGuide: 'Size guide',
+    careGuide: 'Care guide',
+    rightsReserved: 'All rights reserved.',
+  },
+  theme: {
+    switchToDark: 'Switch to dark mode',
+    switchToLight: 'Switch to light mode',
   },
   errors: {
     network: 'We could not reach the store. Please try again.',

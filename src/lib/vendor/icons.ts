@@ -16,9 +16,11 @@ export {
   Loader2,
   Menu,
   Minus,
+  Moon,
   Plus,
   Search,
   ShoppingBag,
+  Sun,
   Trash2,
   X,
 } from 'lucide-react';

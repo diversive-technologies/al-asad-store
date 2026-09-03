@@ -5,11 +5,11 @@
  */
 export default function HomeLoading() {
   return (
-    <div className="mx-auto max-w-2xl p-gutter" aria-hidden>
-      <div className="mb-6 h-8 w-1/2 animate-pulse rounded-card bg-surface-muted" />
-      <div className="mb-6 h-16 w-full animate-pulse rounded-card bg-surface-muted" />
-      <div className="mb-6 h-48 w-full animate-pulse rounded-card bg-surface-muted" />
-      <div className="h-10 w-64 animate-pulse rounded-card bg-surface-muted" />
+    <div className="p-gutter mx-auto max-w-2xl" aria-hidden>
+      <div className="rounded-card bg-surface-muted mb-6 h-8 w-1/2 animate-pulse" />
+      <div className="rounded-card bg-surface-muted mb-6 h-16 w-full animate-pulse" />
+      <div className="rounded-card bg-surface-muted mb-6 h-48 w-full animate-pulse" />
+      <div className="rounded-card bg-surface-muted h-10 w-64 animate-pulse" />
     </div>
   );
 }

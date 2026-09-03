@@ -19,7 +19,7 @@ export default function HomeError({ reset }: HomeErrorProps) {
   const t = useMessages();
 
   return (
-    <div className="mx-auto max-w-2xl p-gutter">
+    <div className="p-gutter mx-auto max-w-2xl">
       <ErrorState message={t.errors.unexpected} className="mb-4" />
       <Button variant="secondary" onClick={reset}>
         {t.common.retry}

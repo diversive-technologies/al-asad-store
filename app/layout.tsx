@@ -3,14 +3,24 @@ import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { Inter, Noto_Nastaliq_Urdu } from 'next/font/google';
 
+import { Footer } from '@/components/layout/Footer';
+import { Header } from '@/components/layout/Header';
+import { SkipLink } from '@/components/layout/SkipLink';
 import { SITE } from '@/config/site';
+import { LocaleSwitcher } from '@/features/localisation';
+import { NewsletterForm } from '@/features/newsletter';
+import { ThemeProvider } from '@/hooks/use-theme';
 import { getLocale, getMessages } from '@/i18n';
-import { DIRECTION } from '@/i18n/locales';
+import { DIRECTION, LOCALES } from '@/i18n/locales';
 import { MessagesProvider } from '@/i18n/use-messages';
 import { cn } from '@/lib/utils/cn';
+import { getThemePreference } from '@/lib/theme.server';
 import { QueryProvider } from '@/providers/query-provider';
 
 import '@/styles/globals.css';
+
+/** A11Y-02: the skip link's destination, referenced in exactly one other place. */
+const MAIN_CONTENT_ID = 'main-content';
 
 // NEXT-10 — fonts come from next/font; third-party <link> tags are PROHIBITED.
 const latin = Inter({
@@ -32,11 +42,29 @@ const nastaliq = Noto_Nastaliq_Urdu({
   preload: false,
 });
 
-// NEXT-11 — metadata is exported, with shared defaults from SSOT-00.
-export const metadata: Metadata = {
-  title: { default: SITE.name, template: `%s · ${SITE.name}` },
-  description: SITE.description,
-};
+/**
+ * NEXT-11 — metadata is exported, not injected.
+ *
+ * It is generated rather than static because the store's name is translated:
+ * a static template would title every Urdu page with the English brand.
+ *
+ * Section 30.5 requires both locales to be published, declared and
+ * cross-linked, so the alternates are emitted here — once, for every route —
+ * rather than being remembered per page.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const messages = await getMessages();
+
+  return {
+    metadataBase: SITE.metadataBase,
+    title: { default: messages.site.name, template: `%s · ${messages.site.name}` },
+    description: messages.site.tagline,
+    alternates: {
+      canonical: '/',
+      languages: Object.fromEntries(LOCALES.map((code) => [code, `/?locale=${code}`])),
+    },
+  };
+}
 
 export interface RootLayoutProps {
   children: ReactNode;
@@ -45,21 +73,51 @@ export interface RootLayoutProps {
 /**
  * I18N-03 — the ONLY place direction is decided. Components never read the
  * locale to flip themselves.
+ *
+ * MOD-01 — this file sits above both `components/` and `features/`, so it is
+ * where the two are composed: the shell receives the locale switcher and the
+ * newsletter form as slots rather than importing them itself.
  */
 export default async function RootLayout({ children }: RootLayoutProps) {
   // PERF-02: independent reads run in parallel, never as a waterfall.
-  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  const [locale, messages, themePreference] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    getThemePreference(),
+  ]);
 
   return (
     <html
       lang={locale}
       dir={DIRECTION[locale]}
+      /*
+       * A stored choice is stamped here so the first paint is already in the
+       * right scheme. Its absence is meaningful: no attribute means "follow the
+       * operating system", which globals.css handles with a media query — so
+       * there is no flash and no blocking inline script.
+       */
+      data-theme={themePreference ?? undefined}
       className={cn(latin.variable, nastaliq.variable)}
       suppressHydrationWarning
     >
-      <body className="min-h-dvh antialiased">
+      <body className="flex min-h-dvh flex-col antialiased">
         <QueryProvider>
-          <MessagesProvider value={messages}>{children}</MessagesProvider>
+          <ThemeProvider initialPreference={themePreference}>
+            <MessagesProvider value={messages}>
+              <SkipLink label={messages.nav.skipToContent} targetId={MAIN_CONTENT_ID} />
+
+              <Header
+                messages={messages}
+                localeSwitcher={<LocaleSwitcher currentLocale={locale} />}
+              />
+
+              <main id={MAIN_CONTENT_ID} className="flex-1">
+                {children}
+              </main>
+
+              <Footer messages={messages} newsletter={<NewsletterForm />} />
+            </MessagesProvider>
+          </ThemeProvider>
         </QueryProvider>
       </body>
     </html>

@@ -1,34 +1,59 @@
+import type { Metadata } from 'next';
+
 import { ErrorState } from '@/components/shared/ErrorState';
-import { serverEnv } from '@/config/env.server';
-import { fetchHealth, FoundationStatus } from '@/features/system';
+import { fetchAvailability } from '@/features/catalogue';
+import { collectRailProductIds, fetchHomepage, HomepageSections } from '@/features/content';
 import { getLocale, getMessages } from '@/i18n';
 import { logApiError } from '@/lib/utils/log';
 
+/** NEXT-11 / section 30.5 — a unique title and description per page. */
+export async function generateMetadata(): Promise<Metadata> {
+  const messages = await getMessages();
+
+  return {
+    title: messages.home.metaTitle,
+    description: messages.home.metaDescription,
+  };
+}
+
 /**
- * STRUCT-02 — the route layer composes; it does not implement. It resolves
- * inputs, calls the data layer, and hands the result to a presentational
- * component.
+ * STRUCT-02 — the route layer composes; it does not implement.
+ *
+ * Two reads with different caching intents, exactly as architecture 8.2
+ * prescribes: the homepage projection is cached, and the availability overlay
+ * that decorates it is live. The overlay is a single request covering every
+ * rail on the page rather than one request per rail (PERF-02).
  */
 export default async function HomePage() {
-  // PERF-02: independent reads run in parallel.
-  const [locale, messages, result] = await Promise.all([getLocale(), getMessages(), fetchHealth()]);
+  // The homepage read is locale-scoped, so the locale is resolved first and the
+  // two reads that depend on it then run together (PERF-02).
+  const locale = await getLocale();
+  const [messages, homepageResult] = await Promise.all([getMessages(), fetchHomepage(locale)]);
 
   // ERR-02: the failure path is handled as a value, not caught.
-  if (!result.ok) {
+  if (!homepageResult.ok) {
     // ERR-10: logged once, here, at the boundary that handles it.
-    logApiError('home', result.error);
+    logApiError('home', homepageResult.error);
     // ERR-11: user-facing copy comes from SSOT-07, never from error.message.
-    return <ErrorState message={messages.errors.network} />;
+    return <ErrorState className="m-gutter" message={messages.errors.network} />;
   }
 
+  const { sections } = homepageResult.value;
+  const availabilityResult = await fetchAvailability(collectRailProductIds(sections));
+
+  /*
+   * Section 30.2: the purchase path must survive a degraded dependency. A
+   * failed overlay costs the stock badges, not the page — every card then
+   * reports availability as unknown rather than guessing (DATA-13a).
+   */
+  if (!availabilityResult.ok) logApiError('home:availability', availabilityResult.error);
+
   return (
-    <main>
-      <FoundationStatus
-        health={result.value}
-        locale={locale}
-        isMocked={serverEnv.API_MOCKING === 'enabled'}
-        messages={messages}
-      />
-    </main>
+    <HomepageSections
+      sections={sections}
+      availabilities={availabilityResult.ok ? availabilityResult.value : []}
+      locale={locale}
+      messages={messages}
+    />
   );
 }

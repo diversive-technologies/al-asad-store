@@ -99,8 +99,8 @@ something on screen.
 
 | # | Super-module | Covers | Architecture refs |
 | --- | --- | --- | --- |
-| **M1** | **Landing page + foundation** | Scaffold, SSOT registries, typed API client + Zod contracts, MSW harness, RTL-safe layout primitives, design tokens. Then: homepage video with poster-first loading, four sections, newsletter capture, header/footer/nav shell, and the D3 dummy sign-in. | Guidelines §3, §4, §8, §18; arch §28.4 |
-| **M2** | **Catalogue** | Listing pages, asymmetric grid, product card, six filters + facet counts + URL state, four sorts, pagination, search with type-ahead | §15, §28.1 |
+| **M1** | **Landing page + foundation** | Scaffold, SSOT registries, typed API client + Zod contracts, MSW harness, RTL-safe layout primitives, design tokens. Then: app shell, homepage with four content-configured section kinds, newsletter capture, and the D3 dummy sign-in. **Also absorbed the product card and the availability overlay** by operator decision — the homepage needs a product rail, and the card is the most reused component in the store, so it is built once here and consumed from the `features/catalogue` barrel by M2 onward. | Guidelines §3, §4, §8, §18; arch §28.1, §28.4, §8.2 |
+| **M2** | **Catalogue** | Listing pages, asymmetric grid, six filters + facet counts + URL state, four sorts, pagination, search with type-ahead. Reuses the M1 product card. | §15, §28.1 |
 | **M3** | **Product page** | One route, one shell, buy-box branching on declared `product_type`. Gallery, size guides, sold-out + Notify Me, Fabric Calculator, info sections, you-may-also-like | §12, §25, §28.2 |
 | **M4** | **Bag & reservation** | Slide-in panel, per-piece size display, quantity, promo code, free-delivery progress, durable holds with read-time expiry | §16, §7.1, §7.3 |
 | **M5** | **Checkout** | Single page, guest checkout, four payment methods, COD cap + SMS confirmation, gift options, order placement | §17, §7.2, §28.2 |

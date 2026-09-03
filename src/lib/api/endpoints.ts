@@ -6,7 +6,22 @@
  * Entries are added as modules need them; speculative paths are not declared.
  */
 export const ENDPOINTS = {
-  system: {
-    health: '/api/v1/health',
+  content: {
+    /** Section 21 ContentQuery.homepage(locale) — locale travels as a header. */
+    homepage: '/api/v1/content/homepage',
+  },
+  catalogue: {
+    /**
+     * Availability is a separate read from the product projection on purpose:
+     * architecture 8.2 keeps stock out of the cached projection so browse
+     * traffic does not invalidate the cache on every order.
+     */
+    availability: '/api/v1/catalogue/availability',
+  },
+  newsletter: {
+    subscribe: '/api/v1/newsletter/subscriptions',
+  },
+  auth: {
+    session: '/api/v1/auth/session',
   },
 } as const;

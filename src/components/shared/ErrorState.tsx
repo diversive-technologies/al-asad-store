@@ -12,7 +12,7 @@ export function ErrorState({ message, className }: ErrorStateProps) {
     <div
       role="alert"
       className={cn(
-        'rounded-card border border-border bg-surface-muted p-gutter text-start text-fg',
+        'rounded-card border-border bg-surface-muted p-gutter text-fg border text-start',
         className,
       )}
     >

@@ -3,9 +3,10 @@ import type { Messages } from './en';
 /**
  * SSOT-07 — structurally checked against `Messages`.
  *
- * I18N-09: 'Al-Asad' is a proper noun carried as supplied; garment and fabric
- * vocabulary arriving from the backend's protected-terms list is likewise
- * rendered verbatim and never transliterated here.
+ * I18N-09: fabric and garment vocabulary carried by the backend's
+ * protected-terms list is rendered exactly as supplied and is never
+ * transliterated here. The interface labels below are ordinary translatable
+ * copy and carry no protected terms.
  */
 export const ur: Messages = {
   site: {
@@ -15,12 +16,16 @@ export const ur: Messages = {
   nav: {
     home: 'صفحۂ اول',
     catalogue: 'مجموعہ',
+    unstitched: 'بغیر سلے',
+    stitched: 'سلے ہوئے',
     search: 'تلاش',
     bag: 'تھیلا',
     signIn: 'سائن اِن',
     skipToContent: 'مواد پر جائیں',
-    primary: 'بنیادی',
-    footer: 'فوٹر',
+    primaryLabel: 'بنیادی نیویگیشن',
+    footerLabel: 'فوٹر نیویگیشن',
+    openMenu: 'مینو کھولیں',
+    closeMenu: 'مینو بند کریں',
   },
   common: {
     switchToUrdu: 'اردو',
@@ -28,20 +33,60 @@ export const ur: Messages = {
     languageGroupLabel: 'زبان',
     loading: 'لوڈ ہو رہا ہے…',
     retry: 'دوبارہ کوشش کریں',
+    viewAll: 'سب دیکھیں',
+    submit: 'جمع کریں',
   },
-  foundation: {
-    heading: 'بنیاد کام کر رہی ہے',
-    body: 'رجسٹریاں، ٹائپ شدہ API کلائنٹ، ماک پرت اور دو طرفہ لے آؤٹ تیار ہیں۔ اسٹور کے ماڈیول اسی پر بنیں گے۔',
-    backendLabel: 'بیک اینڈ',
-    backendReachable: 'دستیاب',
-    backendVersionLabel: 'معاہدہ ورژن',
-    mockLabel: 'ماخذ',
-    mockEnabled: 'HTTP سرحد پر ماک',
-    mockDisabled: 'زندہ جاوا سروس',
-    directionLabel: 'سمت',
-    sampleAmountLabel: 'نمونہ قیمت',
-    primaryAction: 'بنیادی عمل',
-    secondaryAction: 'ثانوی عمل',
+  product: {
+    newBadge: 'نیا',
+    discountBadge: 'رعایت',
+    lowStockBadge: 'اسٹاک کم ہے',
+    soldOutBadge: 'ختم ہو گیا',
+    setLabel: 'سیٹ',
+    pieceCountLabel: 'اجزاء',
+    originalPriceLabel: 'پہلے',
+    metreageLabel: 'کپڑے کی لمبائی',
+    colourLabel: 'رنگ',
+    imageAlt: 'مصنوعات کی تصویر',
+  },
+  home: {
+    metaTitle: 'روایتی ملبوسات، سلے اور بغیر سلے',
+    metaDescription:
+      'لان، کاٹن اور شفون، سلے اور بغیر سلے۔ پورے پاکستان میں ترسیل، کیش آن ڈیلیوری دستیاب ہے۔',
+    railScrollLabel: 'مصنوعات دیکھیں',
+  },
+  newsletter: {
+    heading: 'نئی آمد، سب سے پہلے آپ کے لیے',
+    body: 'جب کوئی نیا مجموعہ آئے گا تو ایک پیغام۔ اس کے سوا کچھ نہیں۔',
+    emailLabel: 'ای میل پتہ',
+    emailPlaceholder: 'you@example.com',
+    subscribeCta: 'شامل ہوں',
+    successMessage: 'آپ فہرست میں شامل ہیں۔ اگلی لانچ کا انتظار کریں۔',
+    invalidEmail: 'درست ای میل پتہ درج کریں۔',
+  },
+  auth: {
+    signInHeading: 'سائن اِن',
+    signInBody: 'اصل تصدیقی نظام تیار ہونے تک یہ عارضی سائن اِن ہے۔',
+    mobileLabel: 'موبائل نمبر',
+    mobilePlaceholder: '03xx xxxxxxx',
+    signInCta: 'جاری رکھیں',
+    invalidMobile: 'درست پاکستانی موبائل نمبر درج کریں۔',
+    signedInAs: 'سائن اِن ہیں',
+    signOut: 'سائن آؤٹ',
+    placeholderNotice:
+      'یہ صفحہ عارضی ہے۔ یہ صرف ایک نمونہ سیشن بناتا ہے اور کوئی معلومات محفوظ نہیں کرتا۔',
+  },
+  footer: {
+    helpHeading: 'مدد',
+    shopHeading: 'خریداری',
+    fabricGlossary: 'کپڑوں کی لغت',
+    paymentGuide: 'ادائیگی کی رہنمائی',
+    sizeGuide: 'سائز کی رہنمائی',
+    careGuide: 'دیکھ بھال کی رہنمائی',
+    rightsReserved: 'جملہ حقوق محفوظ ہیں۔',
+  },
+  theme: {
+    switchToDark: 'ڈارک موڈ پر جائیں',
+    switchToLight: 'لائٹ موڈ پر جائیں',
   },
   errors: {
     network: 'ہم اسٹور تک نہیں پہنچ سکے۔ براہِ کرم دوبارہ کوشش کریں۔',

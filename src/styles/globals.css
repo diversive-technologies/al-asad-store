@@ -41,6 +41,15 @@
   --color-on-brand: oklch(0.99 0.005 90);
   --color-border: oklch(0.89 0.008 90);
 
+  /*
+   * Colours that sit ON photography, and are therefore NOT redefined for dark
+   * mode. A hero caption is legible because of the scrim behind it, not because
+   * of the page theme: swapping these with the theme inverts the scrim to light
+   * and the caption to dark, which is wrong over an image in either mode.
+   */
+  --color-media-scrim: oklch(0.16 0.01 90);
+  --color-on-media: oklch(0.99 0.005 90);
+
   --radius-card: 0.5rem;
   --radius-pill: 9999px;
 
@@ -68,16 +77,51 @@
   z-index: 1500;
 }
 
-/* STY-09 — dark mode redefines semantic tokens once; components stay theme-agnostic. */
+/*
+ * STY-09 — dark mode redefines semantic tokens once; components stay
+ * theme-agnostic and never carry `dark:` variants.
+ *
+ * The dark values are declared ONCE here (PD-01) and only the *mapping* is
+ * repeated below, because CSS cannot combine a media query and an attribute
+ * selector into a single selector list. Editing a colour is still a one-line
+ * change in one place.
+ */
+:root {
+  --dark-surface: oklch(0.19 0.008 90);
+  --dark-surface-muted: oklch(0.23 0.008 90);
+  --dark-surface-strong: oklch(0.28 0.009 90);
+  --dark-fg: oklch(0.96 0.005 90);
+  --dark-fg-muted: oklch(0.72 0.008 90);
+  --dark-border: oklch(0.34 0.009 90);
+}
+
+/*
+ * Three states, in precedence order:
+ *   no attribute        → follow the operating system
+ *   [data-theme=light]  → forced light, even if the OS is dark
+ *   [data-theme=dark]   → forced dark, even if the OS is light
+ *
+ * The `:not([data-theme='light'])` guard is what lets an explicit light choice
+ * win over a dark OS preference.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --color-surface: oklch(0.19 0.008 90);
-    --color-surface-muted: oklch(0.23 0.008 90);
-    --color-surface-strong: oklch(0.28 0.009 90);
-    --color-fg: oklch(0.96 0.005 90);
-    --color-fg-muted: oklch(0.72 0.008 90);
-    --color-border: oklch(0.34 0.009 90);
+  :root:not([data-theme='light']) {
+    --color-surface: var(--dark-surface);
+    --color-surface-muted: var(--dark-surface-muted);
+    --color-surface-strong: var(--dark-surface-strong);
+    --color-fg: var(--dark-fg);
+    --color-fg-muted: var(--dark-fg-muted);
+    --color-border: var(--dark-border);
   }
+}
+
+:root[data-theme='dark'] {
+  --color-surface: var(--dark-surface);
+  --color-surface-muted: var(--dark-surface-muted);
+  --color-surface-strong: var(--dark-surface-strong);
+  --color-fg: var(--dark-fg);
+  --color-fg-muted: var(--dark-fg-muted);
+  --color-border: var(--dark-border);
 }
 
 /*
