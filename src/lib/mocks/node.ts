@@ -13,40 +13,31 @@ type MockServer = ReturnType<typeof setupServer>;
  * single Node-side interceptor covers both Server Component reads and the BFF
  * routes that Client Components query through.
  *
- * Activation is bound to the instance rather than performed once from
- * `instrumentation.ts`. Without this, a hot reload produces a fresh, unpatched
- * `setupServer()` that nobody calls `listen()` on, and every mocked call then
- * fails as a NETWORK error until the dev server is restarted.
+ * The singleton is deliberately module-scoped rather than cached on
+ * `globalThis`, and that distinction is the whole fix.
  *
- * KNOWN LIMITATION, measured rather than assumed: editing application code
- * keeps mocking alive, but instrumentation modules sit outside the HMR graph,
- * so a change to `db.ts` or `handlers.ts` is NOT picked up by the running
- * server. Restart the dev server after editing a fixture or a handler.
+ * MSW works by patching request machinery *in the context where `listen()`
+ * ran*. Turbopack re-evaluates server modules into a fresh module context on
+ * recompile, and the previous context's patch does not carry over — every
+ * mocked call then fails with ECONNREFUSED until the dev server is restarted.
+ * A `globalThis` cache made that worse, not better: it returned the old server
+ * that had patched a context nobody was using any more, so `listen()` was never
+ * called again.
+ *
+ * A module-scoped flag is false again in each new context, which is exactly
+ * when the patch needs re-applying. `startMockServer` is therefore a cheap
+ * no-op on every call but the first per context.
  */
-const globalForMocks = globalThis as typeof globalThis & {
-  __mswServer?: MockServer;
-};
+let server: MockServer | null = null;
 
-function activateMockServer(): MockServer {
-  const existing = globalForMocks.__mswServer;
+export function startMockServer(): void {
+  if (server !== null) return;
 
-  if (existing) {
-    // Reuse the already-patched instance and adopt whatever handlers this
-    // evaluation compiled.
-    existing.resetHandlers(...handlers);
-    return existing;
-  }
-
-  const created = setupServer(...handlers);
+  server = setupServer(...handlers);
   /*
    * `onUnhandledRequest: 'bypass'` is deliberate: an endpoint with no handler
    * yet must fail the way an unimplemented backend route fails, surfacing as a
    * normalised ApiError, rather than being masked by a mock-layer warning.
    */
-  created.listen({ onUnhandledRequest: 'bypass' });
-  globalForMocks.__mswServer = created;
-
-  return created;
+  server.listen({ onUnhandledRequest: 'bypass' });
 }
-
-export const server: MockServer = activateMockServer();

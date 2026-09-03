@@ -24,7 +24,7 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       aria-label={label}
       title={label}
-      className="text-fg hover:bg-surface-muted rounded-card p-2"
+      className="rounded-card p-2 transition-opacity hover:opacity-70"
     >
       {/* I18N-05: neither glyph is directional, so neither mirrors in Urdu. */}
       {isDark ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}

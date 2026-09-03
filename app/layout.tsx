@@ -14,6 +14,7 @@ import { getLocale, getMessages } from '@/i18n';
 import { DIRECTION, LOCALES } from '@/i18n/locales';
 import { MessagesProvider } from '@/i18n/use-messages';
 import { cn } from '@/lib/utils/cn';
+import { ensureMockServer } from '@/lib/mocks/ensure';
 import { getThemePreference } from '@/lib/theme.server';
 import { QueryProvider } from '@/providers/query-provider';
 
@@ -79,6 +80,10 @@ export interface RootLayoutProps {
  * newsletter form as slots rather than importing them itself.
  */
 export default async function RootLayout({ children }: RootLayoutProps) {
+  // D1: re-arms the mock layer for this module context. No-op once armed, and
+  // no-op entirely once the Java service is live.
+  await ensureMockServer();
+
   // PERF-02: independent reads run in parallel, never as a waterfall.
   const [locale, messages, themePreference] = await Promise.all([
     getLocale(),
@@ -111,7 +116,12 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                 localeSwitcher={<LocaleSwitcher currentLocale={locale} />}
               />
 
-              <main id={MAIN_CONTENT_ID} className="flex-1">
+              {/*
+               * The bar is fixed, so it occupies no layout space. Padding here
+               * clears it for every page by default; a full-bleed section such
+               * as the hero opts out with a matching negative margin.
+               */}
+              <main id={MAIN_CONTENT_ID} className="pt-header flex-1">
                 {children}
               </main>
 

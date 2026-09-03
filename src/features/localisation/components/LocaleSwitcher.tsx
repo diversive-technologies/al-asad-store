@@ -27,7 +27,16 @@ export function LocaleSwitcher({ currentLocale }: LocaleSwitcherProps) {
   return (
     <form action={formAction} aria-label={t.common.languageGroupLabel}>
       <input type="hidden" name="locale" value={nextLocale} />
-      <Button type="submit" variant="ghost" size="sm" isLoading={isPending}>
+      <Button
+        type="submit"
+        variant="ghost"
+        size="sm"
+        isLoading={isPending}
+        /* The bar sets its own colour and children inherit it; `text-inherit`
+           lands in the same tailwind-merge group as the variant's `text-fg`,
+           so it replaces that rather than both applying. */
+        className="text-inherit hover:bg-transparent hover:opacity-70"
+      >
         {label}
       </Button>
     </form>

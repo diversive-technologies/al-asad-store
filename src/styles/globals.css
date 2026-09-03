@@ -50,10 +50,24 @@
   --color-media-scrim: oklch(0.16 0.01 90);
   --color-on-media: oklch(0.99 0.005 90);
 
+  /*
+   * The bands beside the hero film on viewports wider than the film itself.
+   * Deliberately the page background, so on a very wide screen the film reads
+   * as sitting ON the site rather than inside a black box. It follows the
+   * theme because `--color-surface` does.
+   */
+  --color-media-band: var(--color-surface);
+
   --radius-card: 0.5rem;
   --radius-pill: 9999px;
 
   --spacing-gutter: 1.5rem;
+  /*
+   * The fixed bar's height. A token because two separate things depend on it:
+   * pages pad their content past it, and the hero pulls itself back up under
+   * it to sit full-bleed behind a transparent bar.
+   */
+  --spacing-header: 4rem;
 
   /*
    * I18N-11 — the stack covers both scripts. `--font-latin` and `--font-urdu`
@@ -67,6 +81,9 @@
  * Z-index is not a Tailwind v4 theme namespace, so the scale is exposed as
  * explicit utilities. This keeps `z-modal` legal and `z-[1300]` prohibited.
  */
+@utility z-header {
+  z-index: 900;
+}
 @utility z-dropdown {
   z-index: 1000;
 }
@@ -75,6 +92,81 @@
 }
 @utility z-toast {
   z-index: 1500;
+}
+
+/*
+ * The fixed bar, which floats over the hero film and turns solid on scroll.
+ *
+ * Both states live here rather than in class names on the component, because
+ * the bar sets its own `color` and every child simply inherits it. That is what
+ * lets server-rendered links and icons change colour on scroll without any of
+ * them subscribing to scroll position, and it keeps the two states legible side
+ * by side in one place.
+ *
+ * The border is always present and merely changes colour, so turning solid
+ * cannot nudge the layout by a pixel.
+ */
+@utility header-surface {
+  color: var(--color-fg);
+  background-color: var(--color-surface);
+  border-block-end: 1px solid var(--color-border);
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease,
+    color 300ms ease;
+
+  /* A11Y-10 */
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/*
+ * The bar floats, white-on-film, ONLY while it is genuinely over media.
+ *
+ * `:has(.hero-frame)` is the condition, and it has to be a condition rather
+ * than the default. A page with no hero — sign-in, and every page M2 onward —
+ * puts the bar over the page background, where light-on-media text is
+ * invisible in the light theme. Tying the treatment to "is there a full-bleed
+ * hero behind me" means new pages get a readable bar without opting in, and
+ * cannot forget to.
+ *
+ * The gradient is what makes the text legible over BOTH the film and the page
+ * background bands beside it on a wide screen, which a flat colour cannot do
+ * because those two backgrounds move in opposite directions between themes.
+ */
+body:has(.hero-frame) header[data-scrolled='false'] {
+  color: var(--color-on-media);
+  background-color: transparent;
+  border-block-end-color: transparent;
+}
+
+body:has(.hero-frame) header[data-scrolled='false']::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 200%;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--color-media-scrim) 60%, transparent),
+    transparent
+  );
+}
+
+/* Hero height, as a named utility so STY-02 holds. */
+@utility hero-frame {
+  /*
+   * The film owns the first screen.
+   *
+   * `svh`, not `vh`: on mobile browsers `100vh` is the tallest layout viewport,
+   * so a `vh` hero sits partly behind the address bar until the reader
+   * scrolls. The small viewport unit is the one that is always fully visible,
+   * which is what "covers the first viewport" has to mean on a phone.
+   */
+  min-block-size: 100svh;
 }
 
 /*

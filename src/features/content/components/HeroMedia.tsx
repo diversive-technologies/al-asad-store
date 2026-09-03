@@ -110,33 +110,64 @@ export function HeroMedia({ poster, video }: HeroMediaProps) {
   }, [theme, video, prefersReducedMotion]);
 
   return (
-    <>
-      <Image
-        src={poster[theme]}
-        alt=""
-        aria-hidden
-        fill
-        priority
-        sizes="100vw"
-        className="-z-10 object-cover"
-      />
-
-      {isFilmEnabled ? (
-        <video
-          ref={videoRef}
-          muted
-          loop
-          playsInline
-          preload="none"
-          // A11Y-04: decorative — the headline beside it carries the meaning.
+    /*
+     * The film is scaled by HEIGHT only, then centred.
+     *
+     * `object-fit: cover` scales by whichever axis needs more, so on a tall
+     * viewport it crops the sides and on a wide one it crops the top and
+     * bottom — which is what was cutting heads off on laptops. Sizing a 16:9
+     * stage to the full height instead means the vertical framing the film was
+     * shot with is always preserved: wide viewports get bands beside it, narrow
+     * ones lose width from both edges evenly.
+     *
+     * The threshold where bands replace cropping is not a breakpoint we pick;
+     * it is wherever the viewport is wider than `height x 16/9`.
+     */
+    <div className="bg-media-band absolute inset-0 -z-20 flex justify-center overflow-hidden">
+      {/*
+       * `shrink-0` is load-bearing: without it flex would compress the stage to
+       * fit a narrow viewport, which is exactly the squashing this avoids.
+       * `aspect-video` states the ratio up front so the stage has its final
+       * width before the film's metadata arrives, and the poster underneath
+       * cannot shift when it does.
+       */}
+      <div className="relative aspect-video h-full shrink-0">
+        <Image
+          src={poster[theme]}
+          alt=""
           aria-hidden
-          className={cn(
-            'absolute inset-0 -z-10 h-full w-full object-cover',
-            'transition-opacity duration-500 motion-reduce:transition-none',
-            isFilmReady ? 'opacity-100' : 'opacity-0',
-          )}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
         />
-      ) : null}
-    </>
+
+        {isFilmEnabled ? (
+          <video
+            ref={videoRef}
+            muted
+            loop
+            playsInline
+            preload="none"
+            // A11Y-04: decorative — the headline beside it carries the meaning.
+            aria-hidden
+            className={cn(
+              'absolute inset-0 h-full w-full object-cover',
+              'transition-opacity duration-500 motion-reduce:transition-none',
+              isFilmReady ? 'opacity-100' : 'opacity-0',
+            )}
+          />
+        ) : null}
+
+        {/*
+         * The scrim lives INSIDE the stage, over the film only. Covering the
+         * whole section would tint the bands too, and the bands are meant to be
+         * the page background so the film reads as sitting on the site rather
+         * than in a box. A11Y-07 contrast still holds because the hero copy is
+         * constrained to the stage's width.
+         */}
+        <div className="bg-media-scrim/45 absolute inset-0" aria-hidden />
+      </div>
+    </div>
   );
 }

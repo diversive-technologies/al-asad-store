@@ -11,21 +11,30 @@ export interface HeroVideoSectionProps {
  * The hero. Everything except the backdrop is a Server Component: the headline,
  * the supporting line and the call to action are all in the initial HTML, so
  * the section is readable and clickable before any JavaScript runs.
+ *
+ * `-mt-header` pulls the section up under the fixed bar so the film starts at
+ * the very top of the viewport, while `main` keeps its padding for every other
+ * page. Full-bleed is opt-in; clearing the bar is the default.
  */
 export function HeroVideoSection({ section }: HeroVideoSectionProps) {
   return (
-    <section className="relative isolate flex min-h-[70vh] items-end overflow-hidden">
+    <section className="hero-frame -mt-header relative isolate flex items-end overflow-hidden">
       <HeroMedia poster={section.poster} video={section.video} />
 
-      {/* Scrim keeps A11Y-07 contrast over an arbitrary editorial still. */}
-      <div className="bg-media-scrim/50 absolute inset-0 -z-10" aria-hidden />
-
-      <div className="p-gutter flex max-w-xl flex-col items-start gap-4 pb-12 text-start">
-        <h1 className="text-on-media text-3xl font-semibold sm:text-5xl">{section.headline}</h1>
-        <p className="text-on-media/90">{section.subheadline}</p>
-        <ButtonLink href={section.cta.href} variant="primary" size="lg">
-          {section.cta.label}
-        </ButtonLink>
+      {/*
+       * The copy is held to the same max width as the header, and centred.
+       * On a viewport wide enough to show bands, that keeps every word over
+       * footage rather than over the page background, where light-on-media text
+       * would be unreadable in the light theme.
+       */}
+      <div className="px-gutter mx-auto w-full max-w-6xl pb-16">
+        <div className="flex max-w-xl flex-col items-start gap-4 text-start">
+          <h1 className="text-on-media text-3xl font-semibold sm:text-5xl">{section.headline}</h1>
+          <p className="text-on-media/90">{section.subheadline}</p>
+          <ButtonLink href={section.cta.href} variant="primary" size="lg">
+            {section.cta.label}
+          </ButtonLink>
+        </div>
       </div>
     </section>
   );

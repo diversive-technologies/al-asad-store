@@ -30,7 +30,7 @@ export function PrimaryNav({ messages, className }: PrimaryNavProps) {
       <ul className="flex items-center gap-5">
         {links.map((link) => (
           <li key={link.key}>
-            <Link href={link.href} className="text-fg hover:text-brand-600 text-sm">
+            <Link href={link.href} className="text-sm transition-opacity hover:opacity-70">
               {link.label}
             </Link>
           </li>
