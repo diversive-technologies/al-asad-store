@@ -15,10 +15,14 @@ export interface HeroVideoSectionProps {
  * `-mt-header` pulls the section up under the fixed bar so the film starts at
  * the very top of the viewport, while `main` keeps its padding for every other
  * page. Full-bleed is opt-in; clearing the bar is the default.
+ *
+ * The section deliberately does NOT clip. Clipping lives on the film stage,
+ * which is what needs it; hoisting it here would cut off the ambient glow at
+ * exactly the edge it is supposed to spill past.
  */
 export function HeroVideoSection({ section }: HeroVideoSectionProps) {
   return (
-    <section className="hero-frame -mt-header relative isolate flex items-end overflow-hidden">
+    <section className="bg-media-band hero-frame -mt-header relative isolate flex items-end">
       <HeroMedia poster={section.poster} video={section.video} />
 
       {/*

@@ -68,6 +68,8 @@
    * it to sit full-bleed behind a transparent bar.
    */
   --spacing-header: 4rem;
+  /* How far the ambient glow reaches below the film before it is fully faded. */
+  --spacing-ambient-spill: 7.5rem;
 
   /*
    * I18N-11 — the stack covers both scripts. `--font-latin` and `--font-urdu`
@@ -163,19 +165,18 @@ body:has(.hero-frame) header[data-scrolled='false']::before {
  * The width is capped by whichever is smaller of two things:
  *
  *  - a comfortable reading measure, and
- *  - the width of the hero film, which is 16/9 of the viewport height because
- *    the film is scaled by height.
+ *  - the widest the hero film can ever be, which is its capped height times
+ *    16/9.
  *
- * The second cap is the point. Past the width where the film stops filling the
- * screen and gains bands beside it, content that kept spreading would run out
- * past the footage and sit over the page background — the film centred, the
- * page drifting wider than it. Tying the two together means the page can never
- * be wider than the picture it sits under.
+ * The second cap only bites on an ultra-wide screen, and that is exactly where
+ * it is needed: that is the one place the film stops spanning the viewport, and
+ * content that kept spreading would run out past the footage — the film
+ * centred, the page drifting wider than it.
  */
 @utility page-shell {
   margin-inline: auto;
   inline-size: 100%;
-  max-inline-size: min(80rem, calc(100svh * 16 / 9));
+  max-inline-size: min(80rem, calc(125svh * 16 / 9));
   padding-inline: var(--spacing-gutter);
 
   /* Content should not be pressed against the edge on a larger screen. */
@@ -184,17 +185,112 @@ body:has(.hero-frame) header[data-scrolled='false']::before {
   }
 }
 
-/* Hero height, as a named utility so STY-02 holds. */
+/*
+ * Hero geometry, in two regimes.
+ *
+ * The old rule scaled the film to the viewport HEIGHT, and that was wrong for a
+ * reason worth recording: a browser viewport is never the same shape as the
+ * screen. A 1920x1080 monitor gives roughly a 1920x950 viewport once chrome is
+ * accounted for, so the viewport is always WIDER than 16:9 — which meant every
+ * laptop, not just ultra-wides, ended up with ~115px of dead band down each
+ * side. Assuming viewport == screen is what produced that.
+ */
 @utility hero-frame {
   /*
-   * The film owns the first screen.
-   *
-   * `svh`, not `vh`: on mobile browsers `100vh` is the tallest layout viewport,
-   * so a `vh` hero sits partly behind the address bar until the reader
-   * scrolls. The small viewport unit is the one that is always fully visible,
-   * which is what "covers the first viewport" has to mean on a phone.
+   * Portrait and near-square: the film fills the screen and gives up width at
+   * both edges. A 16:9 film at full width on a 390px phone is 220px tall, which
+   * is not a hero.
    */
   min-block-size: 100svh;
+
+  @media (min-aspect-ratio: 4 / 3) {
+    /*
+     * Landscape: the film owns the full width at its own ratio. Nothing is
+     * cropped and nothing is stretched — the section simply takes the height
+     * 16:9 implies, which lands a little past the fold and hints at more below.
+     */
+    min-block-size: 0;
+    /*
+     * `inline-size` is pinned, and that is load-bearing. With width left auto,
+     * `max-block-size` below clamps the height and `aspect-ratio` then drags the
+     * WIDTH in to preserve the ratio — the section itself shrinks and the page
+     * background shows beside it. Fixing the width means the ratio can only ever
+     * drive the height, which is the whole intent.
+     */
+    inline-size: 100%;
+    aspect-ratio: 16 / 9;
+
+    /*
+     * Ultra-wide only. Past roughly 2.22:1 the film's natural height would run
+     * far below the fold, so it is capped and genuine side space appears. That
+     * space is what the ambient glow is for. 16:9 and 16:10 never reach here.
+     */
+    max-block-size: 125svh;
+  }
+}
+
+/*
+ * The ambient glow — a heavily blurred mirror of the frame currently playing,
+ * in the manner of YouTube's ambient mode.
+ *
+ * It sits behind the film, so on most screens the only part anyone sees is the
+ * spill below the film's bottom edge. On an ultra-wide it also fills the side
+ * space, which is the point: the film reads as glowing into the page instead of
+ * sitting in a box with padding.
+ *
+ * The mask is what keeps it a glow rather than a coloured band — it is fully
+ * opaque behind the film, where it is hidden anyway, and fades to nothing
+ * across the spill.
+ */
+@utility hero-ambient {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: calc(100% + var(--spacing-ambient-spill));
+  z-index: -30;
+  pointer-events: none;
+
+  /*
+   * Clip sideways, spill downwards.
+   *
+   * `clip` rather than `hidden` is the whole trick: `overflow-x: hidden` forces
+   * the other axis to `auto`, which would turn the downward spill into a
+   * scrollbar. `clip` leaves `overflow-y: visible` alone. Without this the
+   * upscaled canvas hangs past the viewport and the page grows a horizontal
+   * scrollbar — measured at 63px.
+   */
+  overflow-x: clip;
+  overflow-y: visible;
+
+  /*
+   * The falloff is stepped rather than a plain two-stop gradient. A linear fade
+   * reads as a visible band with an edge at each end; easing it out makes the
+   * film dissolve into the page instead of stopping at a line.
+   */
+  mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0) calc(100% - var(--spacing-ambient-spill)),
+    rgb(0 0 0 / 0.82) calc(100% - var(--spacing-ambient-spill) * 0.72),
+    rgb(0 0 0 / 0.45) calc(100% - var(--spacing-ambient-spill) * 0.42),
+    rgb(0 0 0 / 0.14) calc(100% - var(--spacing-ambient-spill) * 0.18),
+    transparent 100%
+  );
+
+  /*
+   * Fully opaque on purpose. At partial opacity the page background shows
+   * through and the side areas read as padding behind a film rather than as the
+   * film's own light — which was the entire point of the effect.
+   *
+   * The scale is generous so the blurred frame's colour reaches well past the
+   * film's edges; a 64px blur on a layer only 10% larger leaves a washed-out
+   * rim where there is nothing left to sample from.
+   */
+  & > canvas {
+    inline-size: 100%;
+    block-size: 100%;
+    transform: scale(1.45);
+    filter: blur(72px) saturate(1.2);
+  }
 }
 
 /*
@@ -306,6 +402,29 @@ html[lang='ur'] body {
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/*
+ * The page's own scrollbar is hidden, while nested scrollers keep the thin one
+ * above.
+ *
+ * Only the indicator goes: wheel, touch, keyboard, scrollbar-less trackpads and
+ * programmatic scrolling all behave exactly as before, because nothing here
+ * touches `overflow`. A11Y-02 is unaffected — the page is still fully keyboard
+ * scrollable.
+ *
+ * The element selector is what makes this win over the `*` rule above; a bare
+ * `::-webkit-scrollbar` has lower specificity than `html::-webkit-scrollbar`.
+ *
+ * A side benefit: with no reserved gutter, `100vw` and the layout width finally
+ * agree, so viewport-width maths can no longer overflow by a scrollbar.
+ */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 /* STY-10 — a visible focus ring is never removed without an equivalent replacement. */
