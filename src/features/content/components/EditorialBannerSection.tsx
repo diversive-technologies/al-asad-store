@@ -19,7 +19,7 @@ export interface EditorialBannerSectionProps {
  */
 export function EditorialBannerSection({ section }: EditorialBannerSectionProps) {
   return (
-    <section className="p-gutter grid gap-6 md:grid-cols-2 md:items-center">
+    <section className="page-shell grid gap-6 py-12 md:grid-cols-2 md:items-center">
       <div
         className={cn(
           'rounded-card bg-surface-muted relative aspect-[3/2] overflow-hidden',

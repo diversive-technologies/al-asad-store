@@ -31,8 +31,8 @@ const PRODUCT_SHAPE = [
     slug: 'embroidered-lawn-three-piece-ivory',
     type: 'SET',
     pieceCount: 3,
-    imageUrl: '/placeholders/product-1.png',
-    hoverImageUrl: '/placeholders/product-2.png',
+    imageUrl: '/placeholders/product-1.avif',
+    hoverImageUrl: '/placeholders/product-2.avif',
     pricing: { currentMinor: 1_249_900, originalMinor: null },
     metreage: null,
     isNew: true,
@@ -42,7 +42,7 @@ const PRODUCT_SHAPE = [
     slug: 'printed-lawn-unstitched-indigo',
     type: 'SIMPLE',
     pieceCount: 1,
-    imageUrl: '/placeholders/product-2.png',
+    imageUrl: '/placeholders/product-2.avif',
     hoverImageUrl: null,
     pricing: { currentMinor: 449_900, originalMinor: 649_900 },
     // Unstitched is sold by length, not by size.
@@ -54,8 +54,8 @@ const PRODUCT_SHAPE = [
     slug: 'chiffon-two-piece-rose',
     type: 'SET',
     pieceCount: 2,
-    imageUrl: '/placeholders/product-3.png',
-    hoverImageUrl: '/placeholders/product-4.png',
+    imageUrl: '/placeholders/product-3.avif',
+    hoverImageUrl: '/placeholders/product-4.avif',
     pricing: { currentMinor: 1_899_900, originalMinor: null },
     metreage: null,
     isNew: false,
@@ -65,7 +65,7 @@ const PRODUCT_SHAPE = [
     slug: 'cotton-kurta-sage',
     type: 'SIMPLE',
     pieceCount: 1,
-    imageUrl: '/placeholders/product-4.png',
+    imageUrl: '/placeholders/product-4.avif',
     hoverImageUrl: null,
     pricing: { currentMinor: 599_900, originalMinor: null },
     metreage: null,
@@ -202,7 +202,7 @@ export function homepageFor(locale: Locale) {
         // them without reloading the page, carrying the playback position
         // across, so toggling the theme reads as a grade change rather than a
         // restart.
-        poster: { light: '/hero/poster-light.png', dark: '/hero/poster-dark.png' },
+        poster: { light: '/hero/poster-light.avif', dark: '/hero/poster-dark.avif' },
         video: { light: '/hero/light.mp4', dark: '/hero/dark.mp4' },
         headline: copy.heroHeadline,
         subheadline: copy.heroSubheadline,
@@ -223,7 +223,7 @@ export function homepageFor(locale: Locale) {
         tiles: copy.tiles.map((label, index) => ({
           id: TILE_IDS[index],
           label,
-          imageUrl: '/placeholders/category-' + String(index + 1) + '.png',
+          imageUrl: '/placeholders/category-' + String(index + 1) + '.avif',
           href: TILE_HREFS[index],
         })),
       },
@@ -232,7 +232,7 @@ export function homepageFor(locale: Locale) {
         id: 'fabric-story',
         heading: copy.bannerHeading,
         body: copy.bannerBody,
-        imageUrl: '/placeholders/editorial.png',
+        imageUrl: '/placeholders/editorial.avif',
         // Logical, not physical: the reading-end side in both directions.
         imageSide: 'end',
         cta: { label: copy.bannerCta, href: '/help/fabric-glossary' },

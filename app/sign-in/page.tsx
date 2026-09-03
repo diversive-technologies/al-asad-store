@@ -13,7 +13,7 @@ export default async function SignInPage() {
   const messages = await getMessages();
 
   return (
-    <section className="p-gutter mx-auto flex max-w-sm flex-col gap-4 py-12">
+    <section className="page-shell flex max-w-sm flex-col gap-4 py-12">
       <h1 className="text-fg text-2xl font-semibold">{messages.auth.signInHeading}</h1>
       <p className="text-fg-muted">{messages.auth.signInBody}</p>
 

@@ -37,7 +37,7 @@ export function Footer({ messages, newsletter }: FooterProps) {
 
   return (
     <footer className="border-border bg-surface-muted mt-12 border-t">
-      <div className="px-gutter mx-auto grid max-w-6xl gap-8 py-10 md:grid-cols-3">
+      <div className="page-shell grid gap-8 py-10 md:grid-cols-3">
         <nav aria-label={messages.nav.footerLabel} className="flex flex-col gap-3">
           <h2 className="text-fg text-sm font-semibold">{t.shopHeading}</h2>
           <ul className="flex flex-col gap-2">
@@ -68,7 +68,7 @@ export function Footer({ messages, newsletter }: FooterProps) {
       </div>
 
       <div className="border-border border-t">
-        <p className="px-gutter text-fg-muted mx-auto max-w-6xl py-4 text-xs">
+        <p className="page-shell text-fg-muted py-4 text-xs">
           {messages.site.name} — {t.rightsReserved}
         </p>
       </div>

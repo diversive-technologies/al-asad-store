@@ -16,7 +16,7 @@ export function CategoryGridSection({ section }: CategoryGridSectionProps) {
   if (section.tiles.length === 0) return null;
 
   return (
-    <section className="p-gutter flex flex-col gap-4">
+    <section className="page-shell flex flex-col gap-4 py-12">
       <h2 className="text-fg text-xl font-semibold">{section.title}</h2>
 
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">

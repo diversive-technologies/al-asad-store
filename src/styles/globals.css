@@ -156,6 +156,34 @@ body:has(.hero-frame) header[data-scrolled='false']::before {
   );
 }
 
+/*
+ * THE content container. Every band of the page uses it, so the whole layout
+ * sits on one vertical rhythm instead of each section inventing its own.
+ *
+ * The width is capped by whichever is smaller of two things:
+ *
+ *  - a comfortable reading measure, and
+ *  - the width of the hero film, which is 16/9 of the viewport height because
+ *    the film is scaled by height.
+ *
+ * The second cap is the point. Past the width where the film stops filling the
+ * screen and gains bands beside it, content that kept spreading would run out
+ * past the footage and sit over the page background — the film centred, the
+ * page drifting wider than it. Tying the two together means the page can never
+ * be wider than the picture it sits under.
+ */
+@utility page-shell {
+  margin-inline: auto;
+  inline-size: 100%;
+  max-inline-size: min(80rem, calc(100svh * 16 / 9));
+  padding-inline: var(--spacing-gutter);
+
+  /* Content should not be pressed against the edge on a larger screen. */
+  @media (min-width: 48rem) {
+    padding-inline: calc(var(--spacing-gutter) * 2);
+  }
+}
+
 /* Hero height, as a named utility so STY-02 holds. */
 @utility hero-frame {
   /*
@@ -239,6 +267,45 @@ body {
 
 html[lang='ur'] body {
   font-family: var(--font-urdu);
+}
+
+/*
+ * Scrollbars, thin and in the page's own palette.
+ *
+ * Both syntaxes are needed and neither is redundant: `scrollbar-width` and
+ * `scrollbar-color` are the standard properties that Firefox honours, while
+ * WebKit and Blink still only respond to the `::-webkit-scrollbar` pseudo
+ * elements. They are set from the same tokens, so the two agree by
+ * construction and follow the theme without a second definition.
+ *
+ * This applies to nested scrollers too, such as the product rail — a heavy
+ * default bar under a row of cards is the one place it is most obvious.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+::-webkit-scrollbar {
+  inline-size: 8px;
+  block-size: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-fg-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* STY-10 — a visible focus ring is never removed without an equivalent replacement. */

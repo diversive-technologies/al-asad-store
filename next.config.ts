@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
    * resolve, and they must never be traced into the edge runtime. Removing
    * these entries once the Java service replaces the mock layer is expected.
    */
+  /*
+   * Serve AVIF where the browser accepts it, WebP otherwise. The source assets
+   * are already AVIF, but next/image re-encodes per requested width, so the
+   * output format has to be stated here or it falls back to WebP only.
+   */
+  images: { formats: ['image/avif', 'image/webp'] },
   serverExternalPackages: ['msw', '@mswjs/interceptors'],
 };
 

@@ -27,7 +27,7 @@ export function HeroVideoSection({ section }: HeroVideoSectionProps) {
        * footage rather than over the page background, where light-on-media text
        * would be unreadable in the light theme.
        */}
-      <div className="px-gutter mx-auto w-full max-w-6xl pb-16">
+      <div className="page-shell pb-16">
         <div className="flex max-w-xl flex-col items-start gap-4 text-start">
           <h1 className="text-on-media text-3xl font-semibold sm:text-5xl">{section.headline}</h1>
           <p className="text-on-media/90">{section.subheadline}</p>

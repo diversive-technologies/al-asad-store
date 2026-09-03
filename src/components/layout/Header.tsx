@@ -37,7 +37,7 @@ export function Header({ messages, localeSwitcher }: HeaderProps) {
 
   return (
     <StickyHeaderShell>
-      <div className="px-gutter h-header mx-auto flex max-w-6xl items-center justify-between gap-4">
+      <div className="page-shell h-header flex items-center justify-between gap-4">
         <Link
           href={ROUTES.home}
           className="text-lg font-semibold tracking-wide transition-opacity hover:opacity-70"

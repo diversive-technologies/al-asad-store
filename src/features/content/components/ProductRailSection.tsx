@@ -30,7 +30,7 @@ export function ProductRailSection({
   if (entries.length === 0) return null;
 
   return (
-    <section className="p-gutter flex flex-col gap-4">
+    <section className="page-shell flex flex-col gap-4 py-12">
       <header className="flex items-baseline justify-between gap-4">
         <h2 className="text-fg text-xl font-semibold">{section.title}</h2>
         <Link
@@ -42,7 +42,7 @@ export function ProductRailSection({
       </header>
 
       <ul
-        className="-mx-gutter px-gutter flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2"
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3"
         aria-label={section.title}
       >
         {entries.map((entry, index) => (
