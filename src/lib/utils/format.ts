@@ -54,3 +54,26 @@ export function formatMetres(metres: number, locale: Locale): string {
     maximumFractionDigits: 2,
   }).format(metres);
 }
+
+/**
+ * I18N-07 — plural selection through the locale's own rules, never a ternary.
+ *
+ * `count === 1 ? 'item' : 'items'` hard-codes English grammar into the
+ * component tree. Urdu's categories are not English's, and a language added
+ * later may have three or six. `Intl.PluralRules` knows them; we do not.
+ *
+ * I18N-08 — the number is formatted through the locale formatter as well, so
+ * the digits match the surrounding text rather than defaulting to Latin.
+ */
+export function formatPlural(
+  forms: Readonly<Record<string, string>>,
+  count: number,
+  locale: Locale,
+): string {
+  const category = new Intl.PluralRules(BCP47[locale]).select(count);
+  // `other` is the one category every locale defines, so it is the only safe
+  // fallback when a translation omits a form.
+  const template = forms[category] ?? forms.other ?? '';
+
+  return template.replace('{count}', formatNumber(count, locale));
+}

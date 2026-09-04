@@ -16,6 +16,12 @@ export interface ProductCardProps {
   messages: Messages;
   /** PERF-07: only the first row above the fold should preload its image. */
   hasPriorityImage?: boolean;
+  /**
+   * NEXT-09: the asymmetric grid gives tiles different widths, so the caller
+   * states how wide this card actually renders. A single hard-coded value would
+   * make a double-width tile request an undersized image and show it soft.
+   */
+  sizes?: string;
 }
 
 /**
@@ -30,6 +36,7 @@ export function ProductCard({
   locale,
   messages,
   hasPriorityImage = false,
+  sizes = '(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 60vw',
 }: ProductCardProps) {
   const { product, availability } = entry;
   const badges = deriveProductBadges(product, availability);
@@ -47,7 +54,7 @@ export function ProductCard({
             src={product.imageUrl}
             alt={product.name}
             fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 60vw"
+            sizes={sizes}
             priority={hasPriorityImage}
             className={cn(
               'object-cover transition-opacity duration-300 motion-reduce:transition-none',
@@ -63,7 +70,7 @@ export function ProductCard({
               alt=""
               aria-hidden
               fill
-              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 60vw"
+              sizes={sizes}
               className="object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100 motion-reduce:transition-none"
             />
           )}

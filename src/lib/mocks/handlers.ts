@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 
+import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue-search';
 import { AVAILABILITY, homepageFor, MOCK_SESSION, NEWSLETTER_SUBSCRIPTION } from './db';
 
 /**
@@ -40,6 +41,35 @@ export const handlers = [
 
     const wanted = new Set(requested.split(','));
     return HttpResponse.json(AVAILABILITY.filter((entry) => wanted.has(entry.productId)));
+  }),
+
+  /*
+   * Section 15 `search`. This genuinely filters, sorts, pages and computes
+   * facet counts in the current filter context — a handler returning a fixed
+   * list would let a filter panel be built that looks right and is wrong the
+   * moment the real service applies context.
+   */
+  http.get(`*${ENDPOINTS.catalogue.search}`, ({ request }) =>
+    HttpResponse.json(searchCatalogue(new URL(request.url))),
+  ),
+
+  http.get(`*${ENDPOINTS.catalogue.suggest}`, ({ request }) =>
+    HttpResponse.json(suggestCatalogue(new URL(request.url))),
+  ),
+
+  /*
+   * Section 15 `byCode(code) -> Product?`. A miss is a 404 rather than a null
+   * body, because "no such product" is an HTTP outcome; the feature's reader
+   * translates that one status back into `ok(null)`.
+   */
+  http.get(`*${ENDPOINTS.catalogue.byCode}`, ({ request }) => {
+    const url = new URL(request.url);
+    const requestedLocale = url.searchParams.get('locale');
+    const locale = isLocale(requestedLocale) ? requestedLocale : DEFAULT_LOCALE;
+    const product = findRecordByCode(url.searchParams.get('code') ?? '', locale);
+
+    if (product === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(product);
   }),
 
   http.post(`*${ENDPOINTS.newsletter.subscribe}`, () =>

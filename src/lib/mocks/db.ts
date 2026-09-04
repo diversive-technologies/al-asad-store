@@ -1,5 +1,7 @@
 import type { Locale } from '@/i18n/locales';
 
+import { CATALOGUE, toProductCard } from './catalogue-db';
+
 /**
  * D1 — THE fixture source for the mock layer.
  *
@@ -15,127 +17,39 @@ import type { Locale } from '@/i18n/locales';
  * Content is held per locale because the real endpoints are locale-scoped
  * (sections 21 and 22). Serving one language for both would hide exactly the
  * class of bug this store cannot afford: an English string inside an Urdu page.
- */
-
-const PRODUCT_IDS = [
-  '7d1f0a2c-9b4e-4c8a-8f21-0a5c6e3d1b01',
-  '7d1f0a2c-9b4e-4c8a-8f21-0a5c6e3d1b02',
-  '7d1f0a2c-9b4e-4c8a-8f21-0a5c6e3d1b03',
-  '7d1f0a2c-9b4e-4c8a-8f21-0a5c6e3d1b04',
-] as const;
-
-/** Fields that never differ by locale: identity, imagery, price, structure. */
-const PRODUCT_SHAPE = [
-  {
-    id: PRODUCT_IDS[0],
-    slug: 'embroidered-lawn-three-piece-ivory',
-    type: 'SET',
-    pieceCount: 3,
-    imageUrl: '/placeholders/product-1.avif',
-    hoverImageUrl: '/placeholders/product-2.avif',
-    pricing: { currentMinor: 1_249_900, originalMinor: null },
-    metreage: null,
-    isNew: true,
-  },
-  {
-    id: PRODUCT_IDS[1],
-    slug: 'printed-lawn-unstitched-indigo',
-    type: 'SIMPLE',
-    pieceCount: 1,
-    imageUrl: '/placeholders/product-2.avif',
-    hoverImageUrl: null,
-    pricing: { currentMinor: 449_900, originalMinor: 649_900 },
-    // Unstitched is sold by length, not by size.
-    metreage: 3.5,
-    isNew: false,
-  },
-  {
-    id: PRODUCT_IDS[2],
-    slug: 'chiffon-two-piece-rose',
-    type: 'SET',
-    pieceCount: 2,
-    imageUrl: '/placeholders/product-3.avif',
-    hoverImageUrl: '/placeholders/product-4.avif',
-    pricing: { currentMinor: 1_899_900, originalMinor: null },
-    metreage: null,
-    isNew: false,
-  },
-  {
-    id: PRODUCT_IDS[3],
-    slug: 'cotton-kurta-sage',
-    type: 'SIMPLE',
-    pieceCount: 1,
-    imageUrl: '/placeholders/product-4.avif',
-    hoverImageUrl: null,
-    pricing: { currentMinor: 599_900, originalMinor: null },
-    metreage: null,
-    isNew: true,
-  },
-] as const;
-
-interface ProductCopy {
-  name: string;
-  workType: string;
-  fabricName: string;
-  colourName: string;
-}
-
-/**
- * Localised catalogue fields. Section 22: fabric names carry a fixed Urdu
- * transliteration from the protected-terms list and are never machine
- * translated — "Lawn" must not become the word for grass.
- */
-const PRODUCT_COPY: Record<Locale, readonly ProductCopy[]> = {
-  en: [
-    {
-      name: 'Embroidered lawn three-piece',
-      workType: 'Embroidered',
-      fabricName: 'Lawn',
-      colourName: 'Ivory',
-    },
-    {
-      name: 'Printed lawn, unstitched',
-      workType: 'Printed',
-      fabricName: 'Lawn',
-      colourName: 'Indigo',
-    },
-    {
-      name: 'Chiffon two-piece',
-      workType: 'Hand-finished',
-      fabricName: 'Chiffon',
-      colourName: 'Rose',
-    },
-    { name: 'Cotton kurta', workType: 'Plain', fabricName: 'Cotton', colourName: 'Sage' },
-  ],
-  ur: [
-    {
-      name: 'کڑھائی والا لان تھری پیس',
-      workType: 'کڑھائی',
-      fabricName: 'لان',
-      colourName: 'عاجی',
-    },
-    { name: 'پرنٹڈ لان، بغیر سلا', workType: 'پرنٹڈ', fabricName: 'لان', colourName: 'نیلا' },
-    { name: 'شفون ٹو پیس', workType: 'ہاتھ سے تیار', fabricName: 'شفون', colourName: 'گلابی' },
-    { name: 'کاٹن کرتا', workType: 'سادہ', fabricName: 'کاٹن', colourName: 'سبزہ' },
-  ],
-};
-
-function productsFor(locale: Locale) {
-  return PRODUCT_SHAPE.map((shape, index) => ({ ...shape, ...PRODUCT_COPY[locale][index] }));
-}
-
-/**
- * The availability overlay of architecture 8.2.
  *
- * Deliberately varied so the running store exercises every badge path — and the
- * fourth product is intentionally absent, so the "availability unknown" path is
- * exercised in the real app rather than only in a unit test.
+ * Products come from `catalogue-db`, not from a second list here. The homepage
+ * rail and the listing page are two views of ONE catalogue, and a separate
+ * homepage fixture would let them disagree about what the store sells (PD-01).
  */
-export const AVAILABILITY = [
-  { productId: PRODUCT_IDS[0], status: 'IN_STOCK', unavailablePieceNames: [] },
-  { productId: PRODUCT_IDS[1], status: 'LOW_STOCK', unavailablePieceNames: [] },
-  { productId: PRODUCT_IDS[2], status: 'SOLD_OUT', unavailablePieceNames: ['Dupatta'] },
-] as const;
+
+/**
+ * The availability overlay of architecture 8.2, derived from the catalogue so a
+ * product cannot exist in one and be missing from the other.
+ *
+ * Two products are deliberately withheld: availability that never arrives is a
+ * real state the interface has to handle without claiming an item is buyable
+ * (DATA-13a), and it should be reachable in the running store rather than only
+ * in a unit test.
+ */
+export const AVAILABILITY = CATALOGUE.filter((_, index) => index % 11 !== 6).map(
+  (record, index) => {
+    if (!record.isInStock) {
+      return {
+        productId: record.id,
+        status: 'SOLD_OUT' as const,
+        // A SET is unbuyable when one piece is gone, and the backend says which.
+        unavailablePieceNames: record.type === 'SET' ? ['Dupatta'] : [],
+      };
+    }
+
+    return {
+      productId: record.id,
+      status: index % 5 === 2 ? ('LOW_STOCK' as const) : ('IN_STOCK' as const),
+      unavailablePieceNames: [],
+    };
+  },
+);
 
 interface HomepageCopy {
   heroHeadline: string;
@@ -185,6 +99,8 @@ const TILE_HREFS = [
   '/catalogue?pieceCount=3',
 ] as const;
 
+const RAIL_LENGTH = 8;
+
 /**
  * Section 28.4: a video and four sections. *Which* four is editorial
  * configuration, so this represents what the operator would have set up in the
@@ -213,7 +129,7 @@ export function homepageFor(locale: Locale) {
         id: 'new-arrivals',
         title: copy.railTitle,
         collectionSlug: 'new-arrivals',
-        products: productsFor(locale),
+        products: CATALOGUE.slice(0, RAIL_LENGTH).map((record) => toProductCard(record, locale)),
         viewAllHref: '/catalogue?collection=new-arrivals',
       },
       {
