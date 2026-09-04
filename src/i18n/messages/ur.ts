@@ -42,6 +42,7 @@ export const ur: Messages = {
     lowStockBadge: 'اسٹاک کم ہے',
     soldOutBadge: 'ختم ہو گیا',
     setLabel: 'سیٹ',
+    singleLabel: 'ایک پیس',
     pieceCountLabel: 'اجزاء',
     originalPriceLabel: 'پہلے',
     metreageLabel: 'کپڑے کی لمبائی',
@@ -83,6 +84,11 @@ export const ur: Messages = {
     sizeGuide: 'سائز کی رہنمائی',
     careGuide: 'دیکھ بھال کی رہنمائی',
     rightsReserved: 'جملہ حقوق محفوظ ہیں۔',
+  },
+  bag: {
+    title: 'تھیلا',
+    emptyBody: 'آپ کا تھیلا خالی ہے۔',
+    startShopping: 'خریداری شروع کریں',
   },
   catalogue: {
     title: 'مجموعہ',

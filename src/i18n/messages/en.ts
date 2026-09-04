@@ -41,6 +41,7 @@ export const en = {
     lowStockBadge: 'Low stock',
     soldOutBadge: 'Sold out',
     setLabel: 'Set',
+    singleLabel: 'Single piece',
     pieceCountLabel: 'Pieces',
     originalPriceLabel: 'Was',
     metreageLabel: 'Fabric length',
@@ -82,6 +83,11 @@ export const en = {
     sizeGuide: 'Size guide',
     careGuide: 'Care guide',
     rightsReserved: 'All rights reserved.',
+  },
+  bag: {
+    title: 'Bag',
+    emptyBody: 'Your bag is empty.',
+    startShopping: 'Start shopping',
   },
   catalogue: {
     title: 'Catalogue',

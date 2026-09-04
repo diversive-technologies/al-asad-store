@@ -1,6 +1,5 @@
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { cn } from '@/lib/utils/cn';
 
 import type { ProductCardWithAvailability } from '../lib/product-card';
 import { ProductCard } from './ProductCard';
@@ -12,50 +11,41 @@ export interface ProductGridProps {
 }
 
 /**
- * Section 28.1's "repeating asymmetric grid".
+ * Section 28.1's "repeating asymmetric grid", as a vertical stagger.
  *
- * The rhythm repeats every six tiles: the first of each block spans two columns
- * from the large breakpoint up. That gives the page editorial variety without
- * the card knowing anything about it — a card is the same component whatever
- * width it lands in, which is why the grid could be added after the card was
- * already built and used on the homepage.
+ * Every tile is the same size and the same 4:5 portrait crop; the rhythm comes
+ * from alternate columns being dropped, not from some products being larger.
  *
- * The pattern is index-based rather than data-driven on purpose. Tying tile size
- * to a product attribute would mean a filtered result set could produce a page
- * of all-wide or all-narrow tiles, and the layout would collapse on exactly the
- * views a customer reaches by filtering.
+ * That distinction matters commercially. A mosaic decides, by grid position,
+ * which products get a big tile — and the customer has just told us their
+ * priority by choosing a sort. Giving product three a quarter of the space of
+ * product one contradicts the order they asked for. Here nothing is demoted, and
+ * a filtered result can never produce a page of all-large or all-small tiles.
  *
- * RTL needs nothing here: CSS Grid places tiles along the inline axis, so the
- * whole arrangement mirrors from `dir` alone (I18N-04).
+ * It also cannot leave a hole: a short final row is simply a short row, with no
+ * two-row frame to fill.
+ *
+ * The offsets themselves live in the `staggered-grid` utility, where the column
+ * arithmetic can be expressed once per breakpoint (SSOT-01, STY-02).
  */
-const BLOCK_SIZE = 6;
 
-/** Matching `sizes` per tile, so a wide tile does not request a narrow image. */
-const WIDE_SIZES = '(min-width: 1024px) 50vw, (min-width: 640px) 66vw, 100vw';
-const NARROW_SIZES = '(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw';
-
-/** The first row is above the fold; PERF-07 preloads only those images. */
-const ABOVE_THE_FOLD = 4;
+/** PERF-07: roughly the first two rows at the widest breakpoint. */
+const ABOVE_THE_FOLD = 8;
 
 export function ProductGrid({ entries, locale, messages }: ProductGridProps) {
   return (
-    <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {entries.map((entry, index) => {
-        const isWide = index % BLOCK_SIZE === 0;
-
-        return (
-          // CMP-10: a stable, domain-derived key.
-          <li key={entry.product.id} className={cn(isWide ? 'lg:col-span-2' : null)}>
-            <ProductCard
-              entry={entry}
-              locale={locale}
-              messages={messages}
-              hasPriorityImage={index < ABOVE_THE_FOLD}
-              sizes={isWide ? WIDE_SIZES : NARROW_SIZES}
-            />
-          </li>
-        );
-      })}
+    <ul className="staggered-grid pb-stagger">
+      {entries.map((entry, index) => (
+        // CMP-10: a stable, domain-derived key.
+        <li key={entry.product.id}>
+          <ProductCard
+            entry={entry}
+            locale={locale}
+            messages={messages}
+            hasPriorityImage={index < ABOVE_THE_FOLD}
+          />
+        </li>
+      ))}
     </ul>
   );
 }

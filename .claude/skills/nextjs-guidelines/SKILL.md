@@ -1,6 +1,6 @@
 ---
 name: nextjs-guidelines
-description: BINDING rulebook for all Next.js frontend code in this project (ethnic apparel e-commerce, EN/UR). Load before writing, generating, reviewing or refactoring ANY frontend file — components, pages, routes, hooks, API client code, forms, styling, state, i18n — and before adding a dependency, creating a directory, or answering "how should this be structured". Covers project structure, SSOT registries, layering, Tailwind/CSS Modules, TanStack Query, Zod, error handling, RTL, accessibility, testing and the consolidated prohibitions.
+description: BINDING rulebook for all Next.js frontend code in this project (ethnic apparel e-commerce, EN/UR). Load before writing, reviewing or refactoring ANY frontend file — components, pages, routes, hooks, API client, forms, styling, state, i18n — and before adding a dependency or creating a directory. Covers structure, SSOT registries, layering, Tailwind, TanStack Query, Zod, error handling, RTL, accessibility, testing and the prohibitions.
 ---
 
 # Next.js Coding & Design Guidelines — router

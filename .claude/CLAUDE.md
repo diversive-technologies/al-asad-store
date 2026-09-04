@@ -36,6 +36,18 @@ auto-imported into every session.
 Where the guidelines and the architecture doc conflict, surface it — do not
 silently pick one.
 
+## Where the build is
+
+`PROGRESS.md` records state — which super-modules are done, what is left in the
+one in flight, what is uncommitted, and the gaps that are deliberate. It is
+imported rather than looked up, because "what is already built" is the one thing
+worth knowing before the first tool call of a session.
+
+It holds no rules. When it goes stale it is a liability, so update it at the end
+of an iteration rather than at the end of a module.
+
+@./PROGRESS.md
+
 ## Git
 
 The full working agreement is `.claude/GIT.md`, imported here so it loads every

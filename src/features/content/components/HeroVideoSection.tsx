@@ -22,7 +22,10 @@ export interface HeroVideoSectionProps {
  */
 export function HeroVideoSection({ section }: HeroVideoSectionProps) {
   return (
-    <section className="bg-media-band hero-frame -mt-header relative isolate flex items-end">
+    <section
+      data-hero
+      className="bg-media-band hero-frame -mt-header relative isolate flex items-end"
+    >
       <HeroMedia poster={section.poster} video={section.video} />
 
       {/*

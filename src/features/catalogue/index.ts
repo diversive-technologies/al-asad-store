@@ -8,6 +8,7 @@ export { findByCode } from './api/find-by-code';
 export { searchProducts } from './api/search-products';
 export { suggest } from './api/suggest';
 export { CatalogueScreen, type CatalogueScreenProps } from './components/CatalogueScreen';
+export { ListingSkeleton } from './components/ListingSkeleton';
 export { Pagination, type PaginationProps } from './components/Pagination';
 export { ProductBadge, type ProductBadgeProps } from './components/ProductBadge';
 export { ProductGrid, type ProductGridProps } from './components/ProductGrid';

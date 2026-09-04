@@ -4,6 +4,7 @@ import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 
 import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue-search';
+import { pageFor } from './pages-db';
 import { AVAILABILITY, homepageFor, MOCK_SESSION, NEWSLETTER_SUBSCRIPTION } from './db';
 
 /**
@@ -26,6 +27,21 @@ export const handlers = [
     const locale = isLocale(requested) ? requested : DEFAULT_LOCALE;
 
     return HttpResponse.json(homepageFor(locale));
+  }),
+
+  /*
+   * Section 21 `page(slug, locale)`. A missing page is a 404, the same as a
+   * missing product — the reader translates that one status into `ok(null)` and
+   * the route turns it into notFound().
+   */
+  http.get(`*${ENDPOINTS.content.page}`, ({ request }) => {
+    const url = new URL(request.url);
+    const requested = url.searchParams.get('locale');
+    const locale = isLocale(requested) ? requested : DEFAULT_LOCALE;
+    const page = pageFor(url.searchParams.get('slug') ?? '', locale);
+
+    if (page === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(page);
   }),
 
   /*

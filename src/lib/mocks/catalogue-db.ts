@@ -184,10 +184,13 @@ export function toProductCard(record: CatalogueRecord, locale: Locale): ProductC
     type: record.type,
     pieceCount: record.pieceCount,
     imageUrl: `/placeholders/product-${String(record.imageIndex)}.avif`,
-    hoverImageUrl:
-      record.imageIndex % 2 === 1
-        ? `/placeholders/product-${String((record.imageIndex % 4) + 1)}.avif`
-        : null,
+    /*
+     * Every product carries a hover image. The contract keeps this nullable
+     * because a real catalogue will have products shot only once, but giving
+     * only half the fixture one made the grid look broken rather than varied —
+     * hovering appeared to work at random.
+     */
+    hoverImageUrl: `/placeholders/product-${String((record.imageIndex % 4) + 1)}.avif`,
     workType: vocabularyLabel(locale, record.workType),
     fabricName: vocabularyLabel(locale, record.fabric),
     colourName: vocabularyLabel(locale, record.colour),

@@ -70,6 +70,8 @@
   --spacing-header: 4rem;
   /* How far the ambient glow reaches below the film before it is fully faded. */
   --spacing-ambient-spill: 7.5rem;
+  /* How far alternate columns of the listing grid drop. */
+  --spacing-stagger: 3rem;
 
   /*
    * I18N-11 — the stack covers both scripts. `--font-latin` and `--font-urdu`
@@ -126,24 +128,29 @@
 /*
  * The bar floats, white-on-film, ONLY while it is genuinely over media.
  *
- * `:has(.hero-frame)` is the condition, and it has to be a condition rather
- * than the default. A page with no hero — sign-in, and every page M2 onward —
- * puts the bar over the page background, where light-on-media text is
- * invisible in the light theme. Tying the treatment to "is there a full-bleed
- * hero behind me" means new pages get a readable bar without opting in, and
- * cannot forget to.
+ * The marker is `[data-hero]`, deliberately NOT the `hero-frame` class.
+ *
+ * Keying off the layout utility was a bug: a loading skeleton legitimately
+ * reuses `hero-frame` to reserve the right amount of space, which made the bar
+ * turn transparent during every navigation and flash a dark gradient across the
+ * top of the page. An attribute that means "a real hero is behind me" cannot be
+ * borrowed by a placeholder.
+ *
+ * It has to be a condition rather than the default: a page with no hero puts the
+ * bar over the page background, where light-on-media text is invisible in the
+ * light theme. New pages get a readable bar without opting in.
  *
  * The gradient is what makes the text legible over BOTH the film and the page
  * background bands beside it on a wide screen, which a flat colour cannot do
  * because those two backgrounds move in opposite directions between themes.
  */
-body:has(.hero-frame) header[data-scrolled='false'] {
+body:has([data-hero]) header[data-scrolled='false'] {
   color: var(--color-on-media);
   background-color: transparent;
   border-block-end-color: transparent;
 }
 
-body:has(.hero-frame) header[data-scrolled='false']::before {
+body:has([data-hero]) header[data-scrolled='false']::before {
   content: '';
   position: absolute;
   inset-block-start: 0;
@@ -182,6 +189,71 @@ body:has(.hero-frame) header[data-scrolled='false']::before {
   /* Content should not be pressed against the edge on a larger screen. */
   @media (min-width: 48rem) {
     padding-inline: calc(var(--spacing-gutter) * 2);
+  }
+}
+
+/*
+ * The listing grid: uniform portrait tiles with alternate columns dropped.
+ *
+ * Every product is framed identically and given equal prominence — nothing is
+ * visually demoted by landing in a small cell, which is the failure mode of a
+ * mosaic when the customer has just chosen a sort order. The rhythm comes from
+ * vertical offset rather than from size.
+ *
+ * `margin-block-start` rather than `translate`: a transform leaves the layout box
+ * in place and lets a dropped tile overlap the row beneath it, while a margin
+ * makes the row genuinely taller and keeps every tile clear of its neighbours.
+ * `align-items: start` stops the un-dropped tiles stretching to match.
+ *
+ * The offset is reset at each breakpoint before the next is applied, because
+ * which columns count as "alternate" changes with the column count.
+ */
+/* Reserves the overhang left by the dropped column at the end of the grid. */
+@utility pb-stagger {
+  padding-block-end: var(--spacing-stagger);
+}
+
+@utility staggered-grid {
+  display: grid;
+  align-items: start;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  & > *:nth-child(2n) {
+    margin-block-start: var(--spacing-stagger);
+  }
+
+  @media (min-width: 48rem) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+
+    /*
+     * `:nth-child(n)` rather than `*`, and the difference is not cosmetic: the
+     * reset has to match the specificity of the offset rules it undoes. A bare
+     * `& > *` is (0,1,0) while `& > *:nth-child(2n)` is (0,2,0), so the narrower
+     * breakpoint's offsets survived into the wider ones and the columns dropped
+     * in the wrong pattern. Media queries add no specificity — only source order
+     * breaks the tie, and only at equal specificity.
+     */
+    & > *:nth-child(n) {
+      margin-block-start: 0;
+    }
+    & > *:nth-child(3n + 2) {
+      margin-block-start: var(--spacing-stagger);
+    }
+  }
+
+  @media (min-width: 64rem) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.5rem;
+
+    & > *:nth-child(n) {
+      margin-block-start: 0;
+    }
+    & > *:nth-child(4n + 2),
+    & > *:nth-child(4n + 4) {
+      margin-block-start: var(--spacing-stagger);
+    }
   }
 }
 

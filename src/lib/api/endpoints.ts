@@ -9,6 +9,8 @@ export const ENDPOINTS = {
   content: {
     /** Section 21 ContentQuery.homepage(locale) — locale travels as a query param. */
     homepage: '/api/v1/content/homepage',
+    /** Section 21 ContentQuery.page(slug, locale) — the four help pages of 28.4. */
+    page: '/api/v1/content/pages',
   },
   catalogue: {
     /**
