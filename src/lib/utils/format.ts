@@ -1,4 +1,4 @@
-import { CURRENCY, MINOR_UNITS_PER_MAJOR } from '@/config/constants';
+import { CLIENT } from '@/config/client';
 import type { Locale } from '@/i18n/locales';
 
 /**
@@ -15,7 +15,11 @@ import type { Locale } from '@/i18n/locales';
  * Urdu and wrongly for this system's only market (DATA-11a). Month names,
  * currency placement and date order still localise.
  */
-const BCP47: Record<Locale, string> = { en: 'en-PK', ur: 'ur-PK' };
+function tagFor(locale: Locale): string {
+  // Falls back to the bare language when a client adds a locale without a
+  // region tag. `Intl` accepts that and simply picks CLDR's own default.
+  return CLIENT.market.formatting[locale] ?? locale;
+}
 
 /**
  * Money is held and computed in minor units (paisa) as integers. Conversion to
@@ -25,20 +29,22 @@ const BCP47: Record<Locale, string> = { en: 'en-PK', ur: 'ur-PK' };
  * serves one market in one currency.
  */
 export function formatMoneyMinor(amountMinor: number, locale: Locale): string {
-  return new Intl.NumberFormat(BCP47[locale], {
+  const { currency } = CLIENT.market;
+
+  return new Intl.NumberFormat(tagFor(locale), {
     style: 'currency',
-    currency: CURRENCY,
+    currency: currency.code,
     maximumFractionDigits: 0,
-  }).format(amountMinor / MINOR_UNITS_PER_MAJOR);
+  }).format(amountMinor / currency.minorUnitsPerMajor);
 }
 
 export function formatNumber(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(BCP47[locale]).format(value);
+  return new Intl.NumberFormat(tagFor(locale)).format(value);
 }
 
 /** Dates cross the wire as ISO-8601 strings (DATA-12) and are parsed here. */
 export function formatDate(isoDate: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(BCP47[locale], {
+  return new Intl.DateTimeFormat(tagFor(locale), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -47,7 +53,7 @@ export function formatDate(isoDate: string, locale: Locale): string {
 
 /** Metreage for unstitched fabric, which is sold by length rather than by size. */
 export function formatMetres(metres: number, locale: Locale): string {
-  return new Intl.NumberFormat(BCP47[locale], {
+  return new Intl.NumberFormat(tagFor(locale), {
     style: 'unit',
     unit: 'meter',
     unitDisplay: 'short',
@@ -70,7 +76,7 @@ export function formatPlural(
   count: number,
   locale: Locale,
 ): string {
-  const category = new Intl.PluralRules(BCP47[locale]).select(count);
+  const category = new Intl.PluralRules(tagFor(locale)).select(count);
   // `other` is the one category every locale defines, so it is the only safe
   // fallback when a translation omits a form.
   const template = forms[category] ?? forms.other ?? '';

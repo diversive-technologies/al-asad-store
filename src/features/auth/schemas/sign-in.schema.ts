@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { CLIENT } from '@/config/client';
+
 /**
  * FORM-01 / SSOT-09 — one schema for client validation and the inferred type.
  *
@@ -11,11 +13,13 @@ import { z } from 'zod';
  * to a mobile; the mobile field is the part of that shape which survives.
  */
 export const signInSchema = z.object({
-  // Pakistani mobile numbers: 03xx xxxxxxx, with optional spaces or dashes.
-  mobile: z
-    .string()
-    .trim()
-    .regex(/^03\d{2}[\s-]?\d{7}$/),
+  /*
+   * D5: the national number format is the CLIENT's, not this schema's. A
+   * deployment in another market changes one entry in the client profile and
+   * both the validation and the placeholder follow, because they read the same
+   * source (PD-01).
+   */
+  mobile: z.string().trim().regex(CLIENT.market.mobile.pattern),
 });
 
 export type SignInInput = z.infer<typeof signInSchema>;

@@ -90,7 +90,6 @@ export const ur: Messages = {
     signInHeading: 'سائن اِن',
     signInBody: 'اصل تصدیقی نظام تیار ہونے تک یہ عارضی سائن اِن ہے۔',
     mobileLabel: 'موبائل نمبر',
-    mobilePlaceholder: '03xx xxxxxxx',
     signInCta: 'جاری رکھیں',
     invalidMobile: 'درست پاکستانی موبائل نمبر درج کریں۔',
     signedInAs: 'سائن اِن ہیں',

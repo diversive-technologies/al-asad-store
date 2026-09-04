@@ -159,21 +159,27 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 
 ## Uncommitted work
 
-The M3 slice described above. Two bugs were found by exercising it and fixed:
+The D5 productisation pass — one codebase, many client deployments:
 
-- The unified selector reused the first piece's id, so it shared a radio group
-  AND duplicate DOM ids with that piece's own override — choosing a unified size
-  silently unchecked the piece's control. It now has its own group.
-- A unified size was assigned to pieces where that size was SOLD OUT, and the
-  selection then reported itself complete. It now skips those pieces, so the
-  customer is asked to choose rather than led toward a reservation §7.1 would
-  refuse. Five tests cover it, including the §30.2 fallback where a degraded
-  overlay must not refuse every size.
+- `src/config/client.ts` — THE client profile: market, currency (with its own
+  minor-unit divisor, because 100 is a property of PKR and not of money),
+  per-locale BCP-47 tags, the national mobile format, and feature switches. Its
+  doc comment is the onboarding checklist for a new client.
+- `src/config/fonts.ts` — typefaces centralised out of the root layout.
+- `constants.ts` narrowed to values that are the same for every client.
+- `format.ts`, `price-input.ts` and the sign-in schema now read the profile;
+  the mobile placeholder reads the same entry as its pattern, so the two cannot
+  drift, and its duplicate message key is gone.
+- `newsletter` and `themeToggle` are feature-flagged; the locale switcher is
+  DERIVED from `LOCALES.length` rather than flagged, so it cannot contradict the
+  locale list.
+- `client.test.ts` — 5 tests guarding the quiet failures.
 
-Verified: **typecheck, lint, 104 tests and the production build all pass.** The
-page was exercised for an unstitched product (no sizes), a stitched SIMPLE (one
-selector) and a SET (unified plus overrides), with the gallery and the unified
-selector driven by real pointer clicks.
+Proven, not assumed: flipping the profile to a Dubai client rendered prices as
+`AED 3,499`, removed the theme toggle from the header and the newsletter from the
+footer, with no other edit. Reverted afterwards.
+
+Verified: **typecheck, lint, 109 tests and the production build all pass.**
 
 ---
 

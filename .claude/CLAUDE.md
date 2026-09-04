@@ -102,6 +102,50 @@ Note for whoever upgrades: TypeScript 6 deprecates `baseUrl`. `paths` in
 tsconfig resolves relative to the config file without it, so STRUCT-07 path
 aliases are unaffected.
 
+**D5 — One codebase, many deployments. Every client difference is data or
+configuration, never a code fork.**
+
+This storefront is being built for one client, but it is a *product*, not a
+bespoke site. It must be deliverable to another apparel retailer by changing
+configuration and content — not by editing components.
+
+**What this is, and what it is not.** This is productisation by configuration:
+one codebase, one deployment per client, differences resolved at build time.
+Each deployment remains single-market, single-currency, single-warehouse, so
+`DATA-11a` and architecture §1.3 hold exactly as written. It is NOT runtime
+multi-tenancy — one deployment serving many brands, with tenant resolution and
+data isolation. That would contradict `DATA-11a` outright and cost an order of
+magnitude more. If the goal ever changes to true multi-tenancy, that is a new
+decision that reopens the architecture, not an extension of this one.
+
+**The four homes.** Anything that can differ between clients belongs in exactly
+one of these, and a component that hard-codes one of them is a defect:
+
+| What varies | Where it lives |
+| --- | --- |
+| Market, currency, number formatting, feature switches | **`src/config/client.ts`** — start here; it documents the whole onboarding list |
+| Colour, spacing, radius, type scale | `@theme` tokens in `globals.css` (`SSOT-01`) |
+| Every user-visible string, in every language | `src/i18n/messages/*` (`SSOT-07`) |
+| Which languages, and the default | `src/i18n/locales.ts` (`I18N-03`) |
+| Typefaces | `src/config/fonts.ts` (`NEXT-10` forbids dynamic font loading) |
+| Routes, endpoints, app URL, secrets | `src/config/routes.ts`, `endpoints.ts`, `env.*.ts` (`SSOT-02`–`SSOT-04`) |
+| Products, imagery, homepage composition, help pages, legal copy | Backend content (architecture §21) |
+
+`src/config/client.test.ts` guards the invariants that would otherwise fail
+quietly — a locale with no formatting tag, a currency `Intl` does not recognise,
+an unanchored phone pattern.
+
+**The test to apply to every new file:** *could a second client change this
+without a developer editing a component?* If the answer is no and the thing is
+plausibly client-specific, it is in the wrong place.
+
+**The stated exception — domain is product, not client.** `SIMPLE`/`SET`,
+per-piece sizing, unstitched metreage, the fabric and colour vocabularies and
+the Fabric Calculator are the *product's* domain. A second ethnic-apparel
+retailer wants all of it. A furniture retailer is a different product, not a
+customisation, and pretending otherwise would drive an abstraction with one real
+user. Do not generalise the domain layer in the name of this decision.
+
 ## Build sequence — super-modules
 
 Delivery is by page-level vertical slice. These consume the 17 architecture

@@ -1,4 +1,4 @@
-import { MINOR_UNITS_PER_MAJOR } from '@/config/constants';
+import { CLIENT } from '@/config/client';
 
 /**
  * MOD-04 — pure, React-free, unit-testable. The only translation between the
@@ -27,7 +27,7 @@ export function parsePriceInput(value: string): number | null {
   // `Number` accepts '', whitespace and Infinity; none of them is a price.
   if (!Number.isFinite(major) || major < 0) return null;
 
-  return Math.round(major * MINOR_UNITS_PER_MAJOR);
+  return Math.round(major * CLIENT.market.currency.minorUnitsPerMajor);
 }
 
 /**
@@ -43,5 +43,5 @@ export function parsePriceInput(value: string): number | null {
 export function formatPriceInput(minor: number | null): string {
   if (minor === null) return '';
 
-  return String(minor / MINOR_UNITS_PER_MAJOR);
+  return String(minor / CLIENT.market.currency.minorUnitsPerMajor);
 }

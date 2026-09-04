@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
+import { CLIENT } from '@/config/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/config/routes';
@@ -64,7 +65,13 @@ export function SignInForm() {
           type="tel"
           inputMode="tel"
           autoComplete="tel"
-          placeholder={t.auth.mobilePlaceholder}
+          /*
+           * PD-01: the example is read from the same profile entry as the
+           * validation pattern, so the two cannot drift. It is a format sample
+           * rather than prose, which is why it is not in the message registry —
+           * a translator editing it would silently break the field.
+           */
+          placeholder={CLIENT.market.mobile.example}
           aria-invalid={Boolean(errors.mobile)}
           aria-describedby={errors.mobile ? 'sign-in-mobile-error' : undefined}
           {...register('mobile')}

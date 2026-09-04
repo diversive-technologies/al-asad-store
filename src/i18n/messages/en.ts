@@ -89,7 +89,6 @@ export const en = {
     signInHeading: 'Sign in',
     signInBody: 'A placeholder sign-in while the real authentication is designed.',
     mobileLabel: 'Mobile number',
-    mobilePlaceholder: '03xx xxxxxxx',
     signInCta: 'Continue',
     invalidMobile: 'Enter a valid Pakistani mobile number.',
     signedInAs: 'Signed in',

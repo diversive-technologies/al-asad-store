@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 
 import type { Metadata } from 'next';
-import { Inter, Noto_Nastaliq_Urdu } from 'next/font/google';
 
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { SkipLink } from '@/components/layout/SkipLink';
+import { CLIENT } from '@/config/client';
+import { fontVariables } from '@/config/fonts';
 import { SITE } from '@/config/site';
 import { HeaderSearch } from '@/features/catalogue';
 import { LocaleSwitcher } from '@/features/localisation';
@@ -23,26 +24,6 @@ import '@/styles/globals.css';
 
 /** A11Y-02: the skip link's destination, referenced in exactly one other place. */
 const MAIN_CONTENT_ID = 'main-content';
-
-// NEXT-10 — fonts come from next/font; third-party <link> tags are PROHIBITED.
-const latin = Inter({
-  subsets: ['latin'],
-  variable: '--font-latin',
-  display: 'swap',
-});
-
-/**
- * I18N-11 — the stack covers both scripts. `preload: false` keeps the Nastaliq
- * files off the critical path for English visitors: architecture 30.1 requires
- * that this face is loaded only for Urdu.
- */
-const nastaliq = Noto_Nastaliq_Urdu({
-  subsets: ['arabic'],
-  weight: ['400', '600'],
-  variable: '--font-nastaliq',
-  display: 'swap',
-  preload: false,
-});
 
 /**
  * NEXT-11 — metadata is exported, not injected.
@@ -103,7 +84,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
        * there is no flash and no blocking inline script.
        */
       data-theme={themePreference ?? undefined}
-      className={cn(latin.variable, nastaliq.variable)}
+      className={cn(fontVariables)}
       suppressHydrationWarning
     >
       <body className="flex min-h-dvh flex-col antialiased">
@@ -114,7 +95,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
               <Header
                 messages={messages}
-                localeSwitcher={<LocaleSwitcher currentLocale={locale} />}
+                /*
+                 * Derived, not flagged: a client with one language has nothing
+                 * to switch to, and a separate flag could contradict LOCALES.
+                 */
+                localeSwitcher={LOCALES.length > 1 ? <LocaleSwitcher currentLocale={locale} /> : null}
                 search={<HeaderSearch locale={locale} messages={messages} />}
               />
 
@@ -127,7 +112,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                 {children}
               </main>
 
-              <Footer messages={messages} newsletter={<NewsletterForm />} />
+              <Footer
+                messages={messages}
+                /* D5: an optional feature, so the slot is empty when it is off. */
+                newsletter={CLIENT.features.newsletter ? <NewsletterForm /> : null}
+              />
             </MessagesProvider>
           </ThemeProvider>
         </QueryProvider>

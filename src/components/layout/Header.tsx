@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
+import { CLIENT } from '@/config/client';
 import { ROUTES } from '@/config/routes';
 import type { Messages } from '@/i18n/messages/en';
 import { ShoppingBag } from '@/lib/vendor/icons';
@@ -63,7 +64,9 @@ export function Header({ messages, localeSwitcher, search }: HeaderProps) {
         <div className="flex shrink-0 items-center gap-1">
           {localeSwitcher}
 
-          <ThemeToggle />
+          {/* D5: some clients ship a single brand treatment. The tokens still
+              define both schemes; this removes the control, not the capability. */}
+          {CLIENT.features.themeToggle ? <ThemeToggle /> : null}
 
           {/* A11Y-04: icon-only controls carry an accessible name. */}
           <Link
