@@ -117,7 +117,8 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 
 ## Uncommitted work
 
-The progress-file reconciliation from `aca3d62`, and the header rework:
+The progress-file reconciliation from `aca3d62`, the header rework, and its
+follow-up fixes:
 
 - `HeaderSearch` (the morphing field), the `header-search` utility and its two
   tokens; `Header` takes it as a slot and no longer renders `PrimaryNav`, which
@@ -125,10 +126,21 @@ The progress-file reconciliation from `aca3d62`, and the header rework:
 - `CATALOGUE_ENTRY` section kind: schema, `CatalogueEntrySection`, the renderer
   case, both barrels, and fixture copy in both locales.
 - `nav.closeSearch` added; `nav.primaryLabel` removed with its only consumer.
+- Lines removed from the listing rail too: the filter-group separators, and the
+  rail's own scrollbar, which drew a full-height vertical rule down the side of
+  the filters. The rail still scrolls; only the indicator went.
+- Fixes on the field: the collapse animated as the reverse of the expansion
+  rather than the field vanishing; the field given its own foreground so the
+  close icon is not white-on-white over the hero in the light theme; and every
+  border and focus line removed from it by operator instruction — the input's
+  caret and the global outline on the two inner buttons still show keyboard
+  focus, so only the container's own indicator went, which was drawn on every
+  open regardless because the field autofocuses.
 
 Verified: **typecheck, lint, 65 tests and the production build all pass.** The
-search was exercised for open, Enter, submit, Escape, click-outside and focus
-restore, and the new section checked in both locales.
+search was exercised for open, focus, Enter, submit, Escape, click-outside,
+focus restore and the reverse collapse, in both locales and over both a
+transparent and a solid header.
 
 ---
 
@@ -148,6 +160,24 @@ restore, and the new section checked in both locales.
 - **Breakpoint resets must match the specificity they override.** `& > *` is
   (0,1,0) and cannot undo `& > *:nth-child(2n)` at (0,2,0); media queries add no
   specificity. Reset with `:nth-child(n)`.
+- **An unlayered rule beats a layered one, whatever the specificity.** `@utility`
+  output lands in `@layer utilities`, so a bare `*` selector written at the top
+  level of `globals.css` overrides `.listing-layout > aside` inside a utility.
+  Rules that override the global `*` scrollbar styling have to live beside it,
+  outside the layer — this cost a debugging round when the compiled CSS looked
+  perfectly correct and simply was not winning.
+- **A `visibility` transition makes `focus()` a silent no-op.** A transition does
+  not take effect until the next style recalculation, so an element merely
+  *transitioning* to `visible` still computes as hidden — and focusing a hidden
+  element does nothing, with no error. Neither `requestAnimationFrame` nor
+  `flushSync` nor a forced reflow works around it. The fix is to delay
+  `visibility` only on the way out (`visibility 0s linear 160ms` when hiding,
+  `0s linear 0s` when showing), so the shown state switches instantly and stays
+  focusable while the fade-out still reads.
+- **Hiding a focused element moves focus to `<body>`.** Swapping two stacked
+  controls means the one that was just clicked becomes hidden and is blurred by
+  the browser, which will race any effect trying to move focus. Move focus in the
+  handler after a `flushSync`, not from an effect.
 - **React delegates `onMouseEnter` through `mouseover`/`mouseout`.** A synthetic
   `mouseenter` event proves nothing — test hover with a real pointer move.
 - **The preview pane throttles `requestAnimationFrame` while hidden,** so

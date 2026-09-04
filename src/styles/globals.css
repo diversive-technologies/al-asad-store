@@ -331,21 +331,103 @@ body:has([data-hero]) header[data-scrolled='false']::before {
  * the sign-in link off the end of a phone screen.
  */
 @utility header-search {
-  display: flex;
+  /*
+   * Both states live in ONE grid cell and neither is unmounted. That is what
+   * lets the collapse run the expansion backwards: conditionally rendering the
+   * field meant it vanished the instant the state flipped, leaving an empty box
+   * to animate shut. Crossfading two stacked children has no mount race and no
+   * timer to keep in step with the CSS duration.
+   */
+  display: grid;
   align-items: center;
-  /* Direction-aware in flex: the field grows towards the reading start. */
-  justify-content: flex-end;
   min-inline-size: 0;
   inline-size: var(--spacing-search-closed);
   transition: inline-size 240ms ease;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+
+  /* Direction-aware: the collapsed icon rests at the reading end. */
+  & > button {
+    justify-self: end;
+  }
+
+  & > form {
+    inline-size: 100%;
+    /*
+     * The field is its own surface, so it sets its own foreground rather than
+     * inheriting. The bar's colour is near-white while it floats over the hero
+     * film, which put a white close icon on a light field — invisible in the
+     * light theme and fine in the dark one, which is why it only showed on the
+     * homepage.
+     */
+    color: var(--color-fg);
+    /* Clips the contents mid-collapse. On the form rather than the wrapper, so
+       the focus ring below is not clipped along with them. */
+    overflow: hidden;
+  }
 
   &[data-open='true'] {
     inline-size: min(var(--spacing-search-open), 100%);
   }
 
+  /*
+   * Shown state. `visibility` switches with NO delay, and that is what makes the
+   * element focusable in the same tick the state changes: a transition does not
+   * take effect until the next style recalculation, so a `visibility` that is
+   * merely *transitioning* to visible still computes as hidden — and `focus()`
+   * on a hidden element is silently a no-op. Neither `flushSync` nor a forced
+   * reflow can work around that; only removing the delay can.
+   */
+  & > button,
+  &[data-open='true'] > form {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 160ms ease,
+      visibility 0s linear 0s;
+  }
+
+  /*
+   * Hidden state. Here `visibility` is delayed by the full fade, so the element
+   * stays visible while it fades out instead of vanishing on the first frame —
+   * which is what makes the collapse read as the expansion reversed. It still
+   * ends up `hidden`, so it leaves the tab order and the accessibility tree
+   * rather than lingering as an invisible tab stop.
+   */
+  & > form,
+  &[data-open='true'] > button {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 160ms ease,
+      visibility 0s linear 160ms;
+  }
+
+  /*
+   * No border and no ring on the field: the operator asked for the lines gone,
+   * and the shape of a filled pill is enough to read as an input.
+   *
+   * A11Y-03 is not abandoned to get there, and the distinction matters. The
+   * input keeps its text caret, which is what indicates focus in a text field;
+   * the close and submit buttons inside keep the global `:focus-visible`
+   * outline, so tabbing between the three controls is still visible. Only the
+   * container's own indicator is dropped — and that one was pure noise, because
+   * the field takes focus automatically the instant it opens, so it was drawn
+   * every single time rather than telling the reader anything.
+   */
+  & input:focus-visible {
+    outline: none;
+  }
+
   /* A11Y-10 */
   @media (prefers-reduced-motion: reduce) {
     transition: none;
+
+    & > * {
+      transition: none;
+    }
   }
 }
 
@@ -610,6 +692,25 @@ html {
 }
 
 html::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * The filter rail scrolls internally but draws no bar either. Its track ran as
+ * a full-height vertical rule down the side of the filters, which reads as a
+ * border rather than as chrome.
+ *
+ * This lives out here rather than inside `@utility listing-layout`, and that is
+ * not tidiness: `@utility` output is placed in `@layer utilities`, and an
+ * UNLAYERED rule beats a layered one no matter how specific the layered
+ * selector is. `.listing-layout > aside` inside the utility lost to the bare
+ * `*` above it; out here, next to the rule it overrides, it wins.
+ */
+.listing-layout > aside {
+  scrollbar-width: none;
+}
+
+.listing-layout > aside::-webkit-scrollbar {
   display: none;
 }
 
