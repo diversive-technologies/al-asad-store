@@ -72,6 +72,15 @@
   --spacing-ambient-spill: 7.5rem;
   /* How far alternate columns of the listing grid drop. */
   --spacing-stagger: 3rem;
+  --spacing-filter-rail: 16rem;
+  /*
+   * 160rem = 2560px: a 1440p monitor fills edge to edge, so the filter rail sits
+   * on the gutter rather than floating in from a centred column. Genuinely
+   * ultra-wide and curved displays still get side bands, which is the behaviour
+   * asked for when the hero was made full-width — a 3440px row of product would
+   * be a neck exercise, not a catalogue.
+   */
+  --spacing-page-max: 160rem;
 
   /*
    * I18N-11 — the stack covers both scripts. `--font-latin` and `--font-urdu`
@@ -183,7 +192,20 @@ body:has([data-hero]) header[data-scrolled='false']::before {
 @utility page-shell {
   margin-inline: auto;
   inline-size: 100%;
-  max-inline-size: min(80rem, calc(125svh * 16 / 9));
+  /*
+   * This used to be `min(80rem, calc(125svh * 16 / 9))` — content was capped to
+   * the hero film's width, back when the film was height-driven and narrower
+   * than the viewport. The film is now `inline-size: 100%` on anything wider
+   * than 4:3, so it is always at least as wide as the content and that term
+   * could never bind. What it did instead was freeze every page at 1280px:
+   * a 2560px monitor rendered 640px of dead background down each side and
+   * product tiles no larger than on a laptop.
+   *
+   * The cap is now a plain ceiling for ultra-wide displays. Pages whose content
+   * is prose set their own, much narrower, limit on top of this — line length is
+   * a readability constraint, not a layout one, and does not belong here.
+   */
+  max-inline-size: var(--spacing-page-max);
   padding-inline: var(--spacing-gutter);
 
   /* Content should not be pressed against the edge on a larger screen. */
@@ -243,16 +265,76 @@ body:has([data-hero]) header[data-scrolled='false']::before {
     }
   }
 
-  @media (min-width: 64rem) {
+  /*
+   * 80rem rather than 64rem, because from 64rem up the filter rail takes a fixed
+   * 16rem out of the row: four columns at 1024px left 142px tiles.
+   *
+   * An EVEN column count always staggers on `2n` — positions 2, 4, 6 … land in
+   * columns 2, 4, 6 … and then repeat in step. Only an odd count needs the
+   * column arithmetic spelled out, which is why 3 and 5 are the verbose ones.
+   */
+  @media (min-width: 80rem) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1.5rem;
 
     & > *:nth-child(n) {
       margin-block-start: 0;
     }
-    & > *:nth-child(4n + 2),
-    & > *:nth-child(4n + 4) {
+    & > *:nth-child(2n) {
       margin-block-start: var(--spacing-stagger);
+    }
+  }
+
+  @media (min-width: 120rem) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+
+    & > *:nth-child(n) {
+      margin-block-start: 0;
+    }
+    & > *:nth-child(5n + 2),
+    & > *:nth-child(5n + 4) {
+      margin-block-start: var(--spacing-stagger);
+    }
+  }
+
+  @media (min-width: 140rem) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+
+    & > *:nth-child(n) {
+      margin-block-start: 0;
+    }
+    & > *:nth-child(2n) {
+      margin-block-start: var(--spacing-stagger);
+    }
+  }
+}
+
+/*
+ * The listing layout: a filter rail beside the results, one column below `md`.
+ *
+ * The rail sticks so the filters stay reachable while the grid scrolls, and it
+ * scrolls internally rather than growing past the viewport — six filter groups
+ * are taller than a laptop screen. `inset-block-start` and the block-size cap
+ * both account for the fixed header, so the first group is never underneath it.
+ */
+@utility listing-layout {
+  display: grid;
+  align-items: start;
+  gap: 2rem;
+
+  /*
+   * 64rem, not 48rem: the rail is a fixed 16rem, so on a 768px viewport it took
+   * more than a third of the row and squeezed the tiles to ~115px. It only earns
+   * its place once there is width to spare; below that the filters stack.
+   */
+  @media (min-width: 64rem) {
+    grid-template-columns: var(--spacing-filter-rail) minmax(0, 1fr);
+
+    & > aside {
+      position: sticky;
+      inset-block-start: calc(var(--spacing-header) + 1rem);
+      max-block-size: calc(100svh - var(--spacing-header) - 2rem);
+      overflow-y: auto;
     }
   }
 }

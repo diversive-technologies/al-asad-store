@@ -75,5 +75,22 @@ export function formatPlural(
   // fallback when a translation omits a form.
   const template = forms[category] ?? forms.other ?? '';
 
-  return template.replace('{count}', formatNumber(count, locale));
+  return formatTemplate(template, { count: formatNumber(count, locale) });
+}
+
+/**
+ * I18N-06 — THE placeholder substitution, so a parameterised message is filled
+ * in exactly one place.
+ *
+ * Values arrive already formatted, because only the caller knows what kind of
+ * value it is: money goes through `formatMoneyMinor`, counts through
+ * `formatNumber`. This function only substitutes, and an unknown placeholder is
+ * left intact rather than replaced with `undefined` — a visible `{min}` in the
+ * interface is a bug report; the word "undefined" is a mystery.
+ */
+export function formatTemplate(
+  template: string,
+  values: Readonly<Record<string, string>>,
+): string {
+  return template.replace(/\{(\w+)\}/g, (match: string, key: string) => values[key] ?? match);
 }

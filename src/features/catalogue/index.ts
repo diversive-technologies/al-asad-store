@@ -9,9 +9,16 @@ export { searchProducts } from './api/search-products';
 export { suggest } from './api/suggest';
 export { CatalogueScreen, type CatalogueScreenProps } from './components/CatalogueScreen';
 export { ListingSkeleton } from './components/ListingSkeleton';
+export { FacetGroup, type FacetGroupProps } from './components/FacetGroup';
+export { FilterChips, type FilterChipsProps } from './components/FilterChips';
+export { FilterDisclosure, type FilterDisclosureProps } from './components/FilterDisclosure';
+export { FilterPanel, type FilterPanelProps } from './components/FilterPanel';
+export { FilterToggleLink, type FilterToggleLinkProps } from './components/FilterToggleLink';
 export { Pagination, type PaginationProps } from './components/Pagination';
 export { ProductBadge, type ProductBadgeProps } from './components/ProductBadge';
 export { ProductGrid, type ProductGridProps } from './components/ProductGrid';
+export { PriceFilter, type PriceFilterProps } from './components/PriceFilter';
+export { SortControl, type SortControlProps } from './components/SortControl';
 export { SearchField, type SearchFieldProps } from './components/SearchField';
 export { ProductCard, type ProductCardProps } from './components/ProductCard';
 export {
