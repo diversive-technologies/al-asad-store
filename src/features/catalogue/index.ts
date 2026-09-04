@@ -9,6 +9,7 @@ export { searchProducts } from './api/search-products';
 export { suggest } from './api/suggest';
 export { fetchSuggestions, type SuggestionsError } from './api/fetch-suggestions';
 export { CatalogueScreen, type CatalogueScreenProps } from './components/CatalogueScreen';
+export { CodeMatch, type CodeMatchProps } from './components/CodeMatch';
 export { ListingSkeleton } from './components/ListingSkeleton';
 export { FacetGroup, type FacetGroupProps } from './components/FacetGroup';
 export { HeaderSearch, type HeaderSearchProps } from './components/HeaderSearch';
@@ -31,6 +32,7 @@ export {
   type ProductBadgeKind,
   type ProductCardWithAvailability,
 } from './lib/product-card';
+export { shouldAttemptCodeLookup } from './lib/product-code';
 export {
   NO_ACTIVE_OPTION,
   nextActiveIndex,

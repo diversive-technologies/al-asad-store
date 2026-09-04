@@ -5,6 +5,7 @@ import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
 import { ok, type Result } from '@/lib/result';
 
+import { shouldAttemptCodeLookup } from '../lib/product-code';
 import { productCardSchema, type ProductCard } from '../schemas/product-card.schema';
 
 /**
@@ -25,7 +26,13 @@ export function findByCode(
   locale: Locale,
 ): Promise<Result<ProductCard | null, ApiError>> {
   const trimmed = code.trim();
-  if (trimmed.length === 0) return Promise.resolve(ok(null));
+  /*
+   * The gate lives here rather than at the call site so every caller gets it,
+   * and so a search for "embroidered lawn" costs no round trip. `ok(null)` is
+   * the same answer the backend gives for a miss, which keeps one shape for
+   * "no product" regardless of why.
+   */
+  if (!shouldAttemptCodeLookup(trimmed)) return Promise.resolve(ok(null));
 
   return apiRequest({
     path: ENDPOINTS.catalogue.byCode,

@@ -16,7 +16,7 @@ Last updated: 2026-09-04. Last commit: `aca3d62` (tree dirty — see below).
 | # | Super-module | Status |
 | --- | --- | --- |
 | M1 | Landing page + foundation | **Done.** Committed. |
-| M2 | Catalogue | **In progress** — see below. |
+| M2 | Catalogue | **Feature-complete** except the small-screen filter drawer, which waits on M4. |
 | M3 | Product page | Not started. |
 | M4 | Bag & reservation | Not started. `app/bag/` is a placeholder route only. |
 | M5 | Checkout | Not started. |
@@ -55,15 +55,19 @@ Last updated: 2026-09-04. Last commit: `aca3d62` (tree dirty — see below).
   without focus ever leaving the input, wrapping arrow keys, Escape dismissing
   the list before the field, and pointer selection on `mousedown` so it beats
   the blur.
+- **Code lookup** — `/search` runs `byCode` alongside the search (PERF-02) and
+  surfaces an exact match above the results. The client never decides what a
+  code LOOKS like — that is the backend's rule (DATA-13); it only declines terms
+  that cannot be one, i.e. anything with whitespace. One availability request
+  covers the grid and the match together.
   Relevance is offered only when a search term is present, matching the
   demotion `parseCatalogueQuery` already performs.
 
 ## M2 — what is left
 
-1. **Code lookup** — `findByCode` and its endpoint exist; no interface. Blocked
-   in part by M3: the natural behaviour is to jump straight to the product, and
-   `/catalogue/[slug]` does not exist yet.
-2. **Filter drawer on small screens** — the rail currently stacks above the grid
+Only one item, and it is blocked rather than pending:
+
+1. **Filter drawer on small screens** — the rail currently stacks above the grid
    below `md`. A slide-over needs the focus-trapping dialog primitive A11Y-08
    requires, which M4 needs anyway for the bag panel; building it once there is
    why this was not hand-rolled now.
@@ -111,6 +115,10 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 2560 → 6 at 343px, all at 100% of viewport width.
 
 ## Deliberate gaps — do not "fix" these
+- **The code match shows a card, not a redirect.** Jumping straight to the
+  product is the natural behaviour and is what M3 should switch this to; today
+  `/catalogue/[slug]` does not exist, so the exact match is surfaced as a card
+  above the results instead.
 - **Suggestion rows search, they do not open the product.** Selecting a product
   in the type-ahead runs a search for its name rather than navigating to
   `/catalogue/[slug]`, which is M3 and would 404. `toSuggestionOptions` is where
@@ -127,23 +135,17 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 
 ## Uncommitted work
 
-The type-ahead, end to end:
+Code lookup (section 28.1), completing M2's search work:
 
-- `app/api/suggest/route.ts` — the first BFF route, arming the mock layer itself
-  because a Route Handler never renders the root layout.
-- `fetch-suggestions.ts` (browser-side, schema-validated), `lib/suggestions.ts`
-  + 11 tests, `SearchSuggestions.tsx`, and `HeaderSearch` rebuilt as a combobox.
-- The results-page `SearchField` stripped of its border and focus ring to match
-  the header field, and WebKit's unthemed native clear button hidden for every
-  search input rather than per field.
-- `use-debounced-value.ts`; `ROUTES.api.suggest`;
-  `queryKeys.catalogue.suggestions`; `--shadow-popover`; suggestion copy in both
-  locales; the native WebKit clear button hidden so it does not sit beside ours.
+- `lib/product-code.ts` + 7 tests — the plausibility gate, which deliberately
+  does NOT encode the code format.
+- `CodeMatch.tsx`; `findByCode` gated at the reader so every caller benefits;
+  `app/search/page.tsx` composing the parallel read and one shared availability
+  request; `search.exactMatchHeading` in both locales; barrel entries.
 
-Verified: **typecheck, lint, 76 tests and the production build all pass.** The
-BFF was exercised directly for both locales, an empty term and a bogus locale;
-the combobox for typing, arrow wrapping, Enter, pointer selection, Escape
-layering and RTL.
+Verified: **typecheck, lint, 83 tests and the production build all pass.**
+Exercised with a real code, a non-code token, a phrase, a well-formed code that
+matches nothing, and RTL.
 
 ---
 

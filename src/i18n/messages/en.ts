@@ -139,6 +139,7 @@ export const en = {
     placeholder: 'Lawn, chiffon, a product code…',
     submit: 'Search',
     resultsHeading: 'Results',
+    exactMatchHeading: 'Exact match for this code',
     suggestionsLabel: 'Search suggestions',
     suggestionsProductsLabel: 'Matching products',
     noResultsHeading: 'No results',
