@@ -5,6 +5,7 @@ import { ENDPOINTS } from '@/lib/api/endpoints';
 
 import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue-search';
 import { pageFor } from './pages-db';
+import { findProductBySlug, productAvailabilityFor } from './product-detail-db';
 import { AVAILABILITY, homepageFor, MOCK_SESSION, NEWSLETTER_SUBSCRIPTION } from './db';
 
 /**
@@ -78,6 +79,41 @@ export const handlers = [
    * body, because "no such product" is an HTTP outcome; the feature's reader
    * translates that one status back into `ok(null)`.
    */
+  /*
+   * Section 12 `getProduct`, keyed by slug. A miss is a 404 for the same reason
+   * `byCode` is: "no such product" is an HTTP outcome, and the feature's reader
+   * translates that one status back into `ok(null)` so the route can render a
+   * not-found page rather than an error.
+   */
+  http.get(`*${ENDPOINTS.catalogue.product}`, ({ request }) => {
+    const url = new URL(request.url);
+    const requestedLocale = url.searchParams.get('locale');
+    const locale = isLocale(requestedLocale) ? requestedLocale : DEFAULT_LOCALE;
+    const product = findProductBySlug(url.searchParams.get('slug') ?? '', locale);
+
+    if (product === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(product);
+  }),
+
+  /*
+   * The live per-size overlay, keyed by product id. It is derived from the same
+   * fixture the product itself came from, so the piece ids in the two payloads
+   * are guaranteed to be the same ones.
+   */
+  http.get(`*${ENDPOINTS.catalogue.productAvailability}`, ({ request }) => {
+    const url = new URL(request.url);
+    const productId = url.searchParams.get('productId') ?? '';
+    /*
+     * Locale is irrelevant to a stock answer — it decides labels, and this
+     * payload carries none. The default is passed only because the fixture
+     * shares one derivation with the product itself.
+     */
+    const availability = productAvailabilityFor(productId, DEFAULT_LOCALE);
+
+    if (availability === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(availability);
+  }),
+
   http.get(`*${ENDPOINTS.catalogue.byCode}`, ({ request }) => {
     const url = new URL(request.url);
     const requestedLocale = url.searchParams.get('locale');

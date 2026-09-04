@@ -29,6 +29,19 @@ export const ENDPOINTS = {
     suggest: '/api/v1/catalogue/suggest',
     /** Section 15 `byCode(code)` — the product-code lookup of section 28.1. */
     byCode: '/api/v1/catalogue/products/by-code',
+    /**
+     * Section 12 `CatalogueQuery.getProduct`. That signature reads
+     * `getProduct(id | code)`; the storefront addresses products by SLUG because
+     * section 30.5 wants one canonical, readable URL per product, so the slug is
+     * the third key the backend must accept.
+     */
+    product: '/api/v1/catalogue/products/by-slug',
+    /**
+     * The per-size availability overlay for ONE product. Separate from the list
+     * overlay above for the same reason it exists at all (architecture 8.2):
+     * product data caches for hours, stock does not cache at all.
+     */
+    productAvailability: '/api/v1/catalogue/availability/product',
   },
   newsletter: {
     subscribe: '/api/v1/newsletter/subscriptions',

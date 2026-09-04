@@ -17,7 +17,7 @@ Last updated: 2026-09-04. Last commit: `aca3d62` (tree dirty — see below).
 | --- | --- | --- |
 | M1 | Landing page + foundation | **Done.** Committed. |
 | M2 | Catalogue | **Feature-complete** except the small-screen filter drawer, which waits on M4. |
-| M3 | Product page | Not started. |
+| M3 | Product page | **In progress** — contract, mock, route and shell done; extras remain. |
 | M4 | Bag & reservation | Not started. `app/bag/` is a placeholder route only. |
 | M5 | Checkout | Not started. |
 | M6 | Real auth & account | Deferred by D3. |
@@ -62,6 +62,30 @@ Last updated: 2026-09-04. Last commit: `aca3d62` (tree dirty — see below).
   covers the grid and the match together.
   Relevance is offered only when a search term is present, matching the
   demotion `parseCatalogueQuery` already performs.
+
+## M3 — what is built
+
+- **Contract** — `product-detail.schema.ts` (§12 `getProduct`) and
+  `piece-availability.schema.ts`. The product projection carries NO quantity, per
+  §12; stock is a separate live read at `(piece, size)` granularity, which is how
+  §13 keys inventory. The schema asserts the §6.1 invariant — SIMPLE ⟹ one piece,
+  SET ⟹ two or more — so a backend that breaks it surfaces as a handled contract
+  violation rather than a buy box with nothing to override.
+- **Readers** — `fetchProduct` (404 → `ok(null)` so the route can render
+  `notFound()`), `fetchProductAvailability` (`revalidate: 0`).
+- **Mock** — `product-detail-db.ts`, derived from the same `CATALOGUE` records
+  the listing uses, plus two MSW handlers.
+- **Route** — `/catalogue/[slug]` with per-product metadata, `loading` and
+  `error`. This was the last dead link.
+- **Shell** — gallery with thumbnails, and the buy box branching on the DECLARED
+  type: SIMPLE gets one selector, SET gets the unified selector plus the
+  per-piece override panel. Selection logic is pure and covered by 21 tests.
+
+## M3 — what is left
+
+Fabric Calculator (§25), Notify Me on sold-out sizes, size guides, WhatsApp and
+copy-link sharing, you-may-also-like, and the gallery's desktop magnifier and
+mobile tap-to-fullscreen. None is started; none is faked.
 
 ## M2 — what is left
 
@@ -135,17 +159,21 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 
 ## Uncommitted work
 
-Code lookup (section 28.1), completing M2's search work:
+The M3 slice described above. Two bugs were found by exercising it and fixed:
 
-- `lib/product-code.ts` + 7 tests — the plausibility gate, which deliberately
-  does NOT encode the code format.
-- `CodeMatch.tsx`; `findByCode` gated at the reader so every caller benefits;
-  `app/search/page.tsx` composing the parallel read and one shared availability
-  request; `search.exactMatchHeading` in both locales; barrel entries.
+- The unified selector reused the first piece's id, so it shared a radio group
+  AND duplicate DOM ids with that piece's own override — choosing a unified size
+  silently unchecked the piece's control. It now has its own group.
+- A unified size was assigned to pieces where that size was SOLD OUT, and the
+  selection then reported itself complete. It now skips those pieces, so the
+  customer is asked to choose rather than led toward a reservation §7.1 would
+  refuse. Five tests cover it, including the §30.2 fallback where a degraded
+  overlay must not refuse every size.
 
-Verified: **typecheck, lint, 83 tests and the production build all pass.**
-Exercised with a real code, a non-code token, a phrase, a well-formed code that
-matches nothing, and RTL.
+Verified: **typecheck, lint, 104 tests and the production build all pass.** The
+page was exercised for an unstitched product (no sizes), a stitched SIMPLE (one
+selector) and a SET (unified plus overrides), with the gallery and the unified
+selector driven by real pointer clicks.
 
 ---
 
@@ -165,6 +193,11 @@ matches nothing, and RTL.
 - **Breakpoint resets must match the specificity they override.** `& > *` is
   (0,1,0) and cannot undo `& > *:nth-child(2n)` at (0,2,0); media queries add no
   specificity. Reset with `:nth-child(n)`.
+- **Page-subtree client components hydrate only on a real user event.** React's
+  selective hydration means a scripted `.click()` from the devtools bridge finds
+  no fiber and does nothing, while the layout's components (the header) are
+  already live. Do not conclude a page is broken from that — drive it with a real
+  pointer click before believing it.
 - **There are TWO search fields.** `HeaderSearch` in the bar, and `SearchField`
   on `/search` — the one with its own "Search" button. Styling feedback about
   "the search bar" has to be matched to the right one first; several rounds of
