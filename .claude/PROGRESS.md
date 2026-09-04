@@ -48,17 +48,22 @@ Last updated: 2026-09-04. Last commit: `aca3d62` (tree dirty — see below).
   filter combination is a crawlable URL; `PriceFilter` is the single client leaf,
   because a range needs a submit rather than a navigation per keystroke.
 - **Sort** — the four options of section 28.1, as links with `aria-current`.
+- **Type-ahead** — `app/api/suggest/route.ts` is the first BFF (DATA-08), and it
+  exists because `apiRequest` is `server-only` while the type-ahead runs on
+  keystrokes. It proxies and nothing else. The header field is a full ARIA
+  combobox: debounced query through TanStack Query, `aria-activedescendant`
+  without focus ever leaving the input, wrapping arrow keys, Escape dismissing
+  the list before the field, and pointer selection on `mousedown` so it beats
+  the blur.
   Relevance is offered only when a search term is present, matching the
   demotion `parseCatalogueQuery` already performs.
 
 ## M2 — what is left
 
-1. **Type-ahead search** — plus the first `app/api/` BFF route. `suggest` and
-   its schema exist; nothing calls them.
-2. **Code lookup** — the typed read exists; no interface.
-3. **Type-ahead on the header field** — it navigates on submit today; the
-   suggestion dropdown belongs with the type-ahead work above.
-4. **Filter drawer on small screens** — the rail currently stacks above the grid
+1. **Code lookup** — `findByCode` and its endpoint exist; no interface. Blocked
+   in part by M3: the natural behaviour is to jump straight to the product, and
+   `/catalogue/[slug]` does not exist yet.
+2. **Filter drawer on small screens** — the rail currently stacks above the grid
    below `md`. A slide-over needs the focus-trapping dialog primitive A11Y-08
    requires, which M4 needs anyway for the bag panel; building it once there is
    why this was not hand-rolled now.
@@ -106,6 +111,11 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 2560 → 6 at 343px, all at 100% of viewport width.
 
 ## Deliberate gaps — do not "fix" these
+- **Suggestion rows search, they do not open the product.** Selecting a product
+  in the type-ahead runs a search for its name rather than navigating to
+  `/catalogue/[slug]`, which is M3 and would 404. `toSuggestionOptions` is where
+  that flips when M3 lands, and it is covered by a test that says so.
+
 
 - **`/catalogue/[slug]` 404s.** That is the M3 product page. Left dead on purpose
   rather than stubbed.
@@ -117,30 +127,23 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 
 ## Uncommitted work
 
-The progress-file reconciliation from `aca3d62`, the header rework, and its
-follow-up fixes:
+The type-ahead, end to end:
 
-- `HeaderSearch` (the morphing field), the `header-search` utility and its two
-  tokens; `Header` takes it as a slot and no longer renders `PrimaryNav`, which
-  is deleted.
-- `CATALOGUE_ENTRY` section kind: schema, `CatalogueEntrySection`, the renderer
-  case, both barrels, and fixture copy in both locales.
-- `nav.closeSearch` added; `nav.primaryLabel` removed with its only consumer.
-- Lines removed from the listing rail too: the filter-group separators, and the
-  rail's own scrollbar, which drew a full-height vertical rule down the side of
-  the filters. The rail still scrolls; only the indicator went.
-- Fixes on the field: the collapse animated as the reverse of the expansion
-  rather than the field vanishing; the field given its own foreground so the
-  close icon is not white-on-white over the hero in the light theme; and every
-  border and focus line removed from it by operator instruction — the input's
-  caret and the global outline on the two inner buttons still show keyboard
-  focus, so only the container's own indicator went, which was drawn on every
-  open regardless because the field autofocuses.
+- `app/api/suggest/route.ts` — the first BFF route, arming the mock layer itself
+  because a Route Handler never renders the root layout.
+- `fetch-suggestions.ts` (browser-side, schema-validated), `lib/suggestions.ts`
+  + 11 tests, `SearchSuggestions.tsx`, and `HeaderSearch` rebuilt as a combobox.
+- The results-page `SearchField` stripped of its border and focus ring to match
+  the header field, and WebKit's unthemed native clear button hidden for every
+  search input rather than per field.
+- `use-debounced-value.ts`; `ROUTES.api.suggest`;
+  `queryKeys.catalogue.suggestions`; `--shadow-popover`; suggestion copy in both
+  locales; the native WebKit clear button hidden so it does not sit beside ours.
 
-Verified: **typecheck, lint, 65 tests and the production build all pass.** The
-search was exercised for open, focus, Enter, submit, Escape, click-outside,
-focus restore and the reverse collapse, in both locales and over both a
-transparent and a solid header.
+Verified: **typecheck, lint, 76 tests and the production build all pass.** The
+BFF was exercised directly for both locales, an empty term and a bogus locale;
+the combobox for typing, arrow wrapping, Enter, pointer selection, Escape
+layering and RTL.
 
 ---
 
@@ -160,6 +163,10 @@ transparent and a solid header.
 - **Breakpoint resets must match the specificity they override.** `& > *` is
   (0,1,0) and cannot undo `& > *:nth-child(2n)` at (0,2,0); media queries add no
   specificity. Reset with `:nth-child(n)`.
+- **There are TWO search fields.** `HeaderSearch` in the bar, and `SearchField`
+  on `/search` — the one with its own "Search" button. Styling feedback about
+  "the search bar" has to be matched to the right one first; several rounds of
+  fixes went to the header while the report was about the results page.
 - **An unlayered rule beats a layered one, whatever the specificity.** `@utility`
   output lands in `@layer utilities`, so a bare `*` selector written at the top
   level of `globals.css` overrides `.listing-layout > aside` inside a utility.

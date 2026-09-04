@@ -139,6 +139,8 @@ export const en = {
     placeholder: 'Lawn, chiffon, a product code…',
     submit: 'Search',
     resultsHeading: 'Results',
+    suggestionsLabel: 'Search suggestions',
+    suggestionsProductsLabel: 'Matching products',
     noResultsHeading: 'No results',
     noResultsBody: 'Check the spelling, try a fabric name, or browse the catalogue.',
   },

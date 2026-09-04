@@ -52,6 +52,15 @@ export function SearchField({ initialTerm, messages }: SearchFieldProps) {
       <Input
         id="catalogue-search"
         type="search"
+        /*
+         * No border and no focus ring, matching the header field. Overridden
+         * here rather than in the `Input` primitive on purpose: sign-in, the
+         * newsletter and the price filter share that primitive and still want
+         * STY-10's ring — a form field with no focus indicator is a different
+         * decision from a search box with none. `cn` merges last-wins, so these
+         * replace the primitive's own border and ring rather than fighting them.
+         */
+        className="border-0 focus-visible:ring-0"
         value={term}
         onChange={(event) => {
           setTerm(event.target.value);

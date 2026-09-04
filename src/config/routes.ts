@@ -17,6 +17,15 @@ export const ROUTES = {
     byPieceCount: (pieceCount: number) => `/catalogue?pieceCount=${String(pieceCount)}`,
     byCollection: (collection: string) => `/catalogue?collection=${collection}`,
   },
+  /**
+   * Internal BFF paths (DATA-08). Nothing navigates here — these are fetched,
+   * not linked — but they are still internal URLs, and the string has to exist
+   * in exactly one place. Java backend paths are a different registry (SSOT-04)
+   * and the two never overlap.
+   */
+  api: {
+    suggest: '/api/suggest',
+  },
   bag: '/bag',
   checkout: '/checkout',
   search: '/search',

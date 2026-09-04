@@ -1,16 +1,39 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react';
 import { flushSync } from 'react-dom';
 
+import { useQuery } from '@tanstack/react-query';
+
 import { ROUTES } from '@/config/routes';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
+import { queryKeys } from '@/lib/api/query-keys';
+import { unwrap } from '@/lib/result';
 import { Search, X } from '@/lib/vendor/icons';
 
+import { fetchSuggestions } from '../api/fetch-suggestions';
 import { EMPTY_QUERY, toQueryString } from '../lib/search-params';
+import {
+  NO_ACTIVE_OPTION,
+  nextActiveIndex,
+  toSuggestionOptions,
+  type SuggestionOption,
+} from '../lib/suggestions';
+import { SearchSuggestions } from './SearchSuggestions';
 
 export interface HeaderSearchProps {
+  locale: Locale;
   messages: Messages;
 }
 
@@ -39,14 +62,87 @@ export interface HeaderSearchProps {
  * a focus trap — the field is inline in the header rather than a modal layer,
  * so trapping focus inside it would strand keyboard users.
  */
-export function HeaderSearch({ messages }: HeaderSearchProps) {
+/** Below this, a suggestion request costs more than it can possibly return. */
+const MIN_TERM_LENGTH = 2;
+
+/** Section 30.1 budgets suggest under 100ms; this keeps one search to one request. */
+const DEBOUNCE_MS = 180;
+
+const LISTBOX_ID = 'header-search-listbox';
+
+function optionId(index: number): string {
+  return `${LISTBOX_ID}-option-${String(index)}`;
+}
+
+export function HeaderSearch({ locale, messages }: HeaderSearchProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [term, setTerm] = useState('');
 
+  const [activeIndex, setActiveIndex] = useState(NO_ACTIVE_OPTION);
+  // Escape dismisses the list before it dismisses the field, so the two need
+  // separate state — the field can be open with the list deliberately closed.
+  const [isListDismissed, setIsListDismissed] = useState(false);
+
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const toggleRef = useRef<HTMLButtonElement | null>(null);
+
+  const debouncedTerm = useDebouncedValue(term.trim(), DEBOUNCE_MS);
+  const canSuggest = isOpen && debouncedTerm.length >= MIN_TERM_LENGTH;
+
+  /*
+   * DATA-05: fetched through TanStack Query, never a `useEffect`. DATA-03a: the
+   * `Result` is bridged with `unwrap`, the one sanctioned adapter, because Query
+   * reports failure only through a rejected promise.
+   *
+   * DATA-09 — caching intent: suggestions are keystroke-scoped, so they are held
+   * briefly and only to make re-typing and backspacing free. `queryKey` carries
+   * the locale, so the two languages can never serve each other's results.
+   */
+  const suggestionsQuery = useQuery({
+    queryKey: queryKeys.catalogue.suggestions(debouncedTerm, locale),
+    queryFn: ({ signal }) => unwrap(fetchSuggestions(debouncedTerm, locale, signal)),
+    enabled: canSuggest,
+    staleTime: 30_000,
+    // A failed suggestion is not worth a retry storm; the reader can still submit.
+    retry: false,
+  });
+
+  const options = useMemo(
+    () => (suggestionsQuery.data === undefined ? [] : toSuggestionOptions(suggestionsQuery.data)),
+    [suggestionsQuery.data],
+  );
+
+  // STATE-03: derived during render, never mirrored into state.
+  const isListOpen = isOpen && !isListDismissed && options.length > 0;
+  const activeOption: SuggestionOption | null =
+    (isListOpen && activeIndex >= 0 ? options[activeIndex] : undefined) ?? null;
+
+  /**
+   * Focus is moved here rather than from an effect, and `flushSync` is what
+   * makes that safe.
+   *
+   * The two states are stacked and swapped with `visibility`, so the moment the
+   * field opens the toggle button — which is what the pointer just activated and
+   * what currently holds focus — becomes hidden, and the browser responds by
+   * blurring it to `<body>`. An effect racing that lands focus nowhere.
+   * `flushSync` commits the state change and its styles first, so by the time
+   * the next line runs the browser has already done its blurring and the field
+   * is genuinely focusable.
+   */
+  /**
+   * Every dismissal resets the list, so reopening never restores a stale row.
+   *
+   * `useCallback` here is for correctness, not speed: `closeSearch` is called
+   * from the outside-press effect, so its identity has to be stable or the
+   * listener is torn down and re-attached on every render — and the dependency
+   * array cannot honestly list it otherwise.
+   */
+  const resetList = useCallback((): void => {
+    setActiveIndex(NO_ACTIVE_OPTION);
+    setIsListDismissed(false);
+  }, []);
 
   /**
    * Focus is moved here rather than from an effect, and `flushSync` is what
@@ -62,6 +158,7 @@ export function HeaderSearch({ messages }: HeaderSearchProps) {
    */
   function openSearch(): void {
     flushSync(() => {
+      resetList();
       setIsOpen(true);
     });
 
@@ -74,14 +171,18 @@ export function HeaderSearch({ messages }: HeaderSearchProps) {
    * back to the search button because someone clicked a link elsewhere on the
    * page would fight the reader for their own caret.
    */
-  function closeSearch(restoreFocus: boolean): void {
-    flushSync(() => {
-      setTerm('');
-      setIsOpen(false);
-    });
+  const closeSearch = useCallback(
+    (restoreFocus: boolean): void => {
+      flushSync(() => {
+        setTerm('');
+        resetList();
+        setIsOpen(false);
+      });
 
-    if (restoreFocus) toggleRef.current?.focus();
-  }
+      if (restoreFocus) toggleRef.current?.focus();
+    },
+    [resetList],
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -101,11 +202,11 @@ export function HeaderSearch({ messages }: HeaderSearchProps) {
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown);
     };
-  }, [isOpen]);
+  }, [isOpen, closeSearch]);
 
-  /** The one navigation path, shared by the submit button and the Enter key. */
-  function runSearch(): void {
-    const trimmed = term.trim();
+  /** The one navigation path: the submit button, Enter, and every suggestion. */
+  function runSearch(rawTerm: string): void {
+    const trimmed = rawTerm.trim();
     // Submitting an empty box would land on a results page for nothing.
     if (trimmed.length === 0) return;
 
@@ -117,32 +218,51 @@ export function HeaderSearch({ messages }: HeaderSearchProps) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    runSearch();
+    // A highlighted suggestion wins over the raw text: it is what the reader can
+    // see is selected.
+    runSearch(activeOption?.searchTerm ?? term);
   }
 
   function handleFormKeyDown(event: KeyboardEvent<HTMLFormElement>): void {
     if (event.key !== 'Escape') return;
 
-    // Escape abandons the search rather than merely hiding the box, so
-    // reopening does not resume someone else's half-typed term. Handled on the
-    // form so it works from the field and from either button.
+    /*
+     * The ARIA combobox pattern: Escape dismisses the LIST first and the field
+     * only once the list is already gone. Collapsing everything on the first
+     * press would throw away a half-typed term just because the reader wanted
+     * the suggestions out of the way.
+     */
+    if (isListOpen) {
+      setIsListDismissed(true);
+      setActiveIndex(NO_ACTIVE_OPTION);
+      return;
+    }
+
     closeSearch(true);
   }
 
   function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (!isListOpen) return;
+
+      // Stops the caret jumping to either end of the text while arrowing rows.
+      event.preventDefault();
+      setActiveIndex(nextActiveIndex(activeIndex, event.key === 'ArrowDown' ? 1 : -1, options.length));
+      return;
+    }
+
     if (event.key !== 'Enter') return;
 
     /*
      * Enter is handled explicitly rather than left to the browser's implicit
      * form submission. Both routes end in `runSearch`, so behaviour is
      * identical — but implicit submission is a default action, and default
-     * actions are exactly what is missing when the field is driven
-     * programmatically. Suppressing it here makes the Enter path deterministic
-     * and testable instead of environment-dependent, and `preventDefault`
-     * guarantees the two paths can never both fire for one keystroke.
+     * actions are exactly what a programmatically driven field does not get,
+     * which left this path unverifiable. `preventDefault` also guarantees the
+     * two can never both fire for one keystroke.
      */
     event.preventDefault();
-    runSearch();
+    runSearch(activeOption?.searchTerm ?? term);
   }
 
   return (
@@ -177,14 +297,28 @@ export function HeaderSearch({ messages }: HeaderSearchProps) {
         <label htmlFor="header-search-input" className="sr-only">
           {messages.search.inputLabel}
         </label>
+        {/*
+          * The ARIA combobox contract. The input owns the relationship: it says
+          * a list exists (`aria-controls`), whether it is showing
+          * (`aria-expanded`), and which row is current
+          * (`aria-activedescendant`) — all without focus ever leaving the field.
+          */}
         <input
           ref={inputRef}
           id="header-search-input"
           name="q"
           type="search"
+          role="combobox"
+          aria-expanded={isListOpen}
+          aria-controls={LISTBOX_ID}
+          aria-autocomplete="list"
+          aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
           value={term}
           onChange={(event) => {
             setTerm(event.target.value);
+            // Typing revives a list the reader dismissed, and invalidates the
+            // row they had highlighted.
+            resetList();
           }}
           onKeyDown={handleInputKeyDown}
           placeholder={messages.search.placeholder}
@@ -211,6 +345,26 @@ export function HeaderSearch({ messages }: HeaderSearchProps) {
           <Search className="size-4" aria-hidden />
         </button>
       </form>
+
+      {/*
+       * A sibling of the form, not a child of it: the form carries
+       * `overflow: hidden` so its contents clip while it collapses, which would
+       * clip the dropdown too. Still inside the wrapper, so the outside-press
+       * dismissal correctly counts a click on a suggestion as "inside".
+       */}
+      {isListOpen ? (
+        <SearchSuggestions
+          options={options}
+          activeIndex={activeIndex}
+          listboxId={LISTBOX_ID}
+          optionId={optionId}
+          onSelect={(option) => {
+            runSearch(option.searchTerm);
+          }}
+          locale={locale}
+          messages={messages}
+        />
+      ) : null}
     </div>
   );
 }

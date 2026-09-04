@@ -75,6 +75,13 @@
   --spacing-filter-rail: 16rem;
   --spacing-search-closed: 2.25rem;
   --spacing-search-open: 24rem;
+
+  /*
+   * Elevation instead of a border. The suggestion list has to separate itself
+   * from the page beneath it, and a hairline is exactly what was stripped from
+   * this control — a soft shadow reads as depth rather than as a rule.
+   */
+  --shadow-popover: 0 10px 30px -10px oklch(0.2 0.02 90 / 0.28);
   /*
    * 160rem = 2560px: a 1440p monitor fills edge to edge, so the filter rail sits
    * on the gutter rather than floating in from a centred column. Genuinely
@@ -340,6 +347,8 @@ body:has([data-hero]) header[data-scrolled='false']::before {
    */
   display: grid;
   align-items: center;
+  /* Anchors the absolutely positioned suggestion list to the field. */
+  position: relative;
   min-inline-size: 0;
   inline-size: var(--spacing-search-closed);
   transition: inline-size 240ms ease;
@@ -409,16 +418,32 @@ body:has([data-hero]) header[data-scrolled='false']::before {
    * No border and no ring on the field: the operator asked for the lines gone,
    * and the shape of a filled pill is enough to read as an input.
    *
-   * A11Y-03 is not abandoned to get there, and the distinction matters. The
-   * input keeps its text caret, which is what indicates focus in a text field;
-   * the close and submit buttons inside keep the global `:focus-visible`
-   * outline, so tabbing between the three controls is still visible. Only the
-   * container's own indicator is dropped — and that one was pure noise, because
-   * the field takes focus automatically the instant it opens, so it was drawn
-   * every single time rather than telling the reader anything.
+   * The container's own focus indicator was pure noise anyway — the field takes
+   * focus automatically the instant it opens, so it was drawn every single time
+   * rather than telling the reader anything.
    */
-  & input:focus-visible {
+  /*
+   * No outline anywhere in this control, focused or clicked — on the field, the
+   * toggle, the clear button and the submit button alike.
+   *
+   * A11Y-03 is satisfied differently rather than dropped. The input shows a text
+   * caret, which is what marks focus in a text field. The three icon buttons
+   * take a background tint on keyboard focus instead: a tint is not a line, so
+   * it honours the instruction while still telling a keyboard user which control
+   * they are on. Without that, tabbing through the open field would be
+   * completely invisible.
+   */
+  & :focus-visible {
     outline: none;
+  }
+
+  & button:focus-visible {
+    background-color: var(--color-surface-muted);
+  }
+
+  /* The submit button already carries a brand fill, so it deepens instead. */
+  & button[type='submit']:focus-visible {
+    background-color: var(--color-brand-700);
   }
 
   /* A11Y-10 */
@@ -692,6 +717,17 @@ html {
 }
 
 html::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * WebKit draws its own clear button inside `type="search"` as soon as the field
+ * has content. It is unlabelled, unthemed — it renders blue, ignoring the
+ * palette — and it duplicates a control both search fields already provide. One
+ * rule for every search input rather than one per field (PD-01).
+ */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
   display: none;
 }
 

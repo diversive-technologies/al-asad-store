@@ -7,10 +7,12 @@ export { fetchAvailability } from './api/fetch-availability';
 export { findByCode } from './api/find-by-code';
 export { searchProducts } from './api/search-products';
 export { suggest } from './api/suggest';
+export { fetchSuggestions, type SuggestionsError } from './api/fetch-suggestions';
 export { CatalogueScreen, type CatalogueScreenProps } from './components/CatalogueScreen';
 export { ListingSkeleton } from './components/ListingSkeleton';
 export { FacetGroup, type FacetGroupProps } from './components/FacetGroup';
 export { HeaderSearch, type HeaderSearchProps } from './components/HeaderSearch';
+export { SearchSuggestions, type SearchSuggestionsProps } from './components/SearchSuggestions';
 export { FilterChips, type FilterChipsProps } from './components/FilterChips';
 export { FilterDisclosure, type FilterDisclosureProps } from './components/FilterDisclosure';
 export { FilterPanel, type FilterPanelProps } from './components/FilterPanel';
@@ -29,6 +31,12 @@ export {
   type ProductBadgeKind,
   type ProductCardWithAvailability,
 } from './lib/product-card';
+export {
+  NO_ACTIVE_OPTION,
+  nextActiveIndex,
+  toSuggestionOptions,
+  type SuggestionOption,
+} from './lib/suggestions';
 export {
   clearFilters,
   EMPTY_QUERY,

@@ -140,6 +140,8 @@ export const ur: Messages = {
     placeholder: 'لان، شفون، یا پروڈکٹ کوڈ…',
     submit: 'تلاش کریں',
     resultsHeading: 'نتائج',
+    suggestionsLabel: 'تلاش کی تجاویز',
+    suggestionsProductsLabel: 'متعلقہ مصنوعات',
     noResultsHeading: 'کوئی نتیجہ نہیں',
     noResultsBody: 'ہجے دیکھیں، کپڑے کا نام آزمائیں، یا مجموعہ دیکھیں۔',
   },

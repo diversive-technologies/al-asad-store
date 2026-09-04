@@ -115,7 +115,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
               <Header
                 messages={messages}
                 localeSwitcher={<LocaleSwitcher currentLocale={locale} />}
-                search={<HeaderSearch messages={messages} />}
+                search={<HeaderSearch locale={locale} messages={messages} />}
               />
 
               {/*

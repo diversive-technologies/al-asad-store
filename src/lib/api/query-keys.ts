@@ -18,5 +18,12 @@ export const queryKeys = {
     list: (filters: QueryFilters) => [...queryKeys.catalogue.lists(), filters] as const,
     details: () => [...queryKeys.catalogue.all, 'detail'] as const,
     detail: (slug: string) => [...queryKeys.catalogue.details(), slug] as const,
+    /**
+     * Keyed by term AND locale: the same partial word suggests different
+     * products in each language, and one cache entry for both would serve Urdu
+     * results into an English box.
+     */
+    suggestions: (term: string, locale: string) =>
+      [...queryKeys.catalogue.all, 'suggestions', locale, term] as const,
   },
 } as const;
