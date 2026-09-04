@@ -56,10 +56,33 @@ Last updated: 2026-09-04. Last commit: `aca3d62` (tree dirty — see below).
 1. **Type-ahead search** — plus the first `app/api/` BFF route. `suggest` and
    its schema exist; nothing calls them.
 2. **Code lookup** — the typed read exists; no interface.
-3. **Filter drawer on small screens** — the rail currently stacks above the grid
+3. **Type-ahead on the header field** — it navigates on submit today; the
+   suggestion dropdown belongs with the type-ahead work above.
+4. **Filter drawer on small screens** — the rail currently stacks above the grid
    below `md`. A slide-over needs the focus-trapping dialog primitive A11Y-08
    requires, which M4 needs anyway for the bag panel; building it once there is
    why this was not hand-rolled now.
+
+## Header and search
+
+The header carries no primary navigation. Catalogue, Unstitched and Stitched
+were three links resolving to one route with different filter state, and §30.5
+wants a single canonical address for a listing. Garment type stays reachable
+from the homepage category grid, and the whole listing from the
+`CATALOGUE_ENTRY` section added in their place. The space they vacated is what
+the search field expands into.
+
+Search is one control in two states, not a link to `/search`: the icon morphs
+into a field, and Enter or the submit button navigates. It lives in
+`features/catalogue` and reaches the header as a slot from `app/layout.tsx`,
+because `components/` may not import from `features/` (MOD-01) and it needs the
+URL-state module.
+
+Enter is handled explicitly rather than by the browser's implicit form
+submission. Both paths call the same `runSearch`, so behaviour is identical —
+but implicit submission is a *default action*, and default actions are exactly
+what a programmatically driven field does not get, which left the Enter path
+unverifiable. `preventDefault` stops the two ever both firing for one keystroke.
 
 ## Page width
 
@@ -94,23 +117,18 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 
 ## Uncommitted work
 
-The progress-file reconciliation left over from `aca3d62`, plus the filter panel
-and sort control:
+The progress-file reconciliation from `aca3d62`, and the header rework:
 
-- `FilterPanel`, `FacetGroup`, `FilterToggleLink`, `FilterDisclosure`,
-  `FilterChips`, `SortControl`, `PriceFilter` and the barrel entries.
-- `lib/price-input.ts` + 13 tests — major/minor conversion, where a cleared box
-  means "no bound" rather than zero.
-- `formatTemplate` in `lib/utils/format.ts`; `formatPlural` now delegates to it
-  rather than carrying its own substitution (PD-01).
-- 22 new keys in both locales; `--spacing-filter-rail` and the `listing-layout`
-  utility in `globals.css`; `CatalogueScreen` composing the rail.
-- The page-width rework: `--spacing-page-max`, a wider `page-shell`, the rail
-  breakpoint raised to 64rem, and 5- and 6-column grid breakpoints.
+- `HeaderSearch` (the morphing field), the `header-search` utility and its two
+  tokens; `Header` takes it as a slot and no longer renders `PrimaryNav`, which
+  is deleted.
+- `CATALOGUE_ENTRY` section kind: schema, `CatalogueEntrySection`, the renderer
+  case, both barrels, and fixture copy in both locales.
+- `nav.closeSearch` added; `nav.primaryLabel` removed with its only consumer.
 
-Verified: **typecheck, lint, 65 tests and the production build all pass**. The
-panel was exercised in the browser in both locales, and the layout measured at
-768, 1024, 1280, 1440, 1920 and 2560.
+Verified: **typecheck, lint, 65 tests and the production build all pass.** The
+search was exercised for open, Enter, submit, Escape, click-outside and focus
+restore, and the new section checked in both locales.
 
 ---
 

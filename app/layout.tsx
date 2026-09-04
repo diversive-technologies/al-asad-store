@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { SkipLink } from '@/components/layout/SkipLink';
 import { SITE } from '@/config/site';
+import { HeaderSearch } from '@/features/catalogue';
 import { LocaleSwitcher } from '@/features/localisation';
 import { NewsletterForm } from '@/features/newsletter';
 import { ThemeProvider } from '@/hooks/use-theme';
@@ -114,6 +115,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
               <Header
                 messages={messages}
                 localeSwitcher={<LocaleSwitcher currentLocale={locale} />}
+                search={<HeaderSearch messages={messages} />}
               />
 
               {/*

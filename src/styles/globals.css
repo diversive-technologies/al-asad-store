@@ -73,6 +73,8 @@
   /* How far alternate columns of the listing grid drop. */
   --spacing-stagger: 3rem;
   --spacing-filter-rail: 16rem;
+  --spacing-search-closed: 2.25rem;
+  --spacing-search-open: 24rem;
   /*
    * 160rem = 2560px: a 1440p monitor fills edge to edge, so the filter rail sits
    * on the gutter rather than floating in from a centred column. Genuinely
@@ -317,6 +319,36 @@ body:has([data-hero]) header[data-scrolled='false']::before {
  * are taller than a laptop screen. `inset-block-start` and the block-size cap
  * both account for the fixed header, so the first group is never underneath it.
  */
+/*
+ * The header search, which is one control in two states rather than a button
+ * that navigates to a search page.
+ *
+ * The width is animated, not the children: the wrapper sits inside the header's
+ * flexible middle column, so `100%` is exactly the space left over after the
+ * wordmark and the action icons have taken theirs. That is what makes the open
+ * width safe at every viewport — it can grow to 24rem when there is room and
+ * simply stops at whatever is available when there is not, instead of pushing
+ * the sign-in link off the end of a phone screen.
+ */
+@utility header-search {
+  display: flex;
+  align-items: center;
+  /* Direction-aware in flex: the field grows towards the reading start. */
+  justify-content: flex-end;
+  min-inline-size: 0;
+  inline-size: var(--spacing-search-closed);
+  transition: inline-size 240ms ease;
+
+  &[data-open='true'] {
+    inline-size: min(var(--spacing-search-open), 100%);
+  }
+
+  /* A11Y-10 */
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
 @utility listing-layout {
   display: grid;
   align-items: start;

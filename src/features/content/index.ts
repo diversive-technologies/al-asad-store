@@ -7,6 +7,7 @@ export { staticPageSchema, type PageBlock, type StaticPage } from './schemas/pag
 export {
   homepageSchema,
   homepageSectionSchema,
+  type CatalogueEntrySection,
   type Cta,
   type Homepage,
   type HomepageSection,

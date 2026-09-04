@@ -61,6 +61,9 @@ interface HomepageCopy {
   bannerHeading: string;
   bannerBody: string;
   bannerCta: string;
+  catalogueHeading: string;
+  catalogueBody: string;
+  catalogueCta: string;
 }
 
 const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
@@ -75,6 +78,10 @@ const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
     bannerBody:
       'Lawn, cambric, chiffon and cotton behave differently in the heat. The glossary explains each one in plain language.',
     bannerCta: 'Read the fabric glossary',
+    catalogueHeading: 'The whole catalogue, in one place',
+    catalogueBody:
+      'Every fabric and every cut, filterable by colour, price, piece count and availability.',
+    catalogueCta: 'Open the catalogue',
   },
   ur: {
     heroHeadline: 'لان، کاٹن اور شفون',
@@ -87,6 +94,9 @@ const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
     bannerBody:
       'لان، کیمبرک، شفون اور کاٹن گرمی میں مختلف برتاؤ کرتے ہیں۔ لغت ہر ایک کو آسان زبان میں سمجھاتی ہے۔',
     bannerCta: 'کپڑوں کی لغت پڑھیں',
+    catalogueHeading: 'پورا مجموعہ، ایک ہی جگہ',
+    catalogueBody: 'ہر کپڑا اور ہر ڈیزائن — رنگ، قیمت، پیس اور دستیابی کے مطابق چھانٹیں۔',
+    catalogueCta: 'مجموعہ کھولیں',
   },
 };
 
@@ -142,6 +152,19 @@ export function homepageFor(locale: Locale) {
           imageUrl: '/placeholders/category-' + String(index + 1) + '.avif',
           href: TILE_HREFS[index],
         })),
+      },
+      {
+        kind: 'CATALOGUE_ENTRY',
+        id: 'catalogue-entry',
+        heading: copy.catalogueHeading,
+        body: copy.catalogueBody,
+        cta: { label: copy.catalogueCta, href: '/catalogue' },
+        previewImageUrls: [
+          '/placeholders/product-1.avif',
+          '/placeholders/product-2.avif',
+          '/placeholders/product-3.avif',
+          '/placeholders/product-4.avif',
+        ],
       },
       {
         kind: 'EDITORIAL_BANNER',

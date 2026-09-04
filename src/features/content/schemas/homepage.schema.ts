@@ -90,11 +90,33 @@ const editorialBannerSectionSchema = z.object({
   cta: ctaSchema,
 });
 
+/**
+ * The entry point to the whole catalogue.
+ *
+ * It exists because the header no longer carries a Catalogue link. That was not
+ * a cosmetic move: Catalogue, Unstitched and Stitched were three header links
+ * resolving to one route with different filter state, and section 30.5 wants a
+ * single canonical address for a listing. The browse affordance belongs on the
+ * page rather than in the chrome, where it can carry copy and imagery.
+ *
+ * `previewImageUrls` is decorative — the CTA is the only control, so the stills
+ * are not links and carry no alt text (A11Y-04).
+ */
+const catalogueEntrySectionSchema = z.object({
+  kind: z.literal('CATALOGUE_ENTRY'),
+  id: z.string().min(1),
+  heading: z.string().min(1),
+  body: z.string().min(1),
+  cta: ctaSchema,
+  previewImageUrls: z.array(z.string().min(1)),
+});
+
 export const homepageSectionSchema = z.discriminatedUnion('kind', [
   heroVideoSectionSchema,
   productRailSectionSchema,
   categoryGridSectionSchema,
   editorialBannerSectionSchema,
+  catalogueEntrySectionSchema,
 ]);
 
 export type HomepageSection = z.infer<typeof homepageSectionSchema>;
@@ -102,6 +124,7 @@ export type HeroVideoSection = z.infer<typeof heroVideoSectionSchema>;
 export type ProductRailSection = z.infer<typeof productRailSectionSchema>;
 export type CategoryGridSection = z.infer<typeof categoryGridSectionSchema>;
 export type EditorialBannerSection = z.infer<typeof editorialBannerSectionSchema>;
+export type CatalogueEntrySection = z.infer<typeof catalogueEntrySectionSchema>;
 
 export const homepageSchema = z.object({
   sections: z.array(homepageSectionSchema),

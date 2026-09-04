@@ -4,6 +4,7 @@ import type { Messages } from '@/i18n/messages/en';
 import { assertNever } from '@/lib/result';
 
 import type { HomepageSection } from '../schemas/homepage.schema';
+import { CatalogueEntrySection } from './CatalogueEntrySection';
 import { CategoryGridSection } from './CategoryGridSection';
 import { EditorialBannerSection } from './EditorialBannerSection';
 import { HeroVideoSection } from './HeroVideoSection';
@@ -54,6 +55,9 @@ export function HomepageSections({
 
           case 'EDITORIAL_BANNER':
             return <EditorialBannerSection key={section.id} section={section} />;
+
+          case 'CATALOGUE_ENTRY':
+            return <CatalogueEntrySection key={section.id} section={section} />;
 
           default:
             return assertNever(section);
