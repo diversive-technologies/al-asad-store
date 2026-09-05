@@ -20,6 +20,7 @@ export {
   Moon,
   Plus,
   Search,
+  SlidersHorizontal,
   ShoppingBag,
   Sun,
   Trash2,

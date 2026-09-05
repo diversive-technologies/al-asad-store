@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-05. Last commit: `e233e62` (tree dirty — see below).
+Last updated: 2026-09-05. Last commit: `d61e2dd` (tree dirty — see below).
 
 ---
 
@@ -95,10 +95,12 @@ tap-to-fullscreen. None is started; none is faked.
 
 ## M2 — what is left
 
-1. **Filter drawer on small screens** — the rail still stacks above the grid
-   below `md`. **No longer blocked:** `components/ui/dialog/SlideOver.tsx` now
-   exists and takes a `side` prop for exactly this. It is a small piece of work
-   whenever it is picked up.
+Nothing. The **filter drawer** landed: below 64rem the rail is hidden and the
+same `FilterPanel` renders inside a `SlideOver` opening from `inline-start`,
+behind a Filters button carrying a count of what is applied. The panel is
+rendered twice — once for the rail, once for the drawer — which is the price of
+keeping it a Server Component on both surfaces; `PriceFilter` now generates its
+ids with `useId` so the two copies cannot collide.
 
 ## M4 — what is built
 
@@ -138,9 +140,9 @@ tap-to-fullscreen. None is started; none is faked.
 
 ## M4 — what is left
 
-`moveToWishlist` is M6. The `/bag` page is still the empty-state placeholder —
-the panel is the working surface, and the full page should render the same
-summary next.
+`moveToWishlist` is M6. The `/bag` page now renders the real bag: both it and
+the panel share `BagContents`, so there is one implementation of a line, its
+quantity control and the hold explanation.
 
 ## M5 — what is built
 
@@ -376,6 +378,21 @@ nothing left to check out, and `/order/AA100001` still renders on a fresh load.
 - **React 19 spells the popover props camelCase** (`popoverTarget`,
   `popoverTargetAction`). The lowercase HTML spelling still works — React passes
   unknown attributes through — but warns "Invalid DOM property" on every render.
+- **MSW must CLOSE the previous interceptor when re-arming.** `startMockServer`
+  re-armed per module context but never disarmed, so every hot reload left
+  another live interceptor and ONE request was handled once per accumulated
+  interceptor. Symptom: a single "Add to bag" ran the reservation four times and
+  put 2 in the bag. The registry is keyed with `Symbol.for` so it resolves
+  across contexts, and holds only the active server so the stale one can be
+  closed. This is NOT the `globalThis` cache that was tried and removed — that
+  one returned the old server and never re-patched.
+- **`disabled={isPending}` does not prevent double submission.** `isPending`
+  only becomes true after a re-render, so two clicks in one tick both pass. A
+  `useRef` latch flipped synchronously inside the handler is the fix; it is on
+  Add to bag and on Place order.
+- **`react-hooks/refs` flags a ref read by a callback composed during render.**
+  `form.handleSubmit(onSubmit)` in JSX counts, even though the callback only
+  runs on submit. Compose it inside the event handler instead.
 - **The preview harness swallows `Escape`.** It reaches neither a modal
   `<dialog>` nor an open popover, even with focus inside them, so that dismissal
   path cannot be verified from here — it needs a human keypress. Do not conclude

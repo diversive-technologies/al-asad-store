@@ -27,17 +27,45 @@ type MockServer = ReturnType<typeof setupServer>;
  * A module-scoped flag is false again in each new context, which is exactly
  * when the patch needs re-applying. `startMockServer` is therefore a cheap
  * no-op on every call but the first per context.
+ *
+ * ## Why the previous interceptor must be CLOSED
+ *
+ * The module flag alone re-arms correctly but never disarms, and `listen()`
+ * patches machinery that is shared across contexts. Every hot reload therefore
+ * left another live interceptor behind, and a single outgoing request was
+ * handled once PER accumulated interceptor — so one "Add to bag" ran the
+ * reservation four times and put a quantity of 2 in the bag.
+ *
+ * The registry below is the missing half. It is deliberately keyed with
+ * `Symbol.for`, which resolves to the same symbol across module contexts, and
+ * it holds only the ACTIVE server so the stale one can be closed before the
+ * replacement listens. This is not the `globalThis` cache that was tried and
+ * removed: that one RETURNED the old server and so never re-patched the new
+ * context. This one keeps re-patching, and cleans up after itself.
  */
-let server: MockServer | null = null;
+const ACTIVE_SERVER = Symbol.for('al-asad.mocks.activeServer');
+
+type ServerRegistry = typeof globalThis & { [ACTIVE_SERVER]?: MockServer };
+
+/** Per-context: false again in every fresh module context, which is the trigger. */
+let armedInThisContext = false;
 
 export function startMockServer(): void {
-  if (server !== null) return;
+  if (armedInThisContext) return;
 
-  server = setupServer(...handlers);
+  const registry = globalThis as ServerRegistry;
+
+  // Whatever a previous context installed is now orphaned; stop it intercepting.
+  registry[ACTIVE_SERVER]?.close();
+
+  const server = setupServer(...handlers);
   /*
    * `onUnhandledRequest: 'bypass'` is deliberate: an endpoint with no handler
    * yet must fail the way an unimplemented backend route fails, surfacing as a
    * normalised ApiError, rather than being masked by a mock-layer warning.
    */
   server.listen({ onUnhandledRequest: 'bypass' });
+
+  registry[ACTIVE_SERVER] = server;
+  armedInThisContext = true;
 }

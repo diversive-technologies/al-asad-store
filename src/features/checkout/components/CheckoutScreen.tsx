@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -45,6 +45,9 @@ export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
   const [deliveryOptionId, setDeliveryOptionId] = useState('standard');
   const [isGift, setIsGift] = useState(false);
   const [outcome, setOutcome] = useState<PlaceOrderResult | null>(null);
+  /* FORM-06, synchronously — see `AddToBagButton` for why `isPending` is not
+     sufficient. Here the cost of the gap would be two orders, not two items. */
+  const inFlight = useRef(false);
 
   const quote = useQuery({
     queryKey: queryKeys.checkout.quote(deliveryOptionId, isGift),
@@ -102,12 +105,34 @@ export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
     const totals = quote.data?.totals;
     if (totals === undefined) return;
 
+    inFlight.current = true;
     setOutcome(null);
+
     /*
      * `expectedTotalMinor` is what arms §7.2 step 2. The customer is submitting
      * against a total they were SHOWN, and the backend refuses if it has moved.
      */
-    place.mutate({ ...input, expectedTotalMinor: totals.totalMinor });
+    place.mutate(
+      { ...input, expectedTotalMinor: totals.totalMinor },
+      {
+        onSettled: () => {
+          inFlight.current = false;
+        },
+      },
+    );
+  }
+
+  /*
+   * `handleSubmit` is composed HERE rather than during render, so the latch is
+   * only ever read inside an event handler — which is both what the rule
+   * requires and what is actually true.
+   */
+  function handleFormSubmit(event: FormEvent<HTMLFormElement>): void {
+    if (inFlight.current) {
+      event.preventDefault();
+      return;
+    }
+    void form.handleSubmit(onSubmit)(event);
   }
 
   if (quote.isPending) {
@@ -163,7 +188,7 @@ export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
       )}
 
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={handleFormSubmit}
         // FORM-02: the browser's own validation is off; Zod is the source (FORM-01).
         noValidate
         className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]"

@@ -7,10 +7,11 @@ import type { Messages } from '@/i18n/messages/en';
 import { formatPlural } from '@/lib/utils/format';
 
 import { mergeAvailability } from '../lib/product-card';
-import { hasActiveFilters } from '../lib/search-params';
+import { hasActiveFilters, listActiveFilters } from '../lib/search-params';
 import type { ProductAvailability } from '../schemas/availability.schema';
 import type { CatalogueQuery, ResultPage } from '../schemas/search.schema';
 import { FilterChips } from './FilterChips';
+import { FilterDrawer } from './FilterDrawer';
 import { FilterPanel } from './FilterPanel';
 import { Pagination } from './Pagination';
 import { ProductGrid } from './ProductGrid';
@@ -44,6 +45,11 @@ export function CatalogueScreen({
 }: CatalogueScreenProps) {
   const t = messages.catalogue;
   const entries = mergeAvailability(results.products, availabilities);
+  /*
+   * The same list the removable chips are built from, so the drawer's badge and
+   * the chips can never disagree about how many filters are on (PD-01).
+   */
+  const activeFilterCount = listActiveFilters(query, results.facets).length;
 
   return (
     <div className="page-shell py-10">
@@ -80,6 +86,25 @@ export function CatalogueScreen({
         {/* A11Y-01: the results are the page's main content, and say so. */}
         <main className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
+            {/*
+             * Rendered a SECOND time, for the drawer. The duplicate is the
+             * price of keeping `FilterPanel` a Server Component on both
+             * surfaces: it ships no JavaScript either way, and moving one DOM
+             * subtree between two parents at a breakpoint is not something CSS
+             * can do. `PriceFilter` generates its ids, so the two copies do not
+             * collide.
+             */}
+            <FilterDrawer messages={messages} activeCount={activeFilterCount}>
+              <FilterPanel
+                query={query}
+                facets={results.facets}
+                basePath={basePath}
+                locale={locale}
+                messages={messages}
+                hideHeading
+              />
+            </FilterDrawer>
+
             <SortControl query={query} basePath={basePath} messages={messages} />
           </div>
 

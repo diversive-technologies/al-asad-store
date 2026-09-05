@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 
@@ -30,6 +30,17 @@ export interface AddToBagButtonProps {
  * so the bag exports this and the buy box renders it as a slot, exactly as the
  * header does with the catalogue's search field.
  */
+/**
+ * A synchronous latch against double submission (FORM-06).
+ *
+ * `disabled={isPending}` is NOT enough on its own, and the gap is easy to miss:
+ * `isPending` only becomes true after React re-renders, so two clicks landing
+ * in the same tick — a double-click, an impatient tap, a trackpad that bounces —
+ * both pass the check and both fire. Measured on the product page: one press
+ * produced two identical POSTs and a quantity of 2.
+ *
+ * A ref flips synchronously, inside the handler, before either can proceed.
+ */
 export function AddToBagButton({
   request,
   isSoldOut,
@@ -39,6 +50,7 @@ export function AddToBagButton({
   const t = messages.bag;
   const { open, onSummary } = useBag();
   const [notice, setNotice] = useState<string | null>(null);
+  const inFlight = useRef(false);
 
   const add = useMutation({
     mutationFn: (body: AddToBagRequest) => unwrap(addToBag(body)),
@@ -78,7 +90,14 @@ export function AddToBagButton({
         disabled={isSoldOut || request === null}
         isLoading={add.isPending}
         onClick={() => {
-          if (request !== null) add.mutate(request);
+          // See `inFlight` above: the guard is synchronous on purpose.
+          if (request === null || inFlight.current) return;
+          inFlight.current = true;
+          add.mutate(request, {
+            onSettled: () => {
+              inFlight.current = false;
+            },
+          });
         }}
       >
         {isSoldOut ? messages.product.productSoldOut : messages.product.addToBag}

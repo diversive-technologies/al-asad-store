@@ -618,10 +618,23 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   /*
    * 64rem, not 48rem: the rail is a fixed 16rem, so on a 768px viewport it took
    * more than a third of the row and squeezed the tiles to ~115px. It only earns
-   * its place once there is width to spare; below that the filters stack.
+   * its place once there is width to spare.
+   *
+   * Below that the rail is HIDDEN rather than stacked. Stacking put six filter
+   * groups between the customer and the first product, which on a phone is a
+   * page of controls before any merchandise; the same panel is one tap away in
+   * `FilterDrawer` instead.
    */
+  & > aside {
+    display: none;
+  }
+
   @media (min-width: 64rem) {
     grid-template-columns: var(--spacing-filter-rail) minmax(0, 1fr);
+
+    & > aside {
+      display: block;
+    }
 
     & > aside {
       position: sticky;

@@ -41,6 +41,8 @@ export {
 export { EMPTY_BAG } from './lib/empty-bag';
 
 export { AddToBagButton, type AddToBagButtonProps } from './components/AddToBagButton';
+export { BagContents, type BagContentsProps } from './components/BagContents';
+export { BagPageScreen, type BagPageScreenProps } from './components/BagPageScreen';
 export { BagPanel, type BagPanelProps } from './components/BagPanel';
 export { BagProvider, useBag } from './components/BagProvider';
 export { BagTrigger, type BagTriggerProps } from './components/BagTrigger';

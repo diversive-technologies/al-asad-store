@@ -20,6 +20,8 @@ export interface FilterPanelProps {
   basePath: string;
   locale: Locale;
   messages: Messages;
+  /** True inside the drawer, whose dialog title already names the panel. */
+  hideHeading?: boolean;
 }
 
 /**
@@ -43,21 +45,35 @@ function selectedValues(query: CatalogueQuery, facet: FacetKey): readonly string
  * zero. The groups vanish because there are no values to offer, and a notice
  * says so. Inventing a count would be a lie about the catalogue (DATA-13).
  *
- * Known limitation, stated rather than hidden (PD-05): on a small screen this
- * column stacks above the grid, so the products sit below the filters. The
- * correct fix is a slide-over drawer, which A11Y-08 requires to trap focus,
- * restore it on close and respond to Escape — a real dialog, not a hidden
- * `<div>`. That belongs with the bag panel in M4, where the same primitive is
- * needed and can be built once.
+ * On a small screen this rail is hidden and the SAME panel is rendered inside
+ * `FilterDrawer` — a real `<dialog>`, because A11Y-08 requires a drawer to trap
+ * focus, restore it on close and respond to Escape. That is why the drawer
+ * waited for M4: the bag needed the identical primitive, and building it twice
+ * would have been building the subtlest component in the project twice.
  */
-export function FilterPanel({ query, facets, basePath, locale, messages }: FilterPanelProps) {
+export function FilterPanel({
+  query,
+  facets,
+  basePath,
+  locale,
+  messages,
+  hideHeading = false,
+}: FilterPanelProps) {
   const t = messages.catalogue;
 
   return (
     <aside aria-label={t.filtersHeading} className="flex flex-col">
-      <h2 className="text-fg mb-1 text-sm font-semibold tracking-wide uppercase">
-        {t.filtersHeading}
-      </h2>
+      {/*
+       * Suppressed inside the drawer, where the dialog's own title already says
+       * "Filters" — two identical headings one above the other is noise on
+       * screen and a stutter to a screen reader. The `aria-label` above keeps
+       * the region named either way.
+       */}
+      {hideHeading ? null : (
+        <h2 className="text-fg mb-1 text-sm font-semibold tracking-wide uppercase">
+          {t.filtersHeading}
+        </h2>
+      )}
 
       {facets === null ? (
         <p className="text-fg-muted border-border border-b py-3 text-sm">{t.facetsUnavailable}</p>

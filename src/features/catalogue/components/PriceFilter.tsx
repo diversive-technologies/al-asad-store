@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import type { FormEvent } from 'react';
+import { useId, type FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,11 @@ export interface PriceFilterProps {
   messages: Messages;
 }
 
+/*
+ * The FORM field names, which are fixed because `FormData.get` reads them and
+ * they mirror the query parameters. The DOM ids are a separate matter — see
+ * `useId` below.
+ */
 const MIN_FIELD = 'priceMin';
 const MAX_FIELD = 'priceMax';
 
@@ -45,6 +50,17 @@ function fieldValue(data: FormData, name: string): string {
  */
 export function PriceFilter({ query, basePath, messages }: PriceFilterProps) {
   const router = useRouter();
+  /*
+   * CMP-11 — ids are GENERATED, not the field names.
+   *
+   * The panel renders twice on a small screen: once in the rail that CSS hides,
+   * and once inside the filter drawer. Fixed ids would be duplicated across the
+   * two, and every `htmlFor` would then point at whichever came first — so the
+   * drawer's labels would focus the hidden rail's inputs.
+   */
+  const fieldId = useId();
+  const minId = `${fieldId}-min`;
+  const maxId = `${fieldId}-max`;
   const t = messages.catalogue;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
@@ -64,11 +80,11 @@ export function PriceFilter({ query, basePath, messages }: PriceFilterProps) {
       <div className="flex items-end gap-2">
         <div className="flex-1">
           {/* FORM-05 / A11Y-04: every box is labelled, not placeholder-hinted. */}
-          <label htmlFor={MIN_FIELD} className="text-fg-muted mb-1 block text-xs">
+          <label htmlFor={minId} className="text-fg-muted mb-1 block text-xs">
             {t.priceMinLabel}
           </label>
           <Input
-            id={MIN_FIELD}
+            id={minId}
             name={MIN_FIELD}
             type="number"
             inputMode="numeric"
@@ -79,11 +95,11 @@ export function PriceFilter({ query, basePath, messages }: PriceFilterProps) {
         </div>
 
         <div className="flex-1">
-          <label htmlFor={MAX_FIELD} className="text-fg-muted mb-1 block text-xs">
+          <label htmlFor={maxId} className="text-fg-muted mb-1 block text-xs">
             {t.priceMaxLabel}
           </label>
           <Input
-            id={MAX_FIELD}
+            id={maxId}
             name={MAX_FIELD}
             type="number"
             inputMode="numeric"
