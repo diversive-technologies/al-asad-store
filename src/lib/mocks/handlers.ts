@@ -5,7 +5,7 @@ import { ENDPOINTS } from '@/lib/api/endpoints';
 
 import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue-search';
 import { pageFor } from './pages-db';
-import { findProductBySlug, productAvailabilityFor } from './product-detail-db';
+import { evaluateFabric, findProductBySlug, productAvailabilityFor } from './product-detail-db';
 import { AVAILABILITY, homepageFor, MOCK_SESSION, NEWSLETTER_SUBSCRIPTION } from './db';
 
 /**
@@ -122,6 +122,23 @@ export const handlers = [
 
     if (product === null) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(product);
+  }),
+
+  /*
+   * Section 25. A GET because it is a pure function of its inputs and stores
+   * nothing — "No customer input is stored" is an invariant of the module, not
+   * an implementation detail, so the request carries no body and no identity.
+   */
+  http.get(`*${ENDPOINTS.fabricCalculator.evaluate}`, ({ request }) => {
+    const url = new URL(request.url);
+    const verdict = evaluateFabric(
+      url.searchParams.get('productId') ?? '',
+      Number(url.searchParams.get('heightCm') ?? '0'),
+      url.searchParams.get('styleId') ?? '',
+    );
+
+    if (verdict === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(verdict);
   }),
 
   http.post(`*${ENDPOINTS.newsletter.subscribe}`, () =>

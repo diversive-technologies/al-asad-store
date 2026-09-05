@@ -80,12 +80,18 @@ Last updated: 2026-09-04. Last commit: `aca3d62` (tree dirty — see below).
 - **Shell** — gallery with thumbnails, and the buy box branching on the DECLARED
   type: SIMPLE gets one selector, SET gets the unified selector plus the
   per-piece override panel. Selection logic is pure and covered by 21 tests.
+- **Fabric Calculator (§25)** — the second BFF route, `/api/fabric-calculator`.
+  The interface holds NO requirement table and does no subtraction: §25 makes
+  that a backend module, and the comfort margin separating "comfortable" from
+  "just enough" is a tunable the operator owns. Eligibility is the backend's
+  answer too — the product payload carries `fabricCalculator: offer | null`, so
+  nothing infers it from `isUnstitched`.
 
 ## M3 — what is left
 
-Fabric Calculator (§25), Notify Me on sold-out sizes, size guides, WhatsApp and
-copy-link sharing, you-may-also-like, and the gallery's desktop magnifier and
-mobile tap-to-fullscreen. None is started; none is faked.
+Notify Me on sold-out sizes, size guides, WhatsApp and copy-link sharing,
+you-may-also-like, and the gallery's desktop magnifier and mobile
+tap-to-fullscreen. None is started; none is faked.
 
 ## M2 — what is left
 
@@ -159,27 +165,20 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 
 ## Uncommitted work
 
-The D5 productisation pass — one codebase, many client deployments:
+The Fabric Calculator (§25):
 
-- `src/config/client.ts` — THE client profile: market, currency (with its own
-  minor-unit divisor, because 100 is a property of PKR and not of money),
-  per-locale BCP-47 tags, the national mobile format, and feature switches. Its
-  doc comment is the onboarding checklist for a new client.
-- `src/config/fonts.ts` — typefaces centralised out of the root layout.
-- `constants.ts` narrowed to values that are the same for every client.
-- `format.ts`, `price-input.ts` and the sign-in schema now read the profile;
-  the mobile placeholder reads the same entry as its pattern, so the two cannot
-  drift, and its duplicate message key is gone.
-- `newsletter` and `themeToggle` are feature-flagged; the locale switcher is
-  DERIVED from `LOCALES.length` rather than flagged, so it cannot contradict the
-  locale list.
-- `client.test.ts` — 5 tests guarding the quiet failures.
+- Contract, endpoint, `evaluate-fabric` reader, the `/api/fabric-calculator` BFF
+  route, a browser read, and the `FabricCalculator` panel.
+- The requirement table lives in the MOCK backend, not the frontend.
+- `catalogue-db` metreage now varies across unstitched products. It did not
+  before: unstitched only occurs where `index % 3 === 0`, so every such product
+  had exactly 2.5m and the `COMFORTABLE` verdict was **unreachable in the running
+  store** — a feature outcome nobody could ever screenshot.
 
-Proven, not assumed: flipping the profile to a Dubai client rendered prices as
-`AED 3,499`, removed the theme toggle from the header and the newsletter from the
-footer, with no other edit. Reverted afterwards.
-
-Verified: **typecheck, lint, 109 tests and the production build all pass.**
+Verified: **typecheck, lint, 109 tests and the production build all pass.** All
+three §25 verdicts were exercised through the BFF and through the UI
+(`COMFORTABLE`, `JUST_ENOUGH`, `INSUFFICIENT`), an unknown style returns 502
+rather than an invented answer, and the panel is absent on a stitched product.
 
 ---
 
@@ -199,6 +198,11 @@ Verified: **typecheck, lint, 109 tests and the production build all pass.**
 - **Breakpoint resets must match the specificity they override.** `& > *` is
   (0,1,0) and cannot undo `& > *:nth-child(2n)` at (0,2,0); media queries add no
   specificity. Reset with `:nth-child(n)`.
+- **`div#S:0` is React's streaming staging container, not a duplicate render.**
+  It carries `hidden` + `display: none`, so it is invisible and out of the
+  accessibility tree — but `querySelectorAll` counts it, which makes every
+  element on a streamed page look duplicated. Scope DOM counts to `main`, or
+  check for the `hidden` ancestor before believing a duplication bug.
 - **Page-subtree client components hydrate only on a real user event.** React's
   selective hydration means a scripted `.click()` from the devtools bridge finds
   no fiber and does nothing, while the layout's components (the header) are

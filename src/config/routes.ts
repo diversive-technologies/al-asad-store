@@ -25,6 +25,7 @@ export const ROUTES = {
    */
   api: {
     suggest: '/api/suggest',
+    fabricCalculator: '/api/fabric-calculator',
   },
   bag: '/bag',
   checkout: '/checkout',

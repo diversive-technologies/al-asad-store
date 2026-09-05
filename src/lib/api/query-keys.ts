@@ -25,5 +25,8 @@ export const queryKeys = {
      */
     suggestions: (term: string, locale: string) =>
       [...queryKeys.catalogue.all, 'suggestions', locale, term] as const,
+    /** §25 is a pure function of these three, so they are the whole key. */
+    fabricVerdict: (productId: string, heightCm: number, styleId: string) =>
+      [...queryKeys.catalogue.all, 'fabric-verdict', productId, heightCm, styleId] as const,
   },
 } as const;

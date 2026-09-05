@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { fabricIdSchema, pieceIdSchema, productIdSchema, sizeIdSchema } from '@/lib/domain/ids';
 
+import { fabricCalculatorOfferSchema } from './fabric-calculator.schema';
 import { productPricingSchema, productTypeSchema } from './product-card.schema';
 
 /**
@@ -121,6 +122,14 @@ const productDetailShape = z.object({
    */
   estimatedDeliveryDate: z.iso.date(),
   infoSections: z.array(infoSectionSchema),
+  /**
+   * §25 — present when the Fabric Calculator applies to this product, `null`
+   * when it does not. The BACKEND decides: "offered only for products with at
+   * least one unstitched piece" is a catalogue rule, and an interface that
+   * inferred it from `isUnstitched` would be a second implementation of it
+   * (DATA-13).
+   */
+  fabricCalculator: fabricCalculatorOfferSchema.nullable(),
   isNew: z.boolean(),
 });
 

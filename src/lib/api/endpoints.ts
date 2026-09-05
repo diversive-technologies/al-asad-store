@@ -43,6 +43,10 @@ export const ENDPOINTS = {
      */
     productAvailability: '/api/v1/catalogue/availability/product',
   },
+  /** Section 25 `FabricCalculator.evaluate(product, height, style)`. */
+  fabricCalculator: {
+    evaluate: '/api/v1/fabric-calculator/evaluate',
+  },
   newsletter: {
     subscribe: '/api/v1/newsletter/subscriptions',
   },

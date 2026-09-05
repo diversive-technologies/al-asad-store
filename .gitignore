@@ -41,3 +41,6 @@ desktop.ini
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Screenshots dropped into the repo root for reference, not project assets
+/WhatsApp Image *

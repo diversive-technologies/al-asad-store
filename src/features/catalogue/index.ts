@@ -4,6 +4,8 @@
  * here rather than reaching into this feature's internals.
  */
 export { fetchAvailability } from './api/fetch-availability';
+export { evaluateFabric } from './api/evaluate-fabric';
+export { fetchFabricVerdict } from './api/fetch-fabric-verdict';
 export { fetchProduct } from './api/fetch-product';
 export { fetchProductAvailability } from './api/fetch-product-availability';
 export { findByCode } from './api/find-by-code';
@@ -12,6 +14,7 @@ export { suggest } from './api/suggest';
 export { fetchSuggestions, type SuggestionsError } from './api/fetch-suggestions';
 export { CatalogueScreen, type CatalogueScreenProps } from './components/CatalogueScreen';
 export { CodeMatch, type CodeMatchProps } from './components/CodeMatch';
+export { FabricCalculator, type FabricCalculatorProps } from './components/FabricCalculator';
 export { ProductBuyBox, type ProductBuyBoxProps } from './components/ProductBuyBox';
 export { ProductGallery, type ProductGalleryProps } from './components/ProductGallery';
 export { ProductScreen, type ProductScreenProps } from './components/ProductScreen';
@@ -78,6 +81,14 @@ export {
   type ProductDetailAvailability,
   type SizeAvailability,
 } from './schemas/piece-availability.schema';
+export {
+  fabricCalculatorOfferSchema,
+  fabricVerdictSchema,
+  type FabricCalculatorOffer,
+  type FabricQuery,
+  type FabricVerdict,
+  type GarmentStyle,
+} from './schemas/fabric-calculator.schema';
 export {
   productDetailSchema,
   type Colour,

@@ -7,6 +7,7 @@ import { formatDate, formatMetres, formatNumber, formatTemplate } from '@/lib/ut
 
 import type { ProductDetailAvailability } from '../schemas/piece-availability.schema';
 import type { ProductDetail } from '../schemas/product-detail.schema';
+import { FabricCalculator } from './FabricCalculator';
 import { ProductBuyBox } from './ProductBuyBox';
 import { ProductGallery } from './ProductGallery';
 
@@ -100,6 +101,22 @@ export function ProductScreen({ product, availability, locale, messages }: Produ
           </dl>
         </div>
       </div>
+
+      {/*
+       * §25 — drawn only when the BACKEND offers it. `null` is the eligibility
+       * answer ("at least one unstitched piece"), so nothing here inspects the
+       * pieces to decide (DATA-13).
+       */}
+      {product.fabricCalculator === null ? null : (
+        <div className="mt-12">
+          <FabricCalculator
+            productId={product.id}
+            offer={product.fabricCalculator}
+            locale={locale}
+            messages={messages}
+          />
+        </div>
+      )}
 
       {/* A11Y-09: sequential headings under the single h1 above. */}
       <section aria-labelledby="included-heading" className="mt-12">

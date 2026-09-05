@@ -139,7 +139,15 @@ export const CATALOGUE: readonly CatalogueRecord[] = Array.from(
       pieceCount,
       currentMinor,
       originalMinor: isDiscounted ? Math.round(currentMinor * 1.35) : null,
-      metreage: garmentType === 'unstitched' ? 2.5 + (index % 3) * 0.5 : null,
+      /*
+       * Varied with `index / 3` rather than `index % 3`, and that is not
+       * cosmetic. Unstitched products only occur where `index % 3 === 0`, so the
+       * old formula gave EVERY unstitched product exactly 2.5m — which made the
+       * Fabric Calculator's `COMFORTABLE` verdict unreachable in the running
+       * store. A fixture that cannot produce one of a feature's three outcomes
+       * hides it from every screenshot and every review.
+       */
+      metreage: garmentType === 'unstitched' ? 2.5 + (Math.floor(index / 3) % 5) * 0.5 : null,
       isNew: index % 5 === 0,
       launchedAt: new Date(LAUNCH_EPOCH - index * DAY_MS).toISOString(),
       // Roughly one in seven is out of stock, so empty states are reachable.
