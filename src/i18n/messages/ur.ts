@@ -84,7 +84,7 @@ export const ur: Messages = {
   home: {
     metaTitle: 'روایتی ملبوسات، سلے اور بغیر سلے',
     metaDescription:
-      'لان، کاٹن اور شفون، سلے اور بغیر سلے۔ پورے پاکستان میں ترسیل، کیش آن ڈیلیوری دستیاب ہے۔',
+      'واش این ویئر، بوسکی اور کرنڈی، سلے اور بغیر سلے۔ پورے پاکستان میں ترسیل، کیش آن ڈیلیوری دستیاب ہے۔',
     railScrollLabel: 'مصنوعات دیکھیں',
   },
   newsletter: {
@@ -168,7 +168,7 @@ export const ur: Messages = {
   search: {
     title: 'تلاش',
     inputLabel: 'مصنوعات تلاش کریں',
-    placeholder: 'لان، شفون، یا پروڈکٹ کوڈ…',
+    placeholder: 'بوسکی، کرنڈی، یا پروڈکٹ کوڈ…',
     submit: 'تلاش کریں',
     resultsHeading: 'نتائج',
     exactMatchHeading: 'اس کوڈ کا بالکل درست نتیجہ',

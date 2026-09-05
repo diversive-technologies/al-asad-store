@@ -12,13 +12,34 @@ import type { Locale } from '@/i18n/locales';
  * it could not model filtering or sorting at all.
  */
 
-const FABRICS = ['lawn', 'chiffon', 'cotton', 'cambric'] as const;
-const COLOURS = ['ivory', 'indigo', 'rose', 'sage', 'charcoal', 'gold'] as const;
-const WORK_TYPES = ['embroidered', 'printed', 'plain', 'hand-finished'] as const;
+const FABRICS = ['wash-n-wear', 'boski', 'karandi', 'cotton'] as const;
+const WORK_TYPES = ['plain', 'self-textured', 'contrast-trim', 'embroidered'] as const;
 
 type FabricKey = (typeof FABRICS)[number];
-type ColourKey = (typeof COLOURS)[number];
 type WorkKey = (typeof WORK_TYPES)[number];
+
+/*
+ * Colour and garment are unions rather than `as const` arrays, because nothing
+ * cycles them any more: both are read off the photograph. `VOCABULARY` below
+ * stays the one place each value's label is written (SSOT-07 in spirit — this
+ * is fixture data standing in for backend content).
+ */
+type ColourKey =
+  | 'maroon'
+  | 'emerald'
+  | 'bottle'
+  | 'olive'
+  | 'walnut'
+  | 'graphite'
+  | 'stone'
+  | 'ivory'
+  | 'charcoal'
+  | 'slate'
+  | 'taupe'
+  | 'rust'
+  | 'navy';
+
+type GarmentKey = 'waistcoat' | 'kameez' | 'kurta' | 'boys-kurta';
 
 /**
  * Section 22: fabric and colour are closed vocabularies with fixed Urdu forms
@@ -28,20 +49,31 @@ type WorkKey = (typeof WORK_TYPES)[number];
  */
 const VOCABULARY: Record<Locale, Record<string, string>> = {
   en: {
-    lawn: 'Lawn',
-    chiffon: 'Chiffon',
+    'wash-n-wear': 'Wash-n-wear',
+    boski: 'Boski',
+    karandi: 'Karandi',
     cotton: 'Cotton',
-    cambric: 'Cambric',
+    maroon: 'Maroon',
+    emerald: 'Emerald',
+    bottle: 'Bottle Green',
+    olive: 'Olive',
+    walnut: 'Walnut',
+    graphite: 'Graphite',
+    stone: 'Stone',
     ivory: 'Ivory',
-    indigo: 'Indigo',
-    rose: 'Rose',
-    sage: 'Sage',
     charcoal: 'Charcoal',
-    gold: 'Gold',
-    embroidered: 'Embroidered',
-    printed: 'Printed',
+    slate: 'Slate',
+    taupe: 'Taupe',
+    rust: 'Rust',
+    navy: 'Navy',
     plain: 'Plain',
-    'hand-finished': 'Hand-finished',
+    'self-textured': 'Self-textured',
+    'contrast-trim': 'Contrast-trim',
+    embroidered: 'Embroidered',
+    waistcoat: 'Waistcoat Suit',
+    kameez: 'Kameez Shalwar',
+    kurta: 'Kurta',
+    'boys-kurta': 'Boys Kurta',
     unstitched: 'Unstitched',
     stitched: 'Stitched',
     '1': 'One-piece',
@@ -49,20 +81,31 @@ const VOCABULARY: Record<Locale, Record<string, string>> = {
     '3': 'Three-piece',
   },
   ur: {
-    lawn: 'لان',
-    chiffon: 'شفون',
+    'wash-n-wear': 'واش این ویئر',
+    boski: 'بوسکی',
+    karandi: 'کرنڈی',
     cotton: 'کاٹن',
-    cambric: 'کیمبرک',
+    maroon: 'مرون',
+    emerald: 'زمردی',
+    bottle: 'گہرا سبز',
+    olive: 'زیتونی',
+    walnut: 'اخروٹی',
+    graphite: 'سیاہی مائل سرمئی',
+    stone: 'پتھری',
     ivory: 'عاجی',
-    indigo: 'نیلا',
-    rose: 'گلابی',
-    sage: 'سبزہ',
     charcoal: 'سرمئی',
-    gold: 'سنہری',
-    embroidered: 'کڑھائی',
-    printed: 'پرنٹڈ',
+    slate: 'نیلگوں سرمئی',
+    taupe: 'خاکی بھورا',
+    rust: 'زنگی',
+    navy: 'گہرا نیلا',
     plain: 'سادہ',
-    'hand-finished': 'ہاتھ سے تیار',
+    'self-textured': 'سیلف',
+    'contrast-trim': 'کنٹراسٹ',
+    embroidered: 'کڑھائی',
+    waistcoat: 'واسکٹ سوٹ',
+    kameez: 'قمیض شلوار',
+    kurta: 'کرتا',
+    'boys-kurta': 'بچوں کا کرتا',
     unstitched: 'بغیر سلے',
     stitched: 'سلے ہوئے',
     '1': 'ایک پیس',
@@ -73,6 +116,57 @@ const VOCABULARY: Record<Locale, Record<string, string>> = {
 
 export function vocabularyLabel(locale: Locale, key: string): string {
   return VOCABULARY[locale][key] ?? key;
+}
+
+/**
+ * The client's own photography, in `public/products/`.
+ *
+ * Every attribute a customer can SEE in the picture is read from this table
+ * rather than computed from the product index — colour, and which garment it is.
+ * That is the whole point: a generated fixture is free to call a product
+ * "Slate", but if the photograph shows a maroon waistcoat then the card is
+ * lying, and no amount of filter correctness makes a lying card acceptable.
+ *
+ * Attributes the picture does NOT settle — fabric, work type, price, launch
+ * date — stay generated, so filtering and sorting still have something to vary.
+ */
+interface Photograph {
+  readonly file: string;
+  readonly colour: ColourKey;
+  readonly garment: GarmentKey;
+}
+
+const PHOTOGRAPHY: readonly Photograph[] = [
+  { file: 'waistcoat-maroon', colour: 'maroon', garment: 'waistcoat' },
+  { file: 'waistcoat-emerald', colour: 'emerald', garment: 'waistcoat' },
+  { file: 'waistcoat-bottle', colour: 'bottle', garment: 'waistcoat' },
+  { file: 'waistcoat-olive', colour: 'olive', garment: 'waistcoat' },
+  { file: 'waistcoat-walnut', colour: 'walnut', garment: 'waistcoat' },
+  { file: 'waistcoat-graphite', colour: 'graphite', garment: 'waistcoat' },
+  { file: 'waistcoat-stone', colour: 'stone', garment: 'waistcoat' },
+  { file: 'waistcoat-ivory', colour: 'ivory', garment: 'waistcoat' },
+  { file: 'kameez-charcoal', colour: 'charcoal', garment: 'kameez' },
+  { file: 'kameez-slate', colour: 'slate', garment: 'kameez' },
+  { file: 'kameez-taupe', colour: 'taupe', garment: 'kameez' },
+  { file: 'kurta-rust', colour: 'rust', garment: 'kurta' },
+  { file: 'boys-kurta-charcoal', colour: 'charcoal', garment: 'boys-kurta' },
+  { file: 'boys-kurta-navy', colour: 'navy', garment: 'boys-kurta' },
+];
+
+/**
+ * §6.1 — piece count follows the garment, and the garment is what was
+ * photographed. A waistcoat suit is the three-piece case the SET model exists
+ * for: waistcoat, kameez and shalwar, each sized and stocked on its own.
+ */
+const PIECES: Record<GarmentKey, number> = {
+  waistcoat: 3,
+  kameez: 2,
+  kurta: 1,
+  'boys-kurta': 1,
+};
+
+export function photoUrl(file: string): string {
+  return `/products/${file}.avif`;
 }
 
 export interface CatalogueRecord {
@@ -102,7 +196,9 @@ export interface CatalogueRecord {
    * overlay, which stays authoritative.
    */
   isInStock: boolean;
-  imageIndex: number;
+  /** Which of the client's photographs this product is. */
+  photo: Photograph;
+  garment: GarmentKey;
 }
 
 const TOTAL_PRODUCTS = 28;
@@ -118,18 +214,35 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const CATALOGUE: readonly CatalogueRecord[] = Array.from(
   { length: TOTAL_PRODUCTS },
   (_, index): CatalogueRecord => {
-    const pieceCount = (index % 3) + 1;
-    const fabric = FABRICS[index % FABRICS.length] ?? 'lawn';
-    const colour = COLOURS[(index * 5) % COLOURS.length] ?? 'ivory';
+    /*
+     * 28 products over 14 photographs, so each garment appears twice — offered
+     * in two different cloths, which is how this catalogue actually works. The
+     * two instances land on different fabrics because 14 and 4 put them two
+     * apart in the fabric cycle, and they never disagree about COLOUR, because
+     * colour is read from the photograph both times.
+     */
+    const photo = PHOTOGRAPHY[index % PHOTOGRAPHY.length] ?? PHOTOGRAPHY[0];
+    if (photo === undefined) throw new Error('PHOTOGRAPHY must not be empty.');
+
+    const pieceCount = PIECES[photo.garment];
+    const fabric = FABRICS[index % FABRICS.length] ?? 'cotton';
+    const colour = photo.colour;
     const workType = WORK_TYPES[(index * 3) % WORK_TYPES.length] ?? 'plain';
-    const garmentType = pieceCount === 1 && index % 2 === 0 ? 'unstitched' : 'stitched';
+    /*
+     * The adult kurta is the unstitched line. Tying this to the garment rather
+     * than to `index % 2` is what keeps it sane now that photography drives the
+     * fixture: the old parity rule would have made an UNSTITCHED product out of
+     * whichever photograph happened to land on an even index, and the two that
+     * did were the boys' kurtas.
+     */
+    const garmentType = photo.garment === 'kurta' ? 'unstitched' : 'stitched';
     const currentMinor = 349_900 + ((index * 187_000) % 1_750_000);
     const isDiscounted = index % 4 === 1;
 
     return {
       id: `7d1f0a2c-9b4e-4c8a-8f21-${String(index + 1).padStart(12, '0')}`,
       code: `AA-${String(1000 + index)}`,
-      slug: `${workType}-${fabric}-${colour}-${String(index + 1)}`,
+      slug: `${fabric}-${photo.garment}-${colour}-${String(index + 1)}`,
       fabric,
       colour,
       workType,
@@ -140,19 +253,20 @@ export const CATALOGUE: readonly CatalogueRecord[] = Array.from(
       currentMinor,
       originalMinor: isDiscounted ? Math.round(currentMinor * 1.35) : null,
       /*
-       * Varied with `index / 3` rather than `index % 3`, and that is not
-       * cosmetic. Unstitched products only occur where `index % 3 === 0`, so the
-       * old formula gave EVERY unstitched product exactly 2.5m — which made the
-       * Fabric Calculator's `COMFORTABLE` verdict unreachable in the running
-       * store. A fixture that cannot produce one of a feature's three outcomes
-       * hides it from every screenshot and every review.
+       * Spread deliberately, and checked against the unstitched indices rather
+       * than assumed. All three Fabric Calculator verdicts have to be reachable
+       * from a product page: a fixture that cannot produce one of a feature's
+       * three outcomes hides it from every screenshot and every review. The two
+       * unstitched products land on 4.5m and 2.5m, which gives COMFORTABLE on
+       * one and JUST_ENOUGH or INSUFFICIENT on the other depending on height.
        */
-      metreage: garmentType === 'unstitched' ? 2.5 + (Math.floor(index / 3) % 5) * 0.5 : null,
+      metreage: garmentType === 'unstitched' ? 2.0 + ((index % 6) * 0.5) : null,
       isNew: index % 5 === 0,
       launchedAt: new Date(LAUNCH_EPOCH - index * DAY_MS).toISOString(),
       // Roughly one in seven is out of stock, so empty states are reachable.
       isInStock: index % 7 !== 3,
-      imageIndex: (index % 4) + 1,
+      photo,
+      garment: photo.garment,
     };
   },
 );
@@ -186,19 +300,29 @@ export function toProductCard(record: CatalogueRecord, locale: Locale): ProductC
   return {
     id: record.id,
     slug: record.slug,
-    // Stands in for a backend-authored, per-locale product name. Assembling it
-    // here is fixture generation, not interface copy (I18N-06 governs the latter).
-    name: `${vocabularyLabel(locale, record.workType)} ${vocabularyLabel(locale, record.fabric)}`,
+    /*
+     * Stands in for a backend-authored, per-locale product name. Assembling it
+     * here is fixture generation, not interface copy (I18N-06 governs the latter).
+     *
+     * Work type plus garment, NOT fabric plus garment: the card already prints
+     * fabric and colour on its own line, and a name that repeated the fabric
+     * read as "Wash-n-wear Kameez Shalwar / Wash-n-wear · Charcoal".
+     */
+    name: `${vocabularyLabel(locale, record.workType)} ${vocabularyLabel(locale, record.garment)}`,
     type: record.type,
     pieceCount: record.pieceCount,
-    imageUrl: `/placeholders/product-${String(record.imageIndex)}.avif`,
+    imageUrl: photoUrl(record.photo.file),
     /*
-     * Every product carries a hover image. The contract keeps this nullable
-     * because a real catalogue will have products shot only once, but giving
-     * only half the fixture one made the grid look broken rather than varied —
-     * hovering appeared to work at random.
+     * Null everywhere, and that is the honest answer rather than a gap.
+     *
+     * The contract has always kept this nullable "because a real catalogue will
+     * have products shot only once" — and now that the fixture holds the
+     * client's real photography, that is precisely the situation: one shot per
+     * garment. Pointing the hover at a DIFFERENT garment's photograph is worse
+     * than no hover, because it tells the customer they are looking at a second
+     * view of the thing they are about to buy.
      */
-    hoverImageUrl: `/placeholders/product-${String((record.imageIndex % 4) + 1)}.avif`,
+    hoverImageUrl: null,
     workType: vocabularyLabel(locale, record.workType),
     fabricName: vocabularyLabel(locale, record.fabric),
     colourName: vocabularyLabel(locale, record.colour),

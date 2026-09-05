@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-04. Last commit: `aca3d62` (tree dirty — see below).
+Last updated: 2026-09-05. Last commit: `0348bda` (tree dirty — see below).
 
 ---
 
@@ -155,30 +155,69 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
   that flips when M3 lands, and it is covered by a test that says so.
 
 
-- **`/catalogue/[slug]` 404s.** That is the M3 product page. Left dead on purpose
-  rather than stubbed.
-- **Product imagery is synthetic.** Four colour-accurate AVIF fabric swatches
-  cycled across 28 products, chosen after keyword photo services returned
-  unusable results. This is the single biggest drag on how the catalogue reads
-  and no card or grid change will fix it — it needs real photography.
+- **Product imagery is now the client's own.** Fourteen photographs in
+  `public/products/`, converted to 4:5 AVIF from the originals kept in
+  `assets/photography/`. See "Photography" below for what this changed and what
+  is still missing.
 - **Sign-in is a mock (D3).** No credentials are stored or validated.
+
+## Photography
+
+The client is **Al-Asad Collections**, and the store sells **menswear**, not the
+women's lawn suits the fixture had been assuming. Sixteen photographs arrived;
+fourteen are product shots and two are marketing collateral.
+
+What that forced, beyond dropping the files in:
+
+- **The fixture vocabulary was womenswear and had to change with the pictures.**
+  Lawn / chiffon / cambric became wash-n-wear / boski / karandi / cotton; rose
+  and sage became the twelve colours actually photographed. A filter reading
+  "Chiffon · Rose" over a photograph of a maroon waistcoat is not a cosmetic
+  mismatch, it is a lying card.
+- **Colour is now READ FROM the photograph, not computed from the index.**
+  `PHOTOGRAPHY` in `catalogue-db.ts` is the table; anything a customer can see in
+  the picture comes from there, and only what the picture does not settle
+  (fabric, work type, price, date) is still generated.
+- **Piece counts follow the garment.** A waistcoat suit is the three-piece SET
+  the domain model exists for — waistcoat, kameez, shalwar, each sized on its
+  own — and a kameez shalwar is two. `PIECE_NAMES` is keyed by garment, because
+  position 0 is "Waistcoat" in one and "Kameez" in the other.
+- **28 products over 14 photographs**, each garment offered in two cloths. The
+  two instances never disagree about colour, because both read it from the photo.
+- **`hoverImageUrl` is null everywhere.** One shot per garment is what exists,
+  and pointing the hover at a different garment is worse than no hover.
+- The sold-out overlay named "Dupatta", a piece no menswear set has. Now Shalwar,
+  the one piece both SET garments share.
+
+Copy that contradicted the new catalogue was updated with it: hero headline,
+meta description, search placeholder, the fabric glossary, the care guide and
+the size guide, in both locales.
+
+**Still missing, and not faked:**
+
+- **No cloth photography.** The unstitched line (the adult kurta) shows a
+  stitched example, because no photograph of fabric on the bolt exists yet.
+- **One frame per garment.** No second angles, no detail shots, so the gallery
+  renders a single image and hides its thumbnail strip.
+- **The two brand pieces are unused** — `assets/photography/brand-poster-lion.jpeg`
+  carries the gold lion crest and would make a real logo and favicon; both it and
+  `brand-banner-rust.jpeg` have a phone number burned into them, so neither is
+  usable as-is.
 
 ## Uncommitted work
 
-The Fabric Calculator (§25):
+Photography (above), and before it the Fabric Calculator (§25):
 
 - Contract, endpoint, `evaluate-fabric` reader, the `/api/fabric-calculator` BFF
   route, a browser read, and the `FabricCalculator` panel.
 - The requirement table lives in the MOCK backend, not the frontend.
-- `catalogue-db` metreage now varies across unstitched products. It did not
-  before: unstitched only occurs where `index % 3 === 0`, so every such product
-  had exactly 2.5m and the `COMFORTABLE` verdict was **unreachable in the running
-  store** — a feature outcome nobody could ever screenshot.
 
-Verified: **typecheck, lint, 109 tests and the production build all pass.** All
-three §25 verdicts were exercised through the BFF and through the UI
-(`COMFORTABLE`, `JUST_ENOUGH`, `INSUFFICIENT`), an unknown style returns 502
-rather than an invented answer, and the panel is absent on a stitched product.
+Verified after the photography change: **typecheck, lint, 109 tests and the
+production build all pass.** Every product image resolves 200 through
+`next/image`, no `/placeholders/` request remains, the three-piece buy box reads
+Waistcoat / Kameez / Shalwar, and the Fabric Calculator still reaches
+`COMFORTABLE` (4.5m, short kurta, 175cm) and `INSUFFICIENT` (same cloth, kameez
+and shalwar) from the running store.
 
 ---
 
@@ -237,6 +276,14 @@ rather than an invented answer, and the panel is absent on a stitched product.
   measuring anything animated, and before any layout read.
 - **`typedRoutes` is off** on purpose: it is incompatible with backend-supplied
   hrefs.
+- **`sharp` is present** (Next pulls it in), so image conversion needs no new
+  dependency — but a script run from the scratchpad cannot resolve it. Require it
+  by absolute path out of the project's `node_modules`.
+- **A two-panel composite defeats `sharp.strategy.attention`:** it straddled the
+  seam and produced a crop that was half one panel. Extract the panel first, then
+  resize.
+- **The Read tool does not render AVIF.** To look at converted output, composite
+  a contact sheet as JPEG and read that instead — one image, one look.
 
 ## Commands
 

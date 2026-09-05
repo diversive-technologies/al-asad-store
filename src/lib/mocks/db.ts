@@ -1,6 +1,6 @@
 import type { Locale } from '@/i18n/locales';
 
-import { CATALOGUE, toProductCard } from './catalogue-db';
+import { CATALOGUE, photoUrl, toProductCard } from './catalogue-db';
 
 /**
  * D1 — THE fixture source for the mock layer.
@@ -38,8 +38,13 @@ export const AVAILABILITY = CATALOGUE.filter((_, index) => index % 11 !== 6).map
       return {
         productId: record.id,
         status: 'SOLD_OUT' as const,
-        // A SET is unbuyable when one piece is gone, and the backend says which.
-        unavailablePieceNames: record.type === 'SET' ? ['Dupatta'] : [],
+        /*
+         * A SET is unbuyable when one piece is gone, and the backend says which.
+         * Shalwar rather than Dupatta: it is the one piece BOTH set garments
+         * have — a three-piece waistcoat suit and a two-piece kameez shalwar —
+         * so the overlay never names a piece the product does not contain.
+         */
+        unavailablePieceNames: record.type === 'SET' ? ['Shalwar'] : [],
       };
     }
 
@@ -68,7 +73,7 @@ interface HomepageCopy {
 
 const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
   en: {
-    heroHeadline: 'Lawn, cotton and chiffon',
+    heroHeadline: 'Wash-n-wear, boski and karandi',
     heroSubheadline: 'Stitched and unstitched, delivered across Pakistan.',
     heroCta: 'Browse the catalogue',
     railTitle: 'New arrivals',
@@ -76,7 +81,7 @@ const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
     tiles: ['Unstitched', 'Stitched', 'Two-piece', 'Three-piece'],
     bannerHeading: 'Know your fabric before you buy',
     bannerBody:
-      'Lawn, cambric, chiffon and cotton behave differently in the heat. The glossary explains each one in plain language.',
+      'Wash-n-wear, boski, karandi and cotton behave differently in the heat. The glossary explains each one in plain language.',
     bannerCta: 'Read the fabric glossary',
     catalogueHeading: 'The whole catalogue, in one place',
     catalogueBody:
@@ -84,7 +89,7 @@ const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
     catalogueCta: 'Open the catalogue',
   },
   ur: {
-    heroHeadline: 'لان، کاٹن اور شفون',
+    heroHeadline: 'واش این ویئر، بوسکی اور کرنڈی',
     heroSubheadline: 'سلے اور بغیر سلے، پورے پاکستان میں ترسیل۔',
     heroCta: 'مجموعہ دیکھیں',
     railTitle: 'نئی آمد',
@@ -92,7 +97,7 @@ const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
     tiles: ['بغیر سلے', 'سلے ہوئے', 'ٹو پیس', 'تھری پیس'],
     bannerHeading: 'خریدنے سے پہلے اپنا کپڑا جانیں',
     bannerBody:
-      'لان، کیمبرک، شفون اور کاٹن گرمی میں مختلف برتاؤ کرتے ہیں۔ لغت ہر ایک کو آسان زبان میں سمجھاتی ہے۔',
+      'واش این ویئر، بوسکی، کرنڈی اور کاٹن گرمی میں مختلف برتاؤ کرتے ہیں۔ لغت ہر ایک کو آسان زبان میں سمجھاتی ہے۔',
     bannerCta: 'کپڑوں کی لغت پڑھیں',
     catalogueHeading: 'پورا مجموعہ، ایک ہی جگہ',
     catalogueBody: 'ہر کپڑا اور ہر ڈیزائن — رنگ، قیمت، پیس اور دستیابی کے مطابق چھانٹیں۔',
@@ -108,6 +113,15 @@ const TILE_HREFS = [
   '/catalogue?pieceCount=2',
   '/catalogue?pieceCount=3',
 ] as const;
+
+/**
+ * One of the client's photographs per tile, chosen to actually SHOW what the
+ * tile filters to: the unstitched line is the kurta, and the three-piece tile
+ * is a waistcoat suit. A category tile that shows something the filter does not
+ * return is worse than no image, because it sets an expectation the listing
+ * then breaks.
+ */
+const TILE_IMAGES = ['kurta-rust', 'kameez-slate', 'kameez-taupe', 'waistcoat-maroon'] as const;
 
 const RAIL_LENGTH = 8;
 
@@ -149,7 +163,7 @@ export function homepageFor(locale: Locale) {
         tiles: copy.tiles.map((label, index) => ({
           id: TILE_IDS[index],
           label,
-          imageUrl: '/placeholders/category-' + String(index + 1) + '.avif',
+          imageUrl: photoUrl(TILE_IMAGES[index] ?? 'kameez-slate'),
           href: TILE_HREFS[index],
         })),
       },
@@ -160,10 +174,10 @@ export function homepageFor(locale: Locale) {
         body: copy.catalogueBody,
         cta: { label: copy.catalogueCta, href: '/catalogue' },
         previewImageUrls: [
-          '/placeholders/product-1.avif',
-          '/placeholders/product-2.avif',
-          '/placeholders/product-3.avif',
-          '/placeholders/product-4.avif',
+          photoUrl('waistcoat-ivory'),
+          photoUrl('kameez-charcoal'),
+          photoUrl('waistcoat-bottle'),
+          photoUrl('kurta-rust'),
         ],
       },
       {
@@ -171,7 +185,8 @@ export function homepageFor(locale: Locale) {
         id: 'fabric-story',
         heading: copy.bannerHeading,
         body: copy.bannerBody,
-        imageUrl: '/placeholders/editorial.avif',
+        // The collar-and-placket detail shot: cloth close enough to read.
+        imageUrl: photoUrl('kameez-charcoal'),
         // Logical, not physical: the reading-end side in both directions.
         imageSide: 'end',
         cta: { label: copy.bannerCta, href: '/help/fabric-glossary' },

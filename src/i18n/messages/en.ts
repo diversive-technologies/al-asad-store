@@ -83,7 +83,7 @@ export const en = {
   home: {
     metaTitle: 'Ethnic apparel, stitched and unstitched',
     metaDescription:
-      'Lawn, cotton and chiffon in stitched and unstitched form. Delivered across Pakistan, cash on delivery available.',
+      'Wash-n-wear, boski and karandi in stitched and unstitched form. Delivered across Pakistan, cash on delivery available.',
     railScrollLabel: 'Scroll products',
   },
   newsletter: {
@@ -167,7 +167,7 @@ export const en = {
   search: {
     title: 'Search',
     inputLabel: 'Search products',
-    placeholder: 'Lawn, chiffon, a product code…',
+    placeholder: 'Boski, karandi, a product code…',
     submit: 'Search',
     resultsHeading: 'Results',
     exactMatchHeading: 'Exact match for this code',

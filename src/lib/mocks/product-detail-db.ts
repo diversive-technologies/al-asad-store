@@ -1,6 +1,6 @@
 import type { Locale } from '@/i18n/locales';
 
-import { CATALOGUE, vocabularyLabel, type CatalogueRecord } from './catalogue-db';
+import { CATALOGUE, photoUrl, vocabularyLabel, type CatalogueRecord } from './catalogue-db';
 
 /**
  * D1 — the product-page fixture, derived from the SAME `CATALOGUE` records the
@@ -27,9 +27,28 @@ const SIZE_LABELS: Record<Locale, readonly string[]> = {
   ur: ['XS', 'S', 'M', 'L', 'XL'],
 };
 
-const PIECE_NAMES: Record<Locale, readonly string[]> = {
-  en: ['Shirt', 'Trouser', 'Dupatta'],
-  ur: ['قمیض', 'شلوار', 'دوپٹہ'],
+/**
+ * Piece names belong to the GARMENT, not to a position in a list.
+ *
+ * A flat `['Shirt', 'Trouser', 'Dupatta']` indexed by position was fine while
+ * every SET was a women's suit. With a three-piece waistcoat suit and a
+ * two-piece kameez shalwar in the same catalogue, position 0 is "Waistcoat" in
+ * one and "Kameez" in the other, and indexing the same array would have named
+ * the two-piece suit's first piece "Waistcoat".
+ */
+const PIECE_NAMES: Record<Locale, Record<string, readonly string[]>> = {
+  en: {
+    waistcoat: ['Waistcoat', 'Kameez', 'Shalwar'],
+    kameez: ['Kameez', 'Shalwar'],
+    kurta: ['Kurta'],
+    'boys-kurta': ['Kurta'],
+  },
+  ur: {
+    waistcoat: ['واسکٹ', 'قمیض', 'شلوار'],
+    kameez: ['قمیض', 'شلوار'],
+    kurta: ['کرتا'],
+    'boys-kurta': ['کرتا'],
+  },
 };
 
 interface FabricDetail {
@@ -38,28 +57,39 @@ interface FabricDetail {
   careText: Record<Locale, string>;
 }
 
-/** §6.3 — held once per fabric; a hundred lawn products share one care text. */
+/** §6.3 — held once per fabric; a hundred boski products share one care text. */
 const FABRIC_DETAIL: Record<string, FabricDetail> = {
-  lawn: {
-    weight: 'LIGHT',
+  'wash-n-wear': {
+    weight: 'MEDIUM',
     explainer: {
-      en: 'A fine, breathable cotton woven for hot weather.',
-      ur: 'باریک، ہوادار کاٹن جو گرم موسم کے لیے بُنا جاتا ہے۔',
+      en: 'A blended weave that keeps its press and needs little ironing.',
+      ur: 'ملواں بُنائی جو استری برقرار رکھتی ہے اور کم استری مانگتی ہے۔',
     },
     careText: {
-      en: 'Machine wash cold on a gentle cycle. Line dry in shade. Warm iron.',
-      ur: 'ٹھنڈے پانی میں ہلکی دھلائی۔ سائے میں سکھائیں۔ ہلکی استری کریں۔',
+      en: 'Machine wash warm. Drip dry on a hanger. Warm iron if needed.',
+      ur: 'نیم گرم پانی میں دھوئیں۔ ہینگر پر سکھائیں۔ ضرورت ہو تو ہلکی استری۔',
     },
   },
-  chiffon: {
+  boski: {
     weight: 'LIGHT',
     explainer: {
-      en: 'A sheer, fluid weave that drapes rather than holds its shape.',
-      ur: 'باریک، بہتا ہوا کپڑا جو اپنی ساخت رکھنے کے بجائے گرتا ہے۔',
+      en: 'A soft silk-finish cloth with a quiet sheen, worn for occasions.',
+      ur: 'نرم ریشمی سطح والا کپڑا، ہلکی چمک کے ساتھ، خاص مواقع کے لیے۔',
     },
     careText: {
-      en: 'Dry clean only. Do not wring. Cool iron with a pressing cloth.',
-      ur: 'صرف ڈرائی کلین۔ نچوڑیں نہیں۔ کپڑا رکھ کر ٹھنڈی استری کریں۔',
+      en: 'Dry clean only. Do not wring. Cool iron on the reverse.',
+      ur: 'صرف ڈرائی کلین۔ نچوڑیں نہیں۔ الٹی طرف سے ٹھنڈی استری۔',
+    },
+  },
+  karandi: {
+    weight: 'HEAVY',
+    explainer: {
+      en: 'A textured winter weave with a little weight and a matte surface.',
+      ur: 'سردیوں کا بُنا ہوا کپڑا، ہلکے وزن اور بغیر چمک والی سطح کے ساتھ۔',
+    },
+    careText: {
+      en: 'Dry clean preferred. If washed, use cold water and dry flat.',
+      ur: 'ڈرائی کلین بہتر ہے۔ دھونا ہو تو ٹھنڈا پانی، اور بچھا کر سکھائیں۔',
     },
   },
   cotton: {
@@ -73,17 +103,6 @@ const FABRIC_DETAIL: Record<string, FabricDetail> = {
       ur: 'نیم گرم پانی میں دھوئیں۔ ہلکی گرمی میں سکھائیں۔ ہلکی نمی میں استری کریں۔',
     },
   },
-  cambric: {
-    weight: 'MEDIUM',
-    explainer: {
-      en: 'A closely woven cotton with a smooth finish and a little weight.',
-      ur: 'گھنی بُنائی والا کاٹن، ہموار سطح اور ہلکے وزن کے ساتھ۔',
-    },
-    careText: {
-      en: 'Machine wash cold. Line dry. Medium iron on the reverse.',
-      ur: 'ٹھنڈے پانی میں دھوئیں۔ لٹکا کر سکھائیں۔ الٹی طرف سے درمیانی استری۔',
-    },
-  },
 };
 
 interface ColourDetail {
@@ -93,29 +112,57 @@ interface ColourDetail {
 
 /** §6.2 — `description` is copy the operator writes, not a generated string. */
 const COLOUR_DETAIL: Record<string, ColourDetail> = {
+  maroon: {
+    hex: '#5c2b38',
+    description: { en: 'A deep wine red, closer to brown than to scarlet.', ur: 'گہرا مرون، سرخ سے زیادہ بھورے کی طرف۔' },
+  },
+  emerald: {
+    hex: '#3c5a3a',
+    description: { en: 'A rich mid green with a warm undertone.', ur: 'گہرا سبز، گرم جھلک کے ساتھ۔' },
+  },
+  bottle: {
+    hex: '#26382c',
+    description: { en: 'A very dark green that reads almost black indoors.', ur: 'بہت گہرا سبز، اندر تقریباً کالا لگتا ہے۔' },
+  },
+  olive: {
+    hex: '#5b6340',
+    description: { en: 'A muted green with a khaki cast.', ur: 'دھیما سبز، خاکی جھلک کے ساتھ۔' },
+  },
+  walnut: {
+    hex: '#4c352b',
+    description: { en: 'A warm dark brown, like polished wood.', ur: 'گرم گہرا بھورا، پالش شدہ لکڑی جیسا۔' },
+  },
+  graphite: {
+    hex: '#585d63',
+    description: { en: 'A mid grey with a cool, slightly blue cast.', ur: 'درمیانہ سرمئی، ہلکی نیلی جھلک کے ساتھ۔' },
+  },
+  stone: {
+    hex: '#b4a99c',
+    description: { en: 'A pale warm grey, softer than beige.', ur: 'ہلکا گرم سرمئی، بیج سے نرم۔' },
+  },
   ivory: {
     hex: '#efe9dd',
     description: { en: 'A warm off-white with a soft cream cast.', ur: 'گرم سفیدی، ہلکی کریمی جھلک کے ساتھ۔' },
-  },
-  indigo: {
-    hex: '#3b4a7a',
-    description: { en: 'A deep blue with a quiet violet undertone.', ur: 'گہرا نیلا، ہلکی بنفشی جھلک کے ساتھ۔' },
-  },
-  rose: {
-    hex: '#d9a3a8',
-    description: { en: 'A dusty pink, muted rather than bright.', ur: 'دھیما گلابی، چمکدار نہیں۔' },
-  },
-  sage: {
-    hex: '#a7b39a',
-    description: { en: 'A soft muted green with a grey undertone.', ur: 'ہلکا سبز، سرمئی جھلک کے ساتھ۔' },
   },
   charcoal: {
     hex: '#3f4147',
     description: { en: 'A near-black grey that reads softer than black.', ur: 'سیاہی مائل سرمئی، کالے سے نرم۔' },
   },
-  gold: {
-    hex: '#c8a561',
-    description: { en: 'A muted antique gold, not metallic.', ur: 'دھیما قدیم سنہری، دھاتی نہیں۔' },
+  slate: {
+    hex: '#59637d',
+    description: { en: 'A dusty blue-grey, muted rather than bright.', ur: 'دھیما نیلا سرمئی، چمکدار نہیں۔' },
+  },
+  taupe: {
+    hex: '#9c8878',
+    description: { en: 'A soft grey-brown that sits between beige and mocha.', ur: 'نرم سرمئی بھورا، بیج اور کافی کے درمیان۔' },
+  },
+  rust: {
+    hex: '#a55f2c',
+    description: { en: 'A warm burnt orange with a brown depth.', ur: 'گرم زنگی نارنجی، بھوری گہرائی کے ساتھ۔' },
+  },
+  navy: {
+    hex: '#22304d',
+    description: { en: 'A deep blue, dark enough to pass for black at night.', ur: 'گہرا نیلا، رات میں تقریباً کالا لگتا ہے۔' },
   },
 };
 
@@ -166,7 +213,6 @@ const INFO_SECTIONS: Record<Locale, readonly { id: string; heading: string; body
   ],
 };
 
-const MEDIA_COUNT = 4;
 const DELIVERY_EPOCH = Date.parse('2026-09-11T00:00:00.000Z');
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -208,7 +254,7 @@ export interface ProductDetailPayload {
   isNew: boolean;
 }
 
-const FABRIC_KEYS = ['lawn', 'chiffon', 'cotton', 'cambric'] as const;
+const FABRIC_KEYS = ['wash-n-wear', 'boski', 'karandi', 'cotton'] as const;
 
 function sizeOptionsFor(record: CatalogueRecord, locale: Locale): { id: string; label: string }[] {
   // Unstitched fabric is sold by length, so it has no size set at all (§6.1:
@@ -232,13 +278,13 @@ export function toProductDetail(record: CatalogueRecord, locale: Locale): Produc
   const pieces = Array.from({ length: record.pieceCount }, (_, pieceIndex) => {
     // Each piece may be cut from a different fabric in a real set; the fixture
     // varies them so the interface cannot assume one fabric per product.
-    const fabricKey = FABRIC_KEYS[(productIndex + pieceIndex) % FABRIC_KEYS.length] ?? 'lawn';
-    const pieceFabric = FABRIC_DETAIL[fabricKey] ?? FABRIC_DETAIL.lawn;
+    const fabricKey = FABRIC_KEYS[(productIndex + pieceIndex) % FABRIC_KEYS.length] ?? 'cotton';
+    const pieceFabric = FABRIC_DETAIL[fabricKey] ?? FABRIC_DETAIL.cotton;
 
     return {
       id: mockId('1111', productIndex * 10 + pieceIndex + 1),
       code: `${record.code}-P${String(pieceIndex + 1)}`,
-      name: PIECE_NAMES[locale][pieceIndex] ?? PIECE_NAMES[locale][0] ?? 'Piece',
+      name: PIECE_NAMES[locale][record.garment]?.[pieceIndex] ?? 'Piece',
       position: pieceIndex,
       fabric: {
         id: mockId('3333', FABRIC_KEYS.indexOf(fabricKey) + 1),
@@ -262,18 +308,25 @@ export function toProductDetail(record: CatalogueRecord, locale: Locale): Produc
     id: record.id,
     code: record.code,
     slug: record.slug,
-    name: `${vocabularyLabel(locale, record.workType)} ${vocabularyLabel(locale, record.fabric)}`,
+    name: `${vocabularyLabel(locale, record.workType)} ${vocabularyLabel(locale, record.garment)}`,
     description:
       locale === 'en'
-        ? `${vocabularyLabel(locale, record.workType)} ${vocabularyLabel(locale, record.fabric)} in ${vocabularyLabel(locale, record.colour)}, cut for everyday wear.`
-        : `${vocabularyLabel(locale, record.colour)} رنگ میں ${vocabularyLabel(locale, record.fabric)}، روزمرہ پہننے کے لیے۔`,
+        ? `${vocabularyLabel(locale, record.workType)} ${vocabularyLabel(locale, record.garment)} in ${vocabularyLabel(locale, record.colour)} ${vocabularyLabel(locale, record.fabric)}, cut for everyday wear.`
+        : `${vocabularyLabel(locale, record.colour)} ${vocabularyLabel(locale, record.fabric)} میں ${vocabularyLabel(locale, record.garment)}، روزمرہ پہننے کے لیے۔`,
     type: record.type,
-    media: Array.from({ length: MEDIA_COUNT }, (_, index) => ({
-      url: `/placeholders/product-${String(((record.imageIndex + index - 1) % 4) + 1)}.avif`,
-      // A11Y-04: authored alt text, not a generated one. The first shot names
-      // the product; the rest are additional views of the same thing.
-      alt: index === 0 ? `${vocabularyLabel(locale, record.fabric)}` : '',
-    })),
+    /*
+     * ONE shot, because one shot is what exists. The gallery was cycling four
+     * placeholder swatches to look like a real set of views; with the client's
+     * own photography there is a single frame per garment, and inventing extra
+     * angles by repeating other products' pictures would be a lie told by the
+     * fixture. A11Y-04: the alt text is authored, not generated.
+     */
+    media: [
+      {
+        url: photoUrl(record.photo.file),
+        alt: `${vocabularyLabel(locale, record.colour)} ${vocabularyLabel(locale, record.garment)}`,
+      },
+    ],
     pieces,
     pricing: { currentMinor: record.currentMinor, originalMinor: record.originalMinor },
     isUnstitched,

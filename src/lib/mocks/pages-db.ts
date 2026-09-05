@@ -26,45 +26,48 @@ export interface StaticPagePayload {
 
 const FABRIC_TERMS = [
   {
-    id: 'lawn',
+    id: 'wash-n-wear',
     en: [
-      'Lawn',
-      'A fine, lightweight cotton with a smooth finish. The default choice for Pakistani summers because it breathes and washes well.',
+      'Wash-n-wear',
+      'A polyester-cotton blend that holds its press and dries quickly. The default choice for daily kameez shalwar because it needs almost no ironing.',
     ],
     ur: [
-      'لان',
-      'باریک، ہلکا سوتی کپڑا جو ہموار ہوتا ہے۔ گرمیوں کا سب سے عام انتخاب، کیونکہ یہ ہوا گزرنے دیتا ہے اور آسانی سے دھل جاتا ہے۔',
+      'واش این ویئر',
+      'پالیسٹر اور کاٹن کا ملواں کپڑا جو استری برقرار رکھتا ہے اور جلد سوکھ جاتا ہے۔ روزمرہ کی قمیض شلوار کا سب سے عام انتخاب، کیونکہ اسے استری کی ضرورت نہ ہونے کے برابر ہوتی ہے۔',
     ],
   },
   {
-    id: 'cambric',
+    id: 'boski',
     en: [
-      'Cambric',
-      'Slightly heavier than lawn with a tighter weave. Holds its shape better, which suits stitched pieces worn through the day.',
+      'Boski',
+      'A soft silk-finish cloth with a quiet sheen and a fluid fall. Chosen for Eid, weddings and occasion wear rather than daily use.',
     ],
     ur: [
-      'کیمبرک',
-      'لان سے قدرے بھاری اور زیادہ کسا ہوا۔ اپنی ساخت بہتر رکھتا ہے، اس لیے دن بھر پہننے والے سلے ملبوسات کے لیے موزوں ہے۔',
+      'بوسکی',
+      'نرم ریشمی سطح والا کپڑا، ہلکی چمک اور بہتی ہوئی گرن کے ساتھ۔ عید، شادیوں اور خاص مواقع کے لیے چنا جاتا ہے، روزمرہ کے لیے نہیں۔',
     ],
   },
   {
-    id: 'chiffon',
+    id: 'karandi',
     en: [
-      'Chiffon',
-      'Sheer and light with a soft drape. Usually chosen for occasion wear rather than daily use.',
+      'Karandi',
+      'A textured winter weave with visible slubs and a matte surface. Heavier than the rest, and the usual choice once the weather turns.',
     ],
     ur: [
-      'شفون',
-      'باریک، ہلکا اور نرم گرنے والا۔ عام طور پر تقریبات کے ملبوسات کے لیے چنا جاتا ہے۔',
+      'کرنڈی',
+      'سردیوں کا بُنا ہوا کپڑا، نمایاں دانے دار سطح اور بغیر چمک کے۔ باقی سب سے بھاری، اور موسم بدلتے ہی عام انتخاب۔',
     ],
   },
   {
     id: 'cotton',
     en: [
       'Cotton',
-      'Durable and everyday. Heavier than lawn, and the most forgiving fabric to care for.',
+      'Durable and everyday. Breathes better than a blend, and the most forgiving fabric to care for — but it creases and will want ironing.',
     ],
-    ur: ['کاٹن', 'مضبوط اور روزمرہ کے لیے۔ لان سے بھاری، اور دیکھ بھال میں سب سے آسان۔'],
+    ur: [
+      'کاٹن',
+      'مضبوط اور روزمرہ کے لیے۔ ملواں کپڑے سے زیادہ ہوادار، اور دیکھ بھال میں سب سے آسان — مگر شکن پڑتی ہے اور استری مانگتا ہے۔',
+    ],
   },
 ] as const;
 
@@ -134,12 +137,12 @@ const PAGES: Record<string, (locale: Locale) => StaticPagePayload> = {
     },
     {
       en: [
-        'A set is measured piece by piece, because the kameez, shalwar and dupatta are sized independently.',
+        'A set is measured piece by piece, because the waistcoat, kameez and shalwar are sized independently.',
         'Unstitched fabric is sold by length rather than by size. The metreage is shown on every unstitched product.',
         'If you are between sizes, the looser size is usually the better choice for stitched pieces.',
       ],
       ur: [
-        'سیٹ کی پیمائش ہر جزو کے لیے الگ ہوتی ہے، کیونکہ قمیض، شلوار اور دوپٹہ کے سائز الگ الگ ہوتے ہیں۔',
+        'سیٹ کی پیمائش ہر جزو کے لیے الگ ہوتی ہے، کیونکہ واسکٹ، قمیض اور شلوار کے سائز الگ الگ ہوتے ہیں۔',
         'بغیر سلا کپڑا سائز کے بجائے لمبائی کے حساب سے بکتا ہے۔ ہر ایسی مصنوعات پر لمبائی درج ہوتی ہے۔',
         'اگر آپ دو سائز کے درمیان ہیں تو سلے ملبوسات کے لیے عام طور پر بڑا سائز بہتر رہتا ہے۔',
       ],
@@ -154,13 +157,13 @@ const PAGES: Record<string, (locale: Locale) => StaticPagePayload> = {
     },
     {
       en: [
-        'Wash lawn and cotton cold, and dry them in shade. Direct sun fades printed colour quickly.',
-        'Chiffon and embroidered pieces should be dry cleaned, or hand washed with great care.',
+        'Wash wash-n-wear and cotton cold, and dry them in shade. Direct sun fades colour quickly.',
+        'Boski, karandi and embroidered pieces should be dry cleaned, or hand washed with great care.',
         'Store folded rather than hung. Hanging stretches lightweight fabric at the shoulders over time.',
       ],
       ur: [
-        'لان اور کاٹن کو ٹھنڈے پانی میں دھوئیں اور سائے میں سکھائیں۔ تیز دھوپ سے پرنٹ کا رنگ جلد پھیکا پڑ جاتا ہے۔',
-        'شفون اور کڑھائی والے ملبوسات ڈرائی کلین کروائیں، یا بہت احتیاط سے ہاتھ سے دھوئیں۔',
+        'واش این ویئر اور کاٹن کو ٹھنڈے پانی میں دھوئیں اور سائے میں سکھائیں۔ تیز دھوپ سے رنگ جلد پھیکا پڑ جاتا ہے۔',
+        'بوسکی، کرنڈی اور کڑھائی والے ملبوسات ڈرائی کلین کروائیں، یا بہت احتیاط سے ہاتھ سے دھوئیں۔',
         'لٹکانے کے بجائے تہہ کر کے رکھیں۔ لٹکانے سے ہلکا کپڑا کندھوں سے کھنچ جاتا ہے۔',
       ],
     },

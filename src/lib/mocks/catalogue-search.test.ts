@@ -44,23 +44,23 @@ describe('paging', () => {
 describe('filtering', () => {
   it('narrows the result set', () => {
     const all = search('');
-    const lawnOnly = search('?fabric=lawn');
+    const boskiOnly = search('?fabric=boski');
 
-    expect(lawnOnly.totalCount).toBeGreaterThan(0);
-    expect(lawnOnly.totalCount).toBeLessThan(all.totalCount);
+    expect(boskiOnly.totalCount).toBeGreaterThan(0);
+    expect(boskiOnly.totalCount).toBeLessThan(all.totalCount);
   });
 
   it('treats multiple values within one facet as OR', () => {
-    const lawn = search('?fabric=lawn').totalCount;
-    const chiffon = search('?fabric=chiffon').totalCount;
-    const both = search('?fabric=lawn,chiffon').totalCount;
+    const boski = search('?fabric=boski').totalCount;
+    const karandi = search('?fabric=karandi').totalCount;
+    const both = search('?fabric=boski,karandi').totalCount;
 
-    expect(both).toBe(lawn + chiffon);
+    expect(both).toBe(boski + karandi);
   });
 
   it('treats separate facets as AND', () => {
-    const fabricOnly = search('?fabric=lawn').totalCount;
-    const combined = search('?fabric=lawn&pieceCount=3').totalCount;
+    const fabricOnly = search('?fabric=boski').totalCount;
+    const combined = search('?fabric=boski&pieceCount=3').totalCount;
 
     expect(combined).toBeLessThanOrEqual(fabricOnly);
   });
@@ -84,18 +84,18 @@ describe('filtering', () => {
 
 describe('facet counts reflect the current filter context', () => {
   it('does NOT zero the other values in the facet being filtered', () => {
-    // The defining behaviour: after choosing Lawn, the customer must still see
-    // how many Chiffon items they would get by switching — otherwise every
+    // The defining behaviour: after choosing Boski, the customer must still see
+    // how many Karandi items they would get by switching — otherwise every
     // unselected value reads zero and the panel becomes a dead end.
-    const filtered = search('?fabric=lawn');
-    const chiffon = filtered.facets.fabric.find((entry) => entry.value === 'chiffon');
+    const filtered = search('?fabric=boski');
+    const karandi = filtered.facets.fabric.find((entry) => entry.value === 'karandi');
 
-    expect(chiffon?.count).toBeGreaterThan(0);
+    expect(karandi?.count).toBeGreaterThan(0);
   });
 
   it('counts a facet as if its own selection were not applied', () => {
     const unfiltered = search('');
-    const filtered = search('?fabric=lawn');
+    const filtered = search('?fabric=boski');
 
     expect(filtered.facets.fabric).toEqual(unfiltered.facets.fabric);
   });
@@ -111,17 +111,17 @@ describe('facet counts reflect the current filter context', () => {
   });
 
   it('reports price bounds for the current context', () => {
-    const { facets } = search('?fabric=lawn');
+    const { facets } = search('?fabric=boski');
 
     expect(facets.priceBounds.minMinor).toBeLessThanOrEqual(facets.priceBounds.maxMinor);
   });
 
   it('localises facet labels rather than echoing the value', () => {
-    const english = search('?locale=en').facets.fabric.find((e) => e.value === 'lawn');
-    const urdu = search('?locale=ur').facets.fabric.find((e) => e.value === 'lawn');
+    const english = search('?locale=en').facets.fabric.find((e) => e.value === 'boski');
+    const urdu = search('?locale=ur').facets.fabric.find((e) => e.value === 'boski');
 
-    expect(english?.label).toBe('Lawn');
-    expect(urdu?.label).toBe('لان');
+    expect(english?.label).toBe('Boski');
+    expect(urdu?.label).toBe('بوسکی');
     expect(urdu?.count).toBe(english?.count);
   });
 });
@@ -146,7 +146,7 @@ describe('suggest and code lookup', () => {
   });
 
   it('suggests products matching a partial term', () => {
-    const result = suggestCatalogue(new URL('http://mock/s?q=lawn'));
+    const result = suggestCatalogue(new URL('http://mock/s?q=boski'));
 
     expect(result.products.length).toBeGreaterThan(0);
     expect(result.terms.length).toBeGreaterThan(0);
