@@ -38,6 +38,21 @@ interface Reservation {
  */
 const RESERVATIONS: Reservation[] = [];
 
+/**
+ * §7.2 step 4 — stock that has stopped being HELD and become OWED.
+ *
+ * `allocated` is the column §6.4 keeps beside `on_hand`, and the two are not the
+ * same thing at all: a reservation expires on its own, an allocation belongs to
+ * a placed order and only ever leaves through dispatch or cancellation. Keeping
+ * them apart is what lets availability be `on_hand − allocated − live holds`.
+ */
+const ALLOCATED = new Map<string, number>();
+
+/** How much of a key is committed to placed orders. */
+export function allocatedQuantity(pieceId: string, sizeId: string): number {
+  return ALLOCATED.get(stockKey(pieceId, sizeId)) ?? 0;
+}
+
 /** A `(piece, size)` pair to reserve against, with how many units are wanted. */
 export interface ReservationKey {
   pieceId: string;
@@ -89,10 +104,17 @@ export function reservedQuantity(
   }, 0);
 }
 
-/** The reservation view every availability read uses (§7.3). */
+/**
+ * What every availability read subtracts from `on_hand` (§7.3).
+ *
+ * Live holds AND allocations: a unit sold this morning is as unavailable as one
+ * in somebody's bag right now, and an overlay that counted only reservations
+ * would happily re-sell it.
+ */
 export function reservedLookup(exceptCartId?: string): (p: string, s: string) => number {
   const now = Date.now();
   return (pieceId, sizeId) =>
+    allocatedQuantity(pieceId, sizeId) +
     reservedQuantity(pieceId, sizeId, {
       now,
       ...(exceptCartId === undefined ? {} : { exceptCartId }),
@@ -132,6 +154,7 @@ export function reserve(
   for (const key of sorted) {
     const available =
       onHandFor(key.pieceId, key.sizeId) -
+      allocatedQuantity(key.pieceId, key.sizeId) -
       reservedQuantity(key.pieceId, key.sizeId, { now, exceptCartId: cartId });
 
     if (available < key.quantity) {
@@ -209,9 +232,46 @@ export function sweepExpired(): number {
   return removed;
 }
 
-/** Test seam: the stock ledger is derived, but reservations accumulate. */
+/**
+ * §7.2 steps 3 and 4 — turn every one of a cart's holds into an allocation.
+ *
+ * ```
+ * 3. SORT piece keys ascending. FOR EACH, SELECT ... FOR UPDATE.
+ * 4. FOR EACH: allocated += quantity ; DELETE the reservation row.
+ *    The CHECK constraint allocated <= on_hand is the final guard.
+ * ```
+ *
+ * That constraint is checked across EVERY key before a single one is written,
+ * for the same reason §7.1 does: a half-allocated order is the same corrupt
+ * state as a half-reserved set. `false` means nothing was written.
+ */
+export function allocate(cartId: string): boolean {
+  const now = Date.now();
+  const rows = RESERVATIONS.filter((row) => row.cartId === cartId && isActive(row, now)).sort(
+    (left, right) => left.pieceId.localeCompare(right.pieceId),
+  );
+
+  if (rows.length === 0) return false;
+
+  // The final guard, applied before anything changes.
+  for (const row of rows) {
+    const next = allocatedQuantity(row.pieceId, row.sizeId) + row.quantity;
+    if (next > onHandFor(row.pieceId, row.sizeId)) return false;
+  }
+
+  for (const row of rows) {
+    const key = stockKey(row.pieceId, row.sizeId);
+    ALLOCATED.set(key, (ALLOCATED.get(key) ?? 0) + row.quantity);
+  }
+
+  releaseCart(cartId);
+  return true;
+}
+
+/** Test seam: the stock ledger is derived, but these accumulate. */
 export function resetReservations(): void {
   RESERVATIONS.length = 0;
+  ALLOCATED.clear();
 }
 
 export { stockKey };

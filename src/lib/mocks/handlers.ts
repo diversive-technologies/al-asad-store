@@ -14,6 +14,7 @@ import {
   updateQuantity,
 } from './bag-db';
 import { reservedLookup } from './bag-reservations';
+import { findOrder, placeOrder, quoteFor } from './checkout-db';
 import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue-search';
 import { pageFor } from './pages-db';
 import { evaluateFabric, findProductBySlug, productAvailabilityFor } from './product-detail-db';
@@ -284,4 +285,46 @@ export const handlers = [
   http.head(`*${ENDPOINTS.bag.cart(':cartId')}`, ({ params }) =>
     new HttpResponse(null, { status: cartExists(String(params.cartId)) ? 200 : 404 }),
   ),
+
+  /*
+   * §17 `quote(cart, address, deliveryOption)`. A GET because it stores nothing
+   * and is a pure function of the cart plus the two choices that change the
+   * total — which is also why those two are its query parameters.
+   */
+  http.get(`*${ENDPOINTS.checkout.quote(':cartId')}`, ({ params, request }) => {
+    const url = new URL(request.url);
+    const quote = quoteFor(
+      String(params.cartId),
+      localeOf(request),
+      url.searchParams.get('deliveryOptionId') ?? '',
+      url.searchParams.get('isGift') === 'true',
+    );
+
+    if (quote === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(quote);
+  }),
+
+  /*
+   * §7.2. Every outcome below is a 200 carrying a union member, for the reason
+   * the bag's writes are: an expired hold and a changed price are what the
+   * transaction is SPECIFIED to do, not failures of the request, and both carry
+   * detail the interface has to render.
+   */
+  http.post(`*${ENDPOINTS.checkout.place(':cartId')}`, async ({ params, request }) => {
+    const body: unknown = await request.clone().json();
+    const outcome = placeOrder(
+      String(params.cartId),
+      body as Parameters<typeof placeOrder>[1],
+      localeOf(request),
+    );
+
+    if (outcome.kind === 'NOT_FOUND') return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(outcome);
+  }),
+
+  http.get(`*${ENDPOINTS.checkout.order(':orderNumber')}`, ({ params }) => {
+    const order = findOrder(String(params.orderNumber));
+    if (order === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(order);
+  }),
 ];

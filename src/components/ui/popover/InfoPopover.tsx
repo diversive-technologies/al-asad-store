@@ -44,8 +44,13 @@ export function InfoPopover({ label, title, closeLabel, children }: InfoPopoverP
     <>
       <button
         type="button"
-        // @ts-expect-error -- React 19's typings still lack `popovertarget`.
-        popovertarget={id}
+        /*
+         * camelCase in JSX; React renders the lowercase HTML attribute. The
+         * lowercase spelling also works — React passes unknown attributes
+         * through, which is why this behaved correctly while warning "Invalid
+         * DOM property" on every render — but it is untyped and noisy.
+         */
+        popoverTarget={id}
         aria-label={label}
         className="text-fg-muted hover:text-fg focus-visible:ring-brand-500 inline-flex shrink-0 items-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
       >
@@ -64,9 +69,8 @@ export function InfoPopover({ label, title, closeLabel, children }: InfoPopoverP
           </h3>
           <button
             type="button"
-            // @ts-expect-error -- as above; `popovertargetaction` is untyped.
-            popovertarget={id}
-            popovertargetaction="hide"
+            popoverTarget={id}
+            popoverTargetAction="hide"
             aria-label={closeLabel}
             className="text-fg-muted hover:text-fg focus-visible:ring-brand-500 shrink-0 rounded-full p-0.5 focus-visible:ring-2 focus-visible:outline-none"
           >

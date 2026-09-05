@@ -40,4 +40,14 @@ export const queryKeys = {
     all: ['bag'] as const,
     summary: () => [...queryKeys.bag.all, 'summary'] as const,
   },
+  /**
+   * §17 — the quote depends on the delivery option and whether it is a gift,
+   * because both change the total, and the total is what decides whether Cash
+   * on Delivery is offered at all. Those two are therefore part of the key.
+   */
+  checkout: {
+    all: ['checkout'] as const,
+    quote: (deliveryOptionId: string, isGift: boolean) =>
+      [...queryKeys.checkout.all, 'quote', deliveryOptionId, isGift] as const,
+  },
 } as const;

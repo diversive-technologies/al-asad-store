@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-05. Last commit: `29cd1f7` (tree dirty — see below).
+Last updated: 2026-09-05. Last commit: `e233e62` (tree dirty — see below).
 
 ---
 
@@ -19,7 +19,7 @@ Last updated: 2026-09-05. Last commit: `29cd1f7` (tree dirty — see below).
 | M2 | Catalogue | **Feature-complete** except the small-screen filter drawer, which waits on M4. |
 | M3 | Product page | **In progress** — contract, mock, route and shell done; extras remain. |
 | M4 | Bag & reservation | **Core done.** Reservations, panel, quantity, remove, promo code. |
-| M5 | Checkout | Not started. |
+| M5 | Checkout | **Core done.** Quote, single-page checkout, §7.2 placement, confirmation. |
 | M6 | Real auth & account | Deferred by D3. |
 
 ## M2 — what is built
@@ -138,9 +138,43 @@ tap-to-fullscreen. None is started; none is faked.
 
 ## M4 — what is left
 
-Checkout is M5 and the button says so. `moveToWishlist` is M6. The `/bag` page
-is still the empty-state placeholder — the panel is the working surface, and the
-full page should render the same summary next.
+`moveToWishlist` is M6. The `/bag` page is still the empty-state placeholder —
+the panel is the working surface, and the full page should render the same
+summary next.
+
+## M5 — what is built
+
+**The store can take an order.** Browse → product → bag → checkout → confirmed.
+
+- **The §7.2 transaction** — `src/lib/mocks/checkout-db.ts`, with both rollback
+  paths real: a lapsed hold returns `RESERVATION_EXPIRED` **naming the items**,
+  and a total that moved returns `PRICE_CHANGED` carrying the new one, because
+  "prices are never silently changed under a customer at payment". Reservations
+  become allocations under the `allocated <= on_hand` guard, the cart is
+  discarded on commit so a refresh cannot place it twice, and steps 7–8 stay
+  outside the transaction. **10 tests.**
+- **`allocated` is now a real column.** `bag-reservations.ts` tracks it beside
+  the holds, and every availability read subtracts both — a unit sold this
+  morning is as unavailable as one in somebody's bag.
+- **No conditional per payment method, anywhere.** §3.1 forbids it, so the four
+  methods are a LIST from `quote()`, each carrying its own label, description,
+  availability and — crucially — its own `nextStep` sentence. That last field is
+  what keeps the confirmation screen free of a branch: Cash on Delivery says an
+  SMS is coming, a card says it is authorised, a transfer asks for the money. A
+  fifth method is a configuration entry in Java and changes no file here.
+- **The COD cap is server-side.** `quote()` returns Cash on Delivery disabled
+  with a reason above the cap, and `place()` refuses it again — a client that
+  never called `quote` is still refused, which is what §17 means by "never only
+  in the interface".
+- **Single page** (§28.2), guest checkout, React Hook Form + `zodResolver`,
+  delivery options, gift wrapping with a message, and a sticky order summary.
+- **The order number is the address** — `/order/[orderNumber]`, bookmarkable and
+  shareable, which is how §28.3 will track a guest order.
+
+## M5 — what is left
+
+Order tracking by number and mobile (§28.3), and the payment gateway itself —
+the mock has no gateway to call, so `AUTHORIZED` is stated rather than obtained.
 
 ## Header and search
 
@@ -200,6 +234,10 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
   `assets/photography/`. See "Photography" below for what this changed and what
   is still missing.
 - **Sign-in is a mock (D3).** No credentials are stored or validated.
+- **No payment gateway.** Card and wallet orders come back `AUTHORIZED` because
+  the mock says so. §7.2's honest consequence — an order existing in
+  `AWAITING_PAYMENT` before authorisation returns — is modelled in the states,
+  but there is no authorisation to fail.
 - **Carts live in memory.** A dev-server restart empties every bag and releases
   every hold. That is the mock standing in for a database, not a design. The
   BFF's add path recovers from it: a cookie naming a cart the backend no longer
@@ -252,7 +290,7 @@ the size guide, in both locales.
 
 The bag and its reservations, as described above.
 
-Verified: **typecheck, lint, 124 tests and the production build all pass.**
+Verified: **typecheck, lint, 134 tests and the production build all pass.**
 Exercised in the running store with real pointer clicks: a three-piece SET added
 at size M shows `Waistcoat · M / Kameez · M / Shalwar · M` in the panel; the
 quantity control reprices the line; `EID10` applies −Rs 700 on Rs 6,998 for a
@@ -264,6 +302,11 @@ read-time exclusion, with no sweeper involved.
 The info popover was verified open, readable and correctly layered ABOVE the
 modal bag panel, and its close button dismisses the popover while leaving the
 bag open. **Escape could not be exercised** — see the note below.
+
+M5 was exercised end to end in the running store: a two-piece order placed with
+Cash on Delivery produced order **AA100001**, the confirmation named the SMS
+step, the bag emptied, `/api/checkout/quote` then answered 404 because there was
+nothing left to check out, and `/order/AA100001` still renders on a fresh load.
 
 ---
 
@@ -326,6 +369,13 @@ bag open. **Escape could not be exercised** — see the note below.
   handler list to find a match, and a resolver that reads the body consumes the
   stream — the next handler to touch the same request throws `Body is unusable`
   and the whole lookup fails as a 502. Three bag writes collided on this.
+- **There are TWO forms on the checkout page** — the header's search field and
+  the checkout itself. `document.querySelector('form')` finds the search one, so
+  a scripted submit silently does nothing. Scope to the checkout form via a
+  field it owns.
+- **React 19 spells the popover props camelCase** (`popoverTarget`,
+  `popoverTargetAction`). The lowercase HTML spelling still works — React passes
+  unknown attributes through — but warns "Invalid DOM property" on every render.
 - **The preview harness swallows `Escape`.** It reaches neither a modal
   `<dialog>` nor an open popover, even with focus inside them, so that dismissal
   path cannot be verified from here — it needs a human keypress. Do not conclude

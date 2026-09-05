@@ -63,6 +63,15 @@ export const ENDPOINTS = {
     /** `summary(cart)` for an existing cart. */
     cart: (cartId: string) => `/api/v1/carts/${cartId}`,
   },
+  /** Section 17 `CheckoutService`. */
+  checkout: {
+    /** `quote(cart, address, deliveryOption) -> {totals, availableMethods}`. */
+    quote: (cartId: string) => `/api/v1/carts/${cartId}/checkout/quote`,
+    /** `place(...) -> Order | Failure` — the section 7.2 transaction. */
+    place: (cartId: string) => `/api/v1/carts/${cartId}/checkout/place`,
+    /** Section 28.3 tracks a guest order by number. */
+    order: (orderNumber: string) => `/api/v1/orders/${orderNumber}`,
+  },
   newsletter: {
     subscribe: '/api/v1/newsletter/subscriptions',
   },

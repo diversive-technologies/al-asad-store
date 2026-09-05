@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 
-import { Button, ButtonLink } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button';
 import { SlideOver } from '@/components/ui/dialog';
 import { InfoPopover } from '@/components/ui/popover';
 import { ROUTES } from '@/config/routes';
@@ -91,13 +91,13 @@ export function BagPanel({ locale, messages }: BagPanelProps) {
           <div className="flex flex-col gap-3">
             <BagTotals summary={summary} locale={locale} messages={messages} />
             {/*
-             * M5 owns checkout, so the control says plainly that it is not live
-             * yet rather than looking active and doing nothing (PD-05).
+             * A LINK, not a button: checkout is a page with its own address
+             * that must be openable in a new tab and reachable by the back
+             * button (A11Y-01). The panel closes itself on navigation.
              */}
-            <Button type="button" size="lg" disabled>
+            <ButtonLink href={ROUTES.checkout} variant="primary" size="lg" className="w-full">
               {t.checkout}
-            </Button>
-            <p className="text-fg-muted text-center text-xs">{t.checkoutPending}</p>
+            </ButtonLink>
           </div>
         )
       }

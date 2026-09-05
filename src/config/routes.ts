@@ -32,9 +32,15 @@ export const ROUTES = {
     bagLine: (lineId: string) => `/api/bag/lines/${lineId}`,
     /** POST to apply a promotional code, DELETE to lift it. */
     bagCode: '/api/bag/code',
+    /** §17 — the quote refreshes as the customer picks delivery and gifting. */
+    checkoutQuote: '/api/checkout/quote',
+    /** §7.2 — the one write that turns a bag into an order. */
+    checkoutPlace: '/api/checkout/place',
   },
   bag: '/bag',
   checkout: '/checkout',
+  /** §28.3 — the order number is the address, so it can be shared and returned to. */
+  orderConfirmation: (orderNumber: string) => `/order/${orderNumber}`,
   search: '/search',
   help: {
     fabricGlossary: '/help/fabric-glossary',
