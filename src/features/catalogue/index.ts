@@ -13,7 +13,6 @@ export { searchProducts } from './api/search-products';
 export { suggest } from './api/suggest';
 export { fetchSuggestions, type SuggestionsError } from './api/fetch-suggestions';
 export { CatalogueScreen, type CatalogueScreenProps } from './components/CatalogueScreen';
-export { CodeMatch, type CodeMatchProps } from './components/CodeMatch';
 export { FabricCalculator, type FabricCalculatorProps } from './components/FabricCalculator';
 export { ProductBuyBox, type ProductBuyBoxProps } from './components/ProductBuyBox';
 export { ProductGallery, type ProductGalleryProps } from './components/ProductGallery';

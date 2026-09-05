@@ -267,7 +267,6 @@ export const ur: Messages = {
     placeholder: 'بوسکی، کرنڈی، یا پروڈکٹ کوڈ…',
     submit: 'تلاش کریں',
     resultsHeading: 'نتائج',
-    exactMatchHeading: 'اس کوڈ کا بالکل درست نتیجہ',
     suggestionsLabel: 'تلاش کی تجاویز',
     suggestionsProductsLabel: 'متعلقہ مصنوعات',
     noResultsHeading: 'کوئی نتیجہ نہیں',

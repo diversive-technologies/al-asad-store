@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-05. Last commit: `d61e2dd` (tree dirty — see below).
+Last updated: 2026-09-05. Last commit: `3cb214e` (tree dirty — see below).
 
 ---
 
@@ -48,7 +48,10 @@ Last updated: 2026-09-05. Last commit: `d61e2dd` (tree dirty — see below).
   filter combination is a crawlable URL; `PriceFilter` is the single client leaf,
   because a range needs a submit rather than a navigation per keystroke.
 - **Sort** — the four options of section 28.1, as links with `aria-current`.
-- **Type-ahead** — `app/api/suggest/route.ts` is the first BFF (DATA-08), and it
+- **Type-ahead** — a product row opens that product; a term row runs a search.
+  `SuggestionOption` carries a typed `destination` union rather than a bare
+  search term, so the two cannot be confused. `app/api/suggest/route.ts` is the
+  first BFF (DATA-08), and it
   exists because `apiRequest` is `server-only` while the type-ahead runs on
   keystrokes. It proxies and nothing else. The header field is a full ARIA
   combobox: debounced query through TanStack Query, `aria-activedescendant`
@@ -56,7 +59,9 @@ Last updated: 2026-09-05. Last commit: `d61e2dd` (tree dirty — see below).
   the list before the field, and pointer selection on `mousedown` so it beats
   the blur.
 - **Code lookup** — `/search` runs `byCode` alongside the search (PERF-02) and
-  surfaces an exact match above the results. The client never decides what a
+  REDIRECTS to the product on an exact match, before the availability read,
+  because someone typing `AA-1004` off a WhatsApp message has already chosen.
+  `CodeMatch` was deleted with the compromise it existed for. The client never decides what a
   code LOOKS like — that is the backend's rule (DATA-13); it only declines terms
   that cannot be one, i.e. anything with whitespace. One availability request
   covers the grid and the match together.
@@ -221,15 +226,6 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 2560 → 6 at 343px, all at 100% of viewport width.
 
 ## Deliberate gaps — do not "fix" these
-- **The code match shows a card, not a redirect.** Jumping straight to the
-  product is the natural behaviour and is what M3 should switch this to; today
-  `/catalogue/[slug]` does not exist, so the exact match is surfaced as a card
-  above the results instead.
-- **Suggestion rows search, they do not open the product.** Selecting a product
-  in the type-ahead runs a search for its name rather than navigating to
-  `/catalogue/[slug]`, which is M3 and would 404. `toSuggestionOptions` is where
-  that flips when M3 lands, and it is covered by a test that says so.
-
 
 - **Product imagery is now the client's own.** Fourteen photographs in
   `public/products/`, converted to 4:5 AVIF from the originals kept in

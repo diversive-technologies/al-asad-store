@@ -28,6 +28,7 @@ import {
   NO_ACTIVE_OPTION,
   nextActiveIndex,
   toSuggestionOptions,
+  type SuggestionDestination,
   type SuggestionOption,
 } from '../lib/suggestions';
 import { SearchSuggestions } from './SearchSuggestions';
@@ -216,11 +217,36 @@ export function HeaderSearch({ locale, messages }: HeaderSearchProps) {
     router.push(`${ROUTES.search}${toQueryString({ ...EMPTY_QUERY, term: trimmed })}`);
   }
 
+  /**
+   * Follows a chosen row to wherever it goes.
+   *
+   * TS-07: exhaustive over the destination union, so a third kind of suggestion
+   * becomes a compile error here rather than a row that silently does nothing.
+   */
+  function go(destination: SuggestionDestination): void {
+    switch (destination.kind) {
+      case 'SEARCH':
+        runSearch(destination.term);
+        return;
+      case 'PRODUCT':
+        closeSearch(false);
+        router.push(ROUTES.catalogue.detail(destination.slug));
+        return;
+    }
+  }
+
+  /** The highlighted row wins over the raw text: it is what the reader can see. */
+  function submitCurrent(): void {
+    if (activeOption === undefined || activeOption === null) {
+      runSearch(term);
+      return;
+    }
+    go(activeOption.destination);
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    // A highlighted suggestion wins over the raw text: it is what the reader can
-    // see is selected.
-    runSearch(activeOption?.searchTerm ?? term);
+    submitCurrent();
   }
 
   function handleFormKeyDown(event: KeyboardEvent<HTMLFormElement>): void {
@@ -262,7 +288,7 @@ export function HeaderSearch({ locale, messages }: HeaderSearchProps) {
      * two can never both fire for one keystroke.
      */
     event.preventDefault();
-    runSearch(activeOption?.searchTerm ?? term);
+    submitCurrent();
   }
 
   return (
@@ -359,7 +385,7 @@ export function HeaderSearch({ locale, messages }: HeaderSearchProps) {
           listboxId={LISTBOX_ID}
           optionId={optionId}
           onSelect={(option) => {
-            runSearch(option.searchTerm);
+            go(option.destination);
           }}
           locale={locale}
           messages={messages}

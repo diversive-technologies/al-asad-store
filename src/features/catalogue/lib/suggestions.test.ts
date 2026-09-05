@@ -62,14 +62,25 @@ describe('toSuggestionOptions', () => {
     expect(options[1]?.product?.id).toBe('p1');
   });
 
-  it('searches a product row by its name rather than opening the product', () => {
-    // Deliberate until M3 exists: a suggestion must not lead to a 404.
-    const options = toSuggestionOptions({
-      terms: [],
-      products: [productFixture('p1', 'Printed Lawn')],
-    });
+  it('opens the product itself, rather than searching for its name', () => {
+    /*
+     * This used to assert the opposite. `/catalogue/[slug]` did not exist, so a
+     * product row ran a search for the product's NAME — a suggestion leading to
+     * a real result set beats one leading to a 404. M3 built the route, so the
+     * compromise is gone, and searching by name would now be actively wrong:
+     * two products sharing a word would send the reader to a list instead of
+     * the item they picked.
+     */
+    const product = productFixture('p1', 'Printed Lawn');
+    const options = toSuggestionOptions({ terms: [], products: [product] });
 
-    expect(options[0]?.searchTerm).toBe('Printed Lawn');
+    expect(options[0]?.destination).toEqual({ kind: 'PRODUCT', slug: product.slug });
+  });
+
+  it('sends a term row to a search', () => {
+    const options = toSuggestionOptions({ terms: ['boski'], products: [] });
+
+    expect(options[0]?.destination).toEqual({ kind: 'SEARCH', term: 'boski' });
   });
 });
 

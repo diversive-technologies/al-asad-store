@@ -12,11 +12,24 @@ import type { Suggestions } from '../schemas/search.schema';
  * the boundary between them wrong.
  */
 
+/**
+ * Where choosing a row takes the reader.
+ *
+ * A discriminated union rather than a bare string, because the two rows in this
+ * list genuinely go to different places: a term runs a search, and a product
+ * opens that product. Modelling both as "a term to search for" is what forced
+ * the earlier compromise where picking a product searched for its NAME —
+ * plausible-looking, and wrong the moment two products share a word.
+ */
+export type SuggestionDestination =
+  | { kind: 'SEARCH'; term: string }
+  | { kind: 'PRODUCT'; slug: string };
+
 export interface SuggestionOption {
   id: string;
   label: string;
-  /** The term a search runs for when this option is chosen. */
-  searchTerm: string;
+  /** Where this row goes when chosen. */
+  destination: SuggestionDestination;
   /** Present for a product row, which renders a thumbnail and a price. */
   product: ProductCard | null;
 }
@@ -31,7 +44,7 @@ export function toSuggestionOptions(suggestions: Suggestions): readonly Suggesti
       // collide on `key` or on `aria-activedescendant` (CMP-10).
       id: `term:${term}`,
       label: term,
-      searchTerm: term,
+      destination: { kind: 'SEARCH', term },
       product: null,
     }),
   );
@@ -41,12 +54,12 @@ export function toSuggestionOptions(suggestions: Suggestions): readonly Suggesti
       id: `product:${product.id}`,
       label: product.name,
       /*
-       * A product row searches for its name rather than opening the product.
-       * `/catalogue/[slug]` is M3 and does not exist yet, and a suggestion that
-       * leads to a 404 is worse than one that leads to a real result set
-       * containing the item. When M3 lands this becomes a direct navigation.
+       * Straight to the product. This used to run a search for the product's
+       * NAME, because `/catalogue/[slug]` did not exist yet and a suggestion
+       * leading to a 404 is worse than one leading to a result set containing
+       * the item. M3 built that route, so the compromise is gone.
        */
-      searchTerm: product.name,
+      destination: { kind: 'PRODUCT', slug: product.slug },
       product,
     }),
   );

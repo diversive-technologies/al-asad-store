@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
 import { ErrorState } from '@/components/shared/ErrorState';
 import { ROUTES } from '@/config/routes';
 import {
   CatalogueScreen,
-  CodeMatch,
   fetchAvailability,
   findByCode,
-  mergeAvailability,
   parseCatalogueQuery,
   searchProducts,
   SearchField,
@@ -49,47 +48,45 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     findByCode(query.term, locale),
   ]);
 
-  if (!results.ok) {
-    logApiError('search', results.error);
-    return <ErrorState className="m-gutter" message={messages.errors.network} />;
-  }
-
   /*
    * Section 28.1's code lookup is a shortcut, not the page. A failed lookup
    * costs the shortcut and nothing else, so it is logged and the results render
    * regardless (section 30.2).
    */
   if (!codeMatch.ok) logApiError('search:byCode', codeMatch.error);
-  const matchedProduct = codeMatch.ok ? codeMatch.value : null;
 
   /*
-   * One availability request covering the grid AND the code match, rather than
-   * one each (PERF-02). The id is de-duplicated because the backend matches
-   * codes in general search too, so the same product is usually in both.
+   * An exact code match goes STRAIGHT to the product.
+   *
+   * Someone typing `AA-1004` from a WhatsApp message or a printed catalogue has
+   * already chosen; showing them a card to click is asking them to choose
+   * twice. This used to render `CodeMatch` above the results because
+   * `/catalogue/[slug]` did not exist yet — M3 built it, so the shortcut is a
+   * real shortcut now.
+   *
+   * Before the availability read on purpose: that work is only needed for a
+   * page we are about to leave. Whether a term IS a code stays the backend's
+   * judgement (DATA-13) — `findByCode` returns a product or nothing.
    */
-  const productIds = [
-    ...new Set([
-      ...results.value.products.map((product) => product.id),
-      ...(matchedProduct === null ? [] : [matchedProduct.id]),
-    ]),
-  ];
+  if (codeMatch.ok && codeMatch.value !== null) {
+    redirect(ROUTES.catalogue.detail(codeMatch.value.slug));
+  }
 
-  const availability = await fetchAvailability(productIds);
+  if (!results.ok) {
+    logApiError('search', results.error);
+    return <ErrorState className="m-gutter" message={messages.errors.network} />;
+  }
+
+  const availability = await fetchAvailability(results.value.products.map((product) => product.id));
   if (!availability.ok) logApiError('search:availability', availability.error);
 
   const availabilities = availability.ok ? availability.value : [];
-  const matchedEntry =
-    matchedProduct === null ? null : (mergeAvailability([matchedProduct], availabilities)[0] ?? null);
 
   return (
     <>
       <div className="page-shell pt-10">
         <SearchField initialTerm={query.term} messages={messages} />
       </div>
-
-      {matchedEntry === null ? null : (
-        <CodeMatch entry={matchedEntry} locale={locale} messages={messages} />
-      )}
 
       <CatalogueScreen
         query={query}
