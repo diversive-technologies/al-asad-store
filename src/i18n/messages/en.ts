@@ -31,6 +31,7 @@ export const en = {
     switchToEnglish: 'English',
     languageGroupLabel: 'Language',
     loading: 'Loading…',
+    close: 'Close',
     retry: 'Try again',
     viewAll: 'View all',
     submit: 'Submit',
@@ -119,6 +120,55 @@ export const en = {
     title: 'Bag',
     emptyBody: 'Your bag is empty.',
     startShopping: 'Start shopping',
+    open: 'Open bag',
+    close: 'Close bag',
+    /* I18N-07: the registry carries both forms; nothing pluralises by hand. */
+    itemsOne: '1 item',
+    itemsOther: '{count} items',
+    quantityLabel: 'Quantity',
+    increase: 'Increase quantity',
+    decrease: 'Decrease quantity',
+    remove: 'Remove',
+    removeTitle: 'Remove this item?',
+    removeBody: 'It will be released back into stock straight away.',
+    removeConfirm: 'Remove it',
+    removeCancel: 'Keep it',
+    subtotal: 'Subtotal',
+    discount: 'Discount',
+    delivery: 'Delivery',
+    deliveryFree: 'Free',
+    total: 'Total',
+    freeDeliveryRemaining: 'Spend {amount} more for free delivery',
+    freeDeliveryMet: 'You have free delivery',
+    promoLabel: 'Promotional code',
+    promoPlaceholder: 'Enter a code',
+    promoApply: 'Apply',
+    promoRemove: 'Remove code',
+    checkout: 'Go to checkout',
+    checkoutPending: 'Checkout arrives with M5',
+    /* §7.1: the refusal names the piece, so the copy has a slot for it. */
+    unavailable: '{piece} in size {size} is no longer available.',
+    addFailed: 'We could not add that. Please try again.',
+    updateFailed: 'We could not update your bag. Please try again.',
+    unreachable: 'We could not reach your bag.',
+    /* §28.2's durable hold, stated plainly rather than as a countdown. */
+    heldUntil: 'Held for you until {time}',
+    /*
+     * "Held until" states a time without saying what happens at it, and a
+     * customer reading it has to guess between three different outcomes. These
+     * answer all three, in the order they occur to someone: is it really mine,
+     * what happens at that time, and what do I do about it.
+     */
+    heldInfoLabel: 'What does this mean?',
+    heldInfoTitle: 'About holding items',
+    heldInfoReserved:
+      'These items are genuinely reserved. Nobody else can buy them while your bag holds them, even if they are the last ones in stock.',
+    heldInfoExpiry:
+      'At that time the hold ends and the items go back on sale to everyone. They also leave your bag, so nothing sits there quietly out of stock.',
+    heldInfoAction:
+      'You can add them again afterwards if they are still available. Finishing checkout before then keeps them for good.',
+    heldInfoExtend: 'Changing your bag renews the hold, so you are not racing a clock while you shop.',
+    viewBag: 'View bag',
   },
   catalogue: {
     title: 'Catalogue',

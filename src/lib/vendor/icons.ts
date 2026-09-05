@@ -13,6 +13,7 @@ export {
   ChevronLeft,
   ChevronRight,
   Heart,
+  Info,
   Loader2,
   Menu,
   Minus,

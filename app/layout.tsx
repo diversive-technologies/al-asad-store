@@ -8,6 +8,7 @@ import { SkipLink } from '@/components/layout/SkipLink';
 import { CLIENT } from '@/config/client';
 import { fontVariables } from '@/config/fonts';
 import { SITE } from '@/config/site';
+import { BagPanel, BagProvider, BagTrigger } from '@/features/bag/contract';
 import { HeaderSearch } from '@/features/catalogue';
 import { LocaleSwitcher } from '@/features/localisation';
 import { NewsletterForm } from '@/features/newsletter';
@@ -91,6 +92,13 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <QueryProvider>
           <ThemeProvider initialPreference={themePreference}>
             <MessagesProvider value={messages}>
+              {/*
+               * The bag wraps everything below the query client, because both
+               * the header's count and a product page's Add to bag read the
+               * same cart. It holds one boolean and the query handle — the
+               * contents are server state and stay in TanStack Query (STATE-02).
+               */}
+              <BagProvider>
               <SkipLink label={messages.nav.skipToContent} targetId={MAIN_CONTENT_ID} />
 
               <Header
@@ -101,6 +109,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                  */
                 localeSwitcher={LOCALES.length > 1 ? <LocaleSwitcher currentLocale={locale} /> : null}
                 search={<HeaderSearch locale={locale} messages={messages} />}
+                bagTrigger={<BagTrigger messages={messages} />}
               />
 
               {/*
@@ -117,6 +126,10 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                 /* D5: an optional feature, so the slot is empty when it is off. */
                 newsletter={CLIENT.features.newsletter ? <NewsletterForm /> : null}
               />
+
+              {/* Mounted once, above the routes: one dialog, one top layer. */}
+              <BagPanel locale={locale} messages={messages} />
+              </BagProvider>
             </MessagesProvider>
           </ThemeProvider>
         </QueryProvider>

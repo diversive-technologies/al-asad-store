@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { AddToBagButton } from '@/features/bag/contract';
 import type { PieceId, SizeId } from '@/lib/domain/ids';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
@@ -147,20 +147,34 @@ export function ProductBuyBox({ product, availability, locale, messages }: Produ
         </>
       )}
 
-      <div className="flex flex-col gap-2">
-        {/*
-         * M4 owns the bag, so the control says plainly that it is not live yet
-         * rather than looking active and doing nothing when pressed. PD-05: the
-         * shortcut would be a button that silently fails.
-         */}
-        <Button type="button" size="lg" disabled>
-          {isSoldOut ? t.productSoldOut : t.addToBag}
-        </Button>
-
-        <p className="text-fg-muted text-xs">
-          {isSoldOut ? t.productSoldOut : isComplete ? t.bagPending : t.chooseSizeFirst}
-        </p>
-      </div>
+      {/*
+       * MOD-01 — the bag's control, rendered as a slot rather than reached for.
+       * The buy box owns the SELECTION; turning that selection into a
+       * reservation is §16's job and lives in `features/bag`.
+       *
+       * `request` is null until every piece has a size, which is §16's first
+       * invariant expressed as a type: there is no way to spell an add for a
+       * half-sized set.
+       */}
+      <AddToBagButton
+        request={
+          isComplete
+            ? {
+                productId: product.id,
+                selections: product.pieces.map((piece) => ({
+                  pieceId: piece.id,
+                  // `isComplete` guarantees this; the fallback keeps the type
+                  // honest rather than asserting with `!` (TS-05).
+                  sizeId: selection[piece.id] ?? piece.sizes[0]?.id ?? ('' as SizeId),
+                })),
+                quantity: 1,
+              }
+            : null
+        }
+        isSoldOut={isSoldOut}
+        messages={messages}
+        disabledHint={isSoldOut ? t.productSoldOut : isComplete ? '' : t.chooseSizeFirst}
+      />
     </div>
   );
 }

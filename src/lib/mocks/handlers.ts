@@ -1,8 +1,19 @@
 import { http, HttpResponse } from 'msw';
 
-import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales';
+import { DEFAULT_LOCALE, isLocale, type Locale } from '@/i18n/locales';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 
+import {
+  addItem,
+  applyCode,
+  cartExists,
+  createCart,
+  removeCode,
+  removeLine,
+  summaryFor,
+  updateQuantity,
+} from './bag-db';
+import { reservedLookup } from './bag-reservations';
 import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue-search';
 import { pageFor } from './pages-db';
 import { evaluateFabric, findProductBySlug, productAvailabilityFor } from './product-detail-db';
@@ -17,6 +28,12 @@ import { AVAILABILITY, homepageFor, MOCK_SESSION, NEWSLETTER_SUBSCRIPTION } from
  * Paths are prefixed with `*` so a handler matches whatever origin
  * `JAVA_API_BASE_URL` currently points at, without duplicating that value here.
  */
+/** Locale travels as a query param on every localised read (see the note above). */
+function localeOf(request: Request): Locale {
+  const requested = new URL(request.url).searchParams.get('locale');
+  return isLocale(requested) ? requested : DEFAULT_LOCALE;
+}
+
 export const handlers = [
   /*
    * Section 21 serves the homepage per locale, and the locale arrives as a
@@ -108,7 +125,12 @@ export const handlers = [
      * payload carries none. The default is passed only because the fixture
      * shares one derivation with the product itself.
      */
-    const availability = productAvailabilityFor(productId, DEFAULT_LOCALE);
+    /*
+     * §7.3 read-time exclusion. The overlay subtracts what other carts are
+     * actively holding, so taking the last unit of a size makes it read sold out
+     * for everyone else on their next load — with no job having run.
+     */
+    const availability = productAvailabilityFor(productId, DEFAULT_LOCALE, reservedLookup());
 
     if (availability === null) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(availability);
@@ -146,4 +168,120 @@ export const handlers = [
   ),
 
   http.post(`*${ENDPOINTS.auth.session}`, () => HttpResponse.json(MOCK_SESSION, { status: 201 })),
+
+  /*
+   * §16 CartService. The cart id is in the PATH because that is how the Java
+   * service will address it; the BFF is what keeps it in an httpOnly cookie so
+   * the browser never composes one of these URLs itself.
+   */
+  http.post(`*${ENDPOINTS.bag.summary}`, () =>
+    HttpResponse.json({ id: createCart() }, { status: 201 }),
+  ),
+
+  http.get(`*${ENDPOINTS.bag.cart(':cartId')}`, ({ params, request }) => {
+    const summary = summaryFor(String(params.cartId), localeOf(request));
+    if (summary === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(summary);
+  }),
+
+  /*
+   * §16 `addItem` -> `Ok | Unavailable(piece)`.
+   *
+   * Both outcomes are 200, and that is deliberate. `Unavailable(piece)` is an
+   * EXPECTED answer, not a transport failure — someone else took the last one —
+   * so it travels as a value in a discriminated union (ERR-01), which is also
+   * the only shape `apiRequest` can deliver: it turns every non-2xx into an
+   * `ApiError` and the body, with the name of the piece in it, would be lost.
+   * A 4xx is reserved for the cart genuinely not existing.
+   */
+  http.post(`*${ENDPOINTS.bag.items(':cartId')}`, async ({ params, request }) => {
+    /*
+     * `.clone()` is load-bearing, not caution.
+     *
+     * MSW walks its handler list to find a match, and a resolver that reads the
+     * body CONSUMES the stream — so the next handler to look at the same
+     * request gets `Body is unusable: Body has already been read` and the whole
+     * lookup throws. Every bag write posts a body, so all three collided.
+     * Cloning leaves the original stream untouched for whoever comes next.
+     */
+    const body: unknown = await request.clone().json();
+    const input = body as {
+      productId?: string;
+      selections?: { pieceId: string; sizeId: string }[];
+      quantity?: number;
+    };
+
+    const result = addItem(
+      String(params.cartId),
+      input.productId ?? '',
+      input.selections ?? [],
+      input.quantity ?? 1,
+      localeOf(request),
+    );
+
+    if (result.kind === 'NOT_FOUND') return new HttpResponse(null, { status: 404 });
+    if (result.kind === 'UNAVAILABLE') return HttpResponse.json(result);
+    return HttpResponse.json({ kind: 'ADDED', summary: result.summary }, { status: 201 });
+  }),
+
+  http.patch(`*${ENDPOINTS.bag.line(':cartId', ':lineId')}`, async ({ params, request }) => {
+    /*
+     * `.clone()` is load-bearing, not caution.
+     *
+     * MSW walks its handler list to find a match, and a resolver that reads the
+     * body CONSUMES the stream — so the next handler to look at the same
+     * request gets `Body is unusable: Body has already been read` and the whole
+     * lookup throws. Every bag write posts a body, so all three collided.
+     * Cloning leaves the original stream untouched for whoever comes next.
+     */
+    const body: unknown = await request.clone().json();
+    const quantity = (body as { quantity?: number }).quantity ?? 1;
+
+    const result = updateQuantity(
+      String(params.cartId),
+      String(params.lineId),
+      quantity,
+      localeOf(request),
+    );
+
+    if (result.kind === 'NOT_FOUND') return new HttpResponse(null, { status: 404 });
+    if (result.kind === 'UNAVAILABLE') return HttpResponse.json(result);
+    return HttpResponse.json({ kind: 'ADDED', summary: result.summary });
+  }),
+
+  http.delete(`*${ENDPOINTS.bag.line(':cartId', ':lineId')}`, ({ params, request }) => {
+    const result = removeLine(String(params.cartId), String(params.lineId), localeOf(request));
+    if (result.kind !== 'ADDED') return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ kind: 'ADDED', summary: result.summary });
+  }),
+
+  /* §16 `applyCode`. A refused code is an outcome, not an error, for the same
+     reason as `Unavailable` above — Pricing's answer travels in the body. */
+  http.post(`*${ENDPOINTS.bag.code(':cartId')}`, async ({ params, request }) => {
+    /*
+     * `.clone()` is load-bearing, not caution.
+     *
+     * MSW walks its handler list to find a match, and a resolver that reads the
+     * body CONSUMES the stream — so the next handler to look at the same
+     * request gets `Body is unusable: Body has already been read` and the whole
+     * lookup throws. Every bag write posts a body, so all three collided.
+     * Cloning leaves the original stream untouched for whoever comes next.
+     */
+    const body: unknown = await request.clone().json();
+    const locale = localeOf(request);
+    const result = applyCode(String(params.cartId), (body as { code?: string }).code ?? '', locale);
+
+    if (result.kind === 'REJECTED') return HttpResponse.json(result);
+    return HttpResponse.json({ kind: 'APPLIED', summary: result.summary });
+  }),
+
+  http.delete(`*${ENDPOINTS.bag.code(':cartId')}`, ({ params, request }) => {
+    const result = removeCode(String(params.cartId), localeOf(request));
+    if (result.kind === 'REJECTED') return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ kind: 'APPLIED', summary: result.summary });
+  }),
+
+  http.head(`*${ENDPOINTS.bag.cart(':cartId')}`, ({ params }) =>
+    new HttpResponse(null, { status: cartExists(String(params.cartId)) ? 200 : 404 }),
+  ),
 ];

@@ -456,6 +456,160 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   }
 }
 
+/*
+ * The modal slide-over of A11Y-08, styled on the native `<dialog>` element.
+ *
+ * `<dialog>` brings its own defaults that have to be undone deliberately: it is
+ * `position: fixed` and centred with a `margin: auto`, sized to its content, and
+ * carries a border. What is kept is everything that makes it worth using — the
+ * top layer, the focus trap, `::backdrop`, and inert page behind it.
+ *
+ * I18N-04: `inset-inline-end` and a logical translate, so the panel enters from
+ * the reading-end edge in English and the mirror of it in Urdu, with no
+ * direction-specific rule anywhere below.
+ */
+/*
+ * The explanation popup of `InfoPopover`, on the native popover API.
+ *
+ * Centred rather than anchored to its trigger: CSS anchor positioning is not
+ * yet safe to rely on, and a fallback that silently drops the popup into the
+ * corner of the viewport is worse than one that is deliberately centred. It
+ * sits in the top layer, so it renders ABOVE an open `<dialog>` — which is the
+ * whole point here, since the trigger lives inside the bag panel.
+ */
+@utility info-popover {
+  position: fixed;
+  margin: auto;
+  inline-size: min(22rem, calc(100vw - 2rem));
+  max-block-size: calc(100dvh - 2rem);
+  overflow-y: auto;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface);
+  box-shadow: 0 1rem 3rem color-mix(in oklab, black 28%, transparent);
+
+  &::backdrop {
+    background-color: color-mix(in oklab, black 35%, transparent);
+  }
+}
+
+@utility bag-progress {
+  /* The width itself comes from a custom property set per render (STY-01a);
+     the rule that consumes it belongs here with every other style. */
+  inline-size: var(--bag-progress, 0%);
+}
+
+@utility slide-over {
+  /* Undo the element's centring: this is a full-height edge panel. */
+  max-inline-size: 100%;
+  max-block-size: 100%;
+  inline-size: 100%;
+  block-size: 100%;
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+  margin-block: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+
+  &::backdrop {
+    background-color: color-mix(in oklab, black 45%, transparent);
+    opacity: 0;
+    transition: opacity 220ms ease;
+  }
+
+  &[open]::backdrop {
+    opacity: 1;
+  }
+
+  &[data-closing]::backdrop {
+    opacity: 0;
+  }
+
+  & > .slide-over-panel {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-surface);
+    block-size: 100%;
+    inline-size: min(26rem, 100%);
+    margin-inline-start: auto;
+    box-shadow: 0 0 3rem color-mix(in oklab, black 22%, transparent);
+
+    /*
+     * `translate` with a percentage is resolved against the element's own box
+     * and is NOT direction-aware, so the sign is flipped for RTL rather than
+     * left to a logical property that does not exist for transforms.
+     */
+    translate: 100% 0;
+    transition: translate 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  &[open] > .slide-over-panel {
+    translate: 0 0;
+  }
+
+  &[data-closing] > .slide-over-panel {
+    translate: 100% 0;
+  }
+
+  /* A11Y-10 — no travel for anyone who asked for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    &::backdrop,
+    & > .slide-over-panel {
+      transition: none;
+    }
+
+    & > .slide-over-panel,
+    &[data-closing] > .slide-over-panel {
+      translate: 0 0;
+    }
+  }
+}
+
+/* The mirror image, for a drawer that belongs on the reading-start edge. */
+@utility slide-over-start {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+
+  & > .slide-over-panel {
+    margin-inline-start: 0;
+    margin-inline-end: auto;
+    translate: -100% 0;
+  }
+
+  &[open] > .slide-over-panel {
+    translate: 0 0;
+  }
+
+  &[data-closing] > .slide-over-panel {
+    translate: -100% 0;
+  }
+}
+
+/*
+ * RTL flips which edge "100%" points at. This is the one place the sign has to
+ * be stated, because `translate` takes no logical values.
+ */
+[dir='rtl'] .slide-over > .slide-over-panel,
+[dir='rtl'] .slide-over[data-closing] > .slide-over-panel {
+  translate: -100% 0;
+}
+
+[dir='rtl'] .slide-over[open] > .slide-over-panel {
+  translate: 0 0;
+}
+
+[dir='rtl'] .slide-over-start > .slide-over-panel,
+[dir='rtl'] .slide-over-start[data-closing] > .slide-over-panel {
+  translate: 100% 0;
+}
+
+[dir='rtl'] .slide-over-start[open] > .slide-over-panel {
+  translate: 0 0;
+}
+
 @utility listing-layout {
   display: grid;
   align-items: start;

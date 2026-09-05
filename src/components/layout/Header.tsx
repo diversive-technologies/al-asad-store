@@ -6,7 +6,6 @@ import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { CLIENT } from '@/config/client';
 import { ROUTES } from '@/config/routes';
 import type { Messages } from '@/i18n/messages/en';
-import { ShoppingBag } from '@/lib/vendor/icons';
 
 import { StickyHeaderShell } from './StickyHeaderShell';
 
@@ -20,6 +19,8 @@ export interface HeaderProps {
    */
   localeSwitcher: ReactNode;
   search: ReactNode;
+  /** The bag button and its item count, from `features/bag`. */
+  bagTrigger: ReactNode;
 }
 
 /**
@@ -37,11 +38,11 @@ export interface HeaderProps {
  * flip from white-over-film to the page foreground as the reader scrolls,
  * without a single one of them being a Client Component.
  *
- * The bag link carries no item count yet: the cart is M4, and a count invented
- * here would be a second source of truth for something the backend owns
- * (DATA-13). The markup leaves room for it rather than faking it.
+ * The bag control arrives as a slot for the same reason the search field does:
+ * it needs the cart's server state and its open/close context, both of which
+ * live in `features/bag`, and `components/` may not import from `features/`.
  */
-export function Header({ messages, localeSwitcher, search }: HeaderProps) {
+export function Header({ messages, localeSwitcher, search, bagTrigger }: HeaderProps) {
   const t = messages.nav;
 
   return (
@@ -68,14 +69,7 @@ export function Header({ messages, localeSwitcher, search }: HeaderProps) {
               define both schemes; this removes the control, not the capability. */}
           {CLIENT.features.themeToggle ? <ThemeToggle /> : null}
 
-          {/* A11Y-04: icon-only controls carry an accessible name. */}
-          <Link
-            href={ROUTES.bag}
-            aria-label={t.bag}
-            className="rounded-card p-2 transition-opacity hover:opacity-70"
-          >
-            <ShoppingBag className="h-5 w-5" aria-hidden />
-          </Link>
+          {bagTrigger}
 
           <Link
             href={ROUTES.signIn}

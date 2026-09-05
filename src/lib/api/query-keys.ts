@@ -29,4 +29,15 @@ export const queryKeys = {
     fabricVerdict: (productId: string, heightCm: number, styleId: string) =>
       [...queryKeys.catalogue.all, 'fabric-verdict', productId, heightCm, styleId] as const,
   },
+  /**
+   * §16 — the bag is ONE server-owned object, so it is one key.
+   *
+   * Deliberately not keyed by cart id: the id lives in an httpOnly cookie the
+   * client cannot read, and every mutation returns the refreshed summary, so
+   * there is exactly one bag per browser and one cache entry for it.
+   */
+  bag: {
+    all: ['bag'] as const,
+    summary: () => [...queryKeys.bag.all, 'summary'] as const,
+  },
 } as const;

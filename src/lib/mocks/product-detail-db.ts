@@ -216,6 +216,90 @@ const INFO_SECTIONS: Record<Locale, readonly { id: string; heading: string; body
 const DELIVERY_EPOCH = Date.parse('2026-09-11T00:00:00.000Z');
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * ## The mock backend's stock ledger
+ *
+ * §13 keys inventory on `(piece_id, size)` for every product, SIMPLE or SET
+ * alike. This is that table, and it is the ONE place a quantity is decided.
+ *
+ * It exists because §7.1 cannot be modelled honestly without it. A reservation
+ * transaction that guarantees "no oversell under concurrency" needs something
+ * to oversell — a status pattern computed on the fly has no number to run out
+ * of, so `Unavailable(piece)` could never actually fire and the interface's
+ * whole failure path would be untestable in the running store.
+ *
+ * The availability overlay now reads from here too, so the sold-out sizes the
+ * product page shows and the sizes the bag will refuse are the same fact rather
+ * than two rules that agree until someone edits one (PD-01).
+ *
+ * Quantities stay small on purpose: eight units is enough to add repeatedly,
+ * and two is enough that a customer can take the last one and watch the size go
+ * sold out.
+ */
+const LOW_STOCK_AT = 2;
+const STOCKED_QUANTITY = 8;
+
+/** The `(piece_id, size)` key of §13, as one string. */
+export function stockKey(pieceId: string, sizeId: string): string {
+  return `${pieceId}:${sizeId}`;
+}
+
+/**
+ * DATA-13: "low stock" is a THRESHOLD the operator owns, so it is applied here
+ * in the mock backend and the number never crosses the wire (§12 carries no
+ * quantity field of any kind).
+ */
+export function statusForQuantity(quantity: number): 'IN_STOCK' | 'LOW_STOCK' | 'SOLD_OUT' {
+  if (quantity <= 0) return 'SOLD_OUT';
+  return quantity <= LOW_STOCK_AT ? 'LOW_STOCK' : 'IN_STOCK';
+}
+
+/** How much a cart other than this read is holding against a key (§7.3). */
+export type ReservedLookup = (pieceId: string, sizeId: string) => number;
+
+const NOTHING_RESERVED: ReservedLookup = () => 0;
+
+/**
+ * Built on FIRST USE, not at module load.
+ *
+ * Filling it eagerly means calling `toProductDetail` while this module is still
+ * evaluating, which reaches `FABRIC_KEYS` before its `const` is initialised —
+ * a temporal-dead-zone `ReferenceError` that takes the whole module with it.
+ * Deferring to first access also means a request that never touches stock never
+ * pays to build the table.
+ */
+let stockOnHand: Map<string, number> | null = null;
+
+function stockTable(): Map<string, number> {
+  if (stockOnHand !== null) return stockOnHand;
+
+  const table = new Map<string, number>();
+
+  CATALOGUE.forEach((record, productIndex) => {
+    toProductDetail(record, 'en').pieces.forEach((piece, pieceIndex) => {
+      piece.sizes.forEach((size, sizeIndex) => {
+        // One piece of some SETs is gone entirely — the case §16 cares about.
+        const pieceGone =
+          !record.isInStock || (record.type === 'SET' && productIndex % 9 === 4 && pieceIndex === 1);
+        // A scattered but fixed pattern, so a screenshot and a bug report agree.
+        const soldOut = (productIndex + sizeIndex * 3 + pieceIndex) % 7 === 2;
+        const low = (productIndex + sizeIndex) % 5 === 1;
+
+        const quantity = pieceGone || soldOut ? 0 : low ? LOW_STOCK_AT : STOCKED_QUANTITY;
+        table.set(stockKey(piece.id, size.id), quantity);
+      });
+    });
+  });
+
+  stockOnHand = table;
+  return table;
+}
+
+/** `on_hand` for one `(piece, size)`. Unknown keys hold nothing. */
+export function onHandFor(pieceId: string, sizeId: string): number {
+  return stockTable().get(stockKey(pieceId, sizeId)) ?? 0;
+}
+
 /** The wire shape, declared here rather than imported (MOD-01). */
 export interface ProductDetailPayload {
   id: string;
@@ -376,39 +460,36 @@ export interface ProductDetailAvailabilityPayload {
 export function productAvailabilityFor(
   productId: string,
   locale: Locale,
+  reservedFor: ReservedLookup = NOTHING_RESERVED,
 ): ProductDetailAvailabilityPayload | null {
   const record = CATALOGUE.find((entry) => entry.id === productId.trim());
   if (record === undefined) return null;
 
   const detail = toProductDetail(record, locale);
-  const productIndex = CATALOGUE.indexOf(record);
 
-  const pieces = detail.pieces.map((piece, pieceIndex) => {
-    // One piece of some SETs is gone entirely — the case §16 cares about.
-    const pieceGone = !record.isInStock || (record.type === 'SET' && productIndex % 9 === 4 && pieceIndex === 1);
-
-    const sizes = piece.sizes.map((size, sizeIndex) => {
-      if (pieceGone) return { sizeId: size.id, status: 'SOLD_OUT' as const };
-
-      // A scattered but fixed pattern, so a screenshot and a bug report agree.
-      const soldOut = (productIndex + sizeIndex * 3 + pieceIndex) % 7 === 2;
-      const low = (productIndex + sizeIndex) % 5 === 1;
-
-      if (soldOut) return { sizeId: size.id, status: 'SOLD_OUT' as const };
-      return { sizeId: size.id, status: low ? ('LOW_STOCK' as const) : ('IN_STOCK' as const) };
+  const pieces = detail.pieces.map((piece) => {
+    const sizes = piece.sizes.map((size) => {
+      /*
+       * §7.3 read-time exclusion, at the one place a customer sees stock: what
+       * is on the shelf MINUS what other carts are holding right now. Nothing
+       * had to expire for this to be right, and no sweeper had to run.
+       */
+      const available = onHandFor(piece.id, size.id) - reservedFor(piece.id, size.id);
+      return { sizeId: size.id, status: statusForQuantity(available) };
     });
 
     const everySizeGone = sizes.length > 0 && sizes.every((size) => size.status === 'SOLD_OUT');
+    const pieceGone = !record.isInStock || everySizeGone;
 
     return {
       pieceId: piece.id,
-      status: pieceGone || everySizeGone ? ('SOLD_OUT' as const) : ('IN_STOCK' as const),
+      status: pieceGone ? ('SOLD_OUT' as const) : ('IN_STOCK' as const),
       sizes,
     };
   });
 
   // The backend's verdict across the whole product, stated rather than derived
-  // by whoever renders it.
+  // by whoever renders it. §16: a SET is unbuyable when ONE piece is gone.
   const anyPieceGone = pieces.some((piece) => piece.status === 'SOLD_OUT');
   const status = !record.isInStock || anyPieceGone ? 'SOLD_OUT' : record.id.endsWith('3') ? 'LOW_STOCK' : 'IN_STOCK';
 

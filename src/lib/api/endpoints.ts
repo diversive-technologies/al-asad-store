@@ -47,6 +47,22 @@ export const ENDPOINTS = {
   fabricCalculator: {
     evaluate: '/api/v1/fabric-calculator/evaluate',
   },
+  /**
+   * Section 16 `CartService`. The cart is addressed by an id the backend issues
+   * and the BFF keeps in an httpOnly cookie — never a path the browser composes.
+   */
+  bag: {
+    /** `summary(cart)`, and the POST that creates a cart on first add. */
+    summary: '/api/v1/carts',
+    /** `addItem(cart, product_id, {piece_id -> size}, qty)`. */
+    items: (cartId: string) => `/api/v1/carts/${cartId}/items`,
+    /** `updateQuantity(cart, line, qty)` and `removeItem(cart, line)`. */
+    line: (cartId: string, lineId: string) => `/api/v1/carts/${cartId}/items/${lineId}`,
+    /** `applyCode(cart, code)`, and DELETE to lift it again. */
+    code: (cartId: string) => `/api/v1/carts/${cartId}/code`,
+    /** `summary(cart)` for an existing cart. */
+    cart: (cartId: string) => `/api/v1/carts/${cartId}`,
+  },
   newsletter: {
     subscribe: '/api/v1/newsletter/subscriptions',
   },

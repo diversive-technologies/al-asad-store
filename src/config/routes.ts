@@ -26,6 +26,12 @@ export const ROUTES = {
   api: {
     suggest: '/api/suggest',
     fabricCalculator: '/api/fabric-calculator',
+    /** §16 — GET the summary, POST to add a line. */
+    bag: '/api/bag',
+    /** PATCH the quantity, DELETE the line. */
+    bagLine: (lineId: string) => `/api/bag/lines/${lineId}`,
+    /** POST to apply a promotional code, DELETE to lift it. */
+    bagCode: '/api/bag/code',
   },
   bag: '/bag',
   checkout: '/checkout',

@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-05. Last commit: `0348bda` (tree dirty — see below).
+Last updated: 2026-09-05. Last commit: `29cd1f7` (tree dirty — see below).
 
 ---
 
@@ -18,7 +18,7 @@ Last updated: 2026-09-05. Last commit: `0348bda` (tree dirty — see below).
 | M1 | Landing page + foundation | **Done.** Committed. |
 | M2 | Catalogue | **Feature-complete** except the small-screen filter drawer, which waits on M4. |
 | M3 | Product page | **In progress** — contract, mock, route and shell done; extras remain. |
-| M4 | Bag & reservation | Not started. `app/bag/` is a placeholder route only. |
+| M4 | Bag & reservation | **Core done.** Reservations, panel, quantity, remove, promo code. |
 | M5 | Checkout | Not started. |
 | M6 | Real auth & account | Deferred by D3. |
 
@@ -95,12 +95,52 @@ tap-to-fullscreen. None is started; none is faked.
 
 ## M2 — what is left
 
-Only one item, and it is blocked rather than pending:
+1. **Filter drawer on small screens** — the rail still stacks above the grid
+   below `md`. **No longer blocked:** `components/ui/dialog/SlideOver.tsx` now
+   exists and takes a `side` prop for exactly this. It is a small piece of work
+   whenever it is picked up.
 
-1. **Filter drawer on small screens** — the rail currently stacks above the grid
-   below `md`. A slide-over needs the focus-trapping dialog primitive A11Y-08
-   requires, which M4 needs anyway for the bag panel; building it once there is
-   why this was not hand-rolled now.
+## M4 — what is built
+
+- **The §7.1 transaction, for real** — `src/lib/mocks/bag-reservations.ts`.
+  Sorted lock order, an all-or-nothing check across every piece before any row
+  is written, `Unavailable(piece)` naming the piece AND size that failed,
+  existing holds refreshed rather than stacked, immediate release on removal,
+  and §7.3 read-time expiry. **15 tests**, including the one that matters most:
+  a SET that fails on its last piece leaves NO reservation behind.
+- **A real stock ledger.** `product-detail-db` now holds `on_hand` per
+  `(piece, size)` — §13's key — and the availability overlay reads from it,
+  subtracting active reservations. Taking the last unit makes a size read sold
+  out for everyone, with no job having run. Previously stock was a status
+  pattern with no number, so `Unavailable` could never actually fire.
+- **Contract** — `bag.schema.ts`. Every money figure arrives computed, the line
+  total included; `Ok | Unavailable(piece)` is a discriminated union; and the
+  summary carries NO cart id, because the id is a capability that stays in the
+  httpOnly cookie.
+- **BFF** — `/api/bag`, `/api/bag/lines/[lineId]`, `/api/bag/code`. The third,
+  fourth and fifth BFF routes, and the first that attach a credential: the cart
+  id is read from an httpOnly cookie the browser cannot see or forge.
+- **Dialog primitive** — `components/ui/dialog/SlideOver.tsx`, on the native
+  `<dialog>` element with `showModal()`. No dependency added: the platform gives
+  the focus trap, Escape, focus restore, top layer and inert background that
+  A11Y-08 requires.
+- **Panel** — slide-in, per-piece size display, quantity, remove with inline
+  confirmation, promotional code, free-delivery progress, and the hold's expiry
+  time.
+- **Add to bag** works from the product page, and the header shows a live count.
+- **"Held for you until…" explains itself.** The bare time was ambiguous — a
+  customer could not tell whether the items were reserved, whether they would
+  quietly go out of stock, or whether they would leave the bag. An info button
+  beside it opens a popover answering all three, plus the fact that editing the
+  bag renews the hold. Built on the native popover API in
+  `components/ui/popover/`, for the same reason `SlideOver` uses `<dialog>`: the
+  platform ships the primitive, so no dependency was added.
+
+## M4 — what is left
+
+Checkout is M5 and the button says so. `moveToWishlist` is M6. The `/bag` page
+is still the empty-state placeholder — the panel is the working surface, and the
+full page should render the same summary next.
 
 ## Header and search
 
@@ -160,6 +200,10 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
   `assets/photography/`. See "Photography" below for what this changed and what
   is still missing.
 - **Sign-in is a mock (D3).** No credentials are stored or validated.
+- **Carts live in memory.** A dev-server restart empties every bag and releases
+  every hold. That is the mock standing in for a database, not a design. The
+  BFF's add path recovers from it: a cookie naming a cart the backend no longer
+  has is discarded and replaced once, rather than failing forever.
 
 ## Photography
 
@@ -204,20 +248,22 @@ the size guide, in both locales.
   `brand-banner-rust.jpeg` have a phone number burned into them, so neither is
   usable as-is.
 
-## Uncommitted work
+## Uncommitted work — M4
 
-Photography (above), and before it the Fabric Calculator (§25):
+The bag and its reservations, as described above.
 
-- Contract, endpoint, `evaluate-fabric` reader, the `/api/fabric-calculator` BFF
-  route, a browser read, and the `FabricCalculator` panel.
-- The requirement table lives in the MOCK backend, not the frontend.
+Verified: **typecheck, lint, 124 tests and the production build all pass.**
+Exercised in the running store with real pointer clicks: a three-piece SET added
+at size M shows `Waistcoat · M / Kameez · M / Shalwar · M` in the panel; the
+quantity control reprices the line; `EID10` applies −Rs 700 on Rs 6,998 for a
+Rs 6,548 total; raising the quantity past the shelf returns
+`UNAVAILABLE / Waistcoat / M` rather than a generic refusal; and holding all
+eight units flips M to **Sold out** on the product page for every piece — §7.3
+read-time exclusion, with no sweeper involved.
 
-Verified after the photography change: **typecheck, lint, 109 tests and the
-production build all pass.** Every product image resolves 200 through
-`next/image`, no `/placeholders/` request remains, the three-piece buy box reads
-Waistcoat / Kameez / Shalwar, and the Fabric Calculator still reaches
-`COMFORTABLE` (4.5m, short kurta, 175cm) and `INSUFFICIENT` (same cloth, kameez
-and shalwar) from the running store.
+The info popover was verified open, readable and correctly layered ABOVE the
+modal bag panel, and its close button dismisses the popover while leaving the
+bag open. **Escape could not be exercised** — see the note below.
 
 ---
 
@@ -276,6 +322,14 @@ and shalwar) from the running store.
   measuring anything animated, and before any layout read.
 - **`typedRoutes` is off** on purpose: it is incompatible with backend-supplied
   hrefs.
+- **MSW handlers that read a body MUST `request.clone().json()`.** MSW walks its
+  handler list to find a match, and a resolver that reads the body consumes the
+  stream — the next handler to touch the same request throws `Body is unusable`
+  and the whole lookup fails as a 502. Three bag writes collided on this.
+- **The preview harness swallows `Escape`.** It reaches neither a modal
+  `<dialog>` nor an open popover, even with focus inside them, so that dismissal
+  path cannot be verified from here — it needs a human keypress. Do not conclude
+  the handler is broken from an automated Escape doing nothing.
 - **`sharp` is present** (Next pulls it in), so image conversion needs no new
   dependency — but a script run from the scratchpad cannot resolve it. Require it
   by absolute path out of the project's `node_modules`.
