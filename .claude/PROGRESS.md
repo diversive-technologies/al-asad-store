@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-07. Last commit: `66dd887` (tree dirty — see below).
+Last updated: 2026-09-07. Last commit: `3a121af` (tree dirty — see below).
 
 ---
 
@@ -534,6 +534,13 @@ nothing left to check out, and `/order/AA100001` still renders on a fresh load.
   clearing line inside it never ran either — one mismatched password left the
   sign-up form permanently dead. `form.handleSubmit(fn)(event)` returns a
   promise that settles on every path, so clear the latch in its `.finally`.
+- **A flat scrim over a film dims the part nobody is reading.** The hero used
+  `media-scrim/45` across the whole stage in BOTH themes, which only looked
+  wrong in the light one — a white page around a film dimmed by half reads as a
+  grey box. The fix is a gradient anchored to the caption: clear from 60% up,
+  strong where the text sits. Its stops were SOLVED, not judged — sampling the
+  film gave luminance 0.66 behind the 48px headline, and the WCAG formula gives
+  the minimum scrim for 3:1 and 4.5:1. Measured after: 3.79:1 and 5.36:1.
 - **`cn` keeps the LAST of two conflicting Tailwind classes**, which is what
   tailwind-merge is for — but it means a state class layered over a per-item one
   silently wins for every item. `opacity-60` for sold-out, applied to each

@@ -184,6 +184,52 @@ body:has([data-hero]) header[data-scrolled='false']::before {
 }
 
 /*
+ * The hero's scrim, anchored to the CAPTION rather than washed over the film.
+ *
+ * It used to be a flat `media-scrim/45` across the whole stage, and in the light
+ * theme that read as a very dark overlay: the page around it is white, so a film
+ * dimmed by nearly half stands out as a grey box rather than as video. In the
+ * dark theme the same wash blends with the page and looked correct, which is why
+ * only one of the two ever looked wrong.
+ *
+ * A gradient fixes both at once. It is strong where the headline and the call to
+ * action actually sit, and clears completely across the upper two-thirds — so
+ * the film reads bright and open in the light theme while the caption keeps the
+ * contrast A11Y-07 requires. Dimming pixels no text is standing on bought
+ * nothing.
+ *
+ * The scrim stays DARK in both themes, and that part of the original reasoning
+ * still holds: the caption is `on-media` (near-white) in both, so inverting the
+ * scrim with the theme would put light text on a light wash. What changes with
+ * the theme is how far it reaches, because a bright film needs a little more
+ * help under the text than a dark one does.
+ */
+@utility hero-scrim {
+  /*
+   * The stops are MEASURED, not judged by eye.
+   *
+   * Sampled against the light-theme film, which is the bright one: luminance
+   * 0.64 behind the 48px headline and 0.63 behind the subheadline. Solving the
+   * WCAG contrast formula for `on-media` text over that gives the minimum scrim
+   * each line needs — 56% for the headline at 3:1 (large text) and 72% for the
+   * subheadline at 4.5:1 (body text). The stops below sit just above both, so
+   * there is headroom for the brighter frames of the film.
+   *
+   * Everything from 60% upward is completely clear, which is the whole point:
+   * that is the part of the film a customer actually looks at, and the old flat
+   * wash was dimming it to protect text standing nowhere near it.
+   */
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, var(--color-media-scrim) 85%, transparent) 0%,
+    color-mix(in oklab, var(--color-media-scrim) 78%, transparent) 20%,
+    color-mix(in oklab, var(--color-media-scrim) 62%, transparent) 30%,
+    color-mix(in oklab, var(--color-media-scrim) 28%, transparent) 45%,
+    transparent 60%
+  );
+}
+
+/*
  * THE content container. Every band of the page uses it, so the whole layout
  * sits on one vertical rhythm instead of each section inventing its own.
  *

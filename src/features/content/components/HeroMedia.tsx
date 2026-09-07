@@ -243,10 +243,13 @@ export function HeroMedia({ poster, video }: HeroMediaProps) {
            * The scrim lives INSIDE the stage, over the film only. Covering the
            * whole section would tint the bands too, and the bands are meant to be
            * the page background so the film reads as sitting on the site rather
-           * than in a box. A11Y-07 contrast still holds because the hero copy is
-           * constrained to the stage's width.
+           * than in a box.
+           *
+           * A gradient, not a flat wash — see `hero-scrim` in globals.css. It is
+           * strong under the caption and clears over the rest, so the film stays
+           * bright while A11Y-07 contrast holds where the text actually is.
            */}
-          <div className="bg-media-scrim/45 absolute inset-0" aria-hidden />
+          <div className="hero-scrim absolute inset-0" aria-hidden />
         </div>
       </div>
     </>
