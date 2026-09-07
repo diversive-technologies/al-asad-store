@@ -30,6 +30,11 @@ export const ROUTES = {
     fabricCalculator: '/api/fabric-calculator',
     /** §28.2's quick add: the sizes a card may offer, read on demand. */
     quickAdd: '/api/quick-add',
+    /**
+     * The saved items, by id. A BFF because the ids live in the BROWSER, so the
+     * request can only start there — and `apiRequest` is `server-only`.
+     */
+    products: '/api/products',
     /** §16 — GET the summary, POST to add a line. */
     bag: '/api/bag',
     /** PATCH the quantity, DELETE the line. */
@@ -42,6 +47,8 @@ export const ROUTES = {
     checkoutPlace: '/api/checkout/place',
   },
   bag: '/bag',
+  /** §28.3's saved items. Offered only to a signed-in customer — see the page. */
+  wishlist: '/wishlist',
   checkout: '/checkout',
   /** §28.3 — the order number is the address, so it can be shared and returned to. */
   orderConfirmation: (orderNumber: string) => `/order/${orderNumber}`,

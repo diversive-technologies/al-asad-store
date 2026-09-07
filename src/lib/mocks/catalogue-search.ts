@@ -311,3 +311,24 @@ export function findRecordByCode(code: string, locale: Locale): ProductCardPaylo
   const record = CATALOGUE.find((entry) => entry.code.toLowerCase() === code.trim().toLowerCase());
   return record === undefined ? null : toProductCard(record, locale);
 }
+
+/**
+ * Several product projections in one read, by id.
+ *
+ * The order of the RESULT follows the order asked for, not the order the
+ * catalogue happens to hold. A saved-items list has a meaning to its owner —
+ * the sequence they saved things in — and re-sorting it by the fixture's own
+ * order would quietly discard that.
+ *
+ * An id with no product is simply absent. Something withdrawn since it was
+ * saved is an expected outcome of this read rather than a failure of it, and
+ * the caller can see the shortfall by comparing lengths.
+ */
+export function findRecordsByIds(ids: readonly string[], locale: Locale): ProductCardPayload[] {
+  const byId = new Map(CATALOGUE.map((record) => [record.id, record]));
+
+  return ids
+    .map((id) => byId.get(id))
+    .filter((record) => record !== undefined)
+    .map((record) => toProductCard(record, locale));
+}

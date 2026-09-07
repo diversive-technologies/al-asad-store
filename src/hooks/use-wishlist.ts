@@ -21,6 +21,25 @@ function read(): string[] {
 }
 
 export interface Wishlist {
+  /**
+   * Every saved id, in the order they were saved.
+   *
+   * The order is the customer's, not the catalogue's, and the page that renders
+   * this list preserves it — re-sorting would quietly discard the one piece of
+   * meaning the list carries beyond its membership.
+   *
+   * Empty on the first render, always: the ids are read in an effect so that
+   * the server render and the first client render agree, which is what
+   * hydration requires. A consumer must therefore treat "empty" as "not known
+   * yet" until `isReady`.
+   */
+  ids: readonly string[];
+  /**
+   * False until `localStorage` has been read, so an empty list can be told
+   * apart from an unread one. Without it the saved-items page would flash
+   * "nothing saved" on every load before showing the items.
+   */
+  isReady: boolean;
   isSaved: (productId: string) => boolean;
   toggle: (productId: string) => void;
 }
@@ -41,6 +60,7 @@ export interface Wishlist {
  */
 export function useWishlist(): Wishlist {
   const [ids, setIds] = useState<readonly string[]>([]);
+  const [isReady, setIsReady] = useState(false);
 
   /*
    * STATE-04 — the external system is `localStorage`, plus the two events that
@@ -51,6 +71,7 @@ export function useWishlist(): Wishlist {
   useEffect(() => {
     const sync = (): void => {
       setIds(read());
+      setIsReady(true);
     };
 
     sync();
@@ -75,5 +96,5 @@ export function useWishlist(): Wishlist {
     window.dispatchEvent(new Event(CHANGE_EVENT));
   }, []);
 
-  return { isSaved, toggle };
+  return { ids, isReady, isSaved, toggle };
 }

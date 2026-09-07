@@ -22,7 +22,12 @@ import {
   requestPasswordReset,
 } from './auth-db';
 import { findOrder, placeOrder, quoteFor } from './checkout-db';
-import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue-search';
+import {
+  findRecordByCode,
+  findRecordsByIds,
+  searchCatalogue,
+  suggestCatalogue,
+} from './catalogue-search';
 import { pageFor } from './pages-db';
 import { evaluateFabric, findProductBySlug, productAvailabilityFor } from './product-detail-db';
 import { AVAILABILITY, homepageFor, NEWSLETTER_SUBSCRIPTION } from './db';
@@ -155,6 +160,26 @@ export const handlers = [
   }),
 
   /*
+   * Several projections in one read, for the saved-items list.
+   *
+   * No 404 for a missing id: the response is whichever of them exist, in the
+   * order asked for. A product withdrawn since a customer saved it is an
+   * ordinary outcome here, and the list should show what is left rather than
+   * fail whole.
+   */
+  http.get(`*${ENDPOINTS.catalogue.byIds}`, ({ request }) => {
+    const url = new URL(request.url);
+    const requestedLocale = url.searchParams.get('locale');
+    const locale = isLocale(requestedLocale) ? requestedLocale : DEFAULT_LOCALE;
+    const ids = (url.searchParams.get('productIds') ?? '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+
+    return HttpResponse.json(findRecordsByIds(ids, locale));
+  }),
+
+  /*
    * Section 25. A GET because it is a pure function of its inputs and stores
    * nothing — "No customer input is stored" is an invariant of the module, not
    * an implementation detail, so the request carries no body and no identity.
@@ -174,7 +199,6 @@ export const handlers = [
   http.post(`*${ENDPOINTS.newsletter.subscribe}`, () =>
     HttpResponse.json(NEWSLETTER_SUBSCRIPTION, { status: 201 }),
   ),
-
 
   /*
    * §16 CartService. The cart id is in the PATH because that is how the Java
@@ -288,8 +312,10 @@ export const handlers = [
     return HttpResponse.json({ kind: 'APPLIED', summary: result.summary });
   }),
 
-  http.head(`*${ENDPOINTS.bag.cart(':cartId')}`, ({ params }) =>
-    new HttpResponse(null, { status: cartExists(String(params.cartId)) ? 200 : 404 }),
+  http.head(
+    `*${ENDPOINTS.bag.cart(':cartId')}`,
+    ({ params }) =>
+      new HttpResponse(null, { status: cartExists(String(params.cartId)) ? 200 : 404 }),
   ),
 
   /*

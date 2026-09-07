@@ -490,6 +490,23 @@ before — it claimed "Sign in" in every state. It is a USER ICON beside the oth
 header glyphs, and clicking it opens a native popover with the name, email and
 mobile plus a sign-out button; signed out, the same icon links to sign-in.
 
+## Wishlist — what is built
+
+- **Contract** — `ENDPOINTS.catalogue.byIds`, several product projections in one
+  read. A missing id is ABSENT rather than a 404: a product withdrawn since it
+  was saved is an expected outcome of this read, not a failure of it. The order
+  of the response follows the order asked for, because a saved list's sequence
+  belongs to its owner.
+- **BFF** — `/api/products`, the sixth. It exists because the ids live in the
+  BROWSER and `apiRequest` is `server-only`, and it aggregates the cached
+  projection with the live availability overlay that §8.2 keeps separate. Ids
+  are capped at 100 (SEC-02: the length is untrusted input).
+- **`features/catalogue/contract.ts`** — a second, CLIENT-SAFE barrel, on the
+  precedent the bag already set (STRUCT-06). The main barrel re-exports
+  `CatalogueScreen`, which reaches `next/headers` through
+  `grid-columns.server.ts`; a Client Component importing it fails the build
+  outright. This was found by the wishlist page 500ing, not by reading.
+
 ## Deliberate gaps — do not "fix" these
 
 - **Product imagery is now the client's own.** Fourteen photographs in
@@ -502,16 +519,30 @@ mobile plus a sign-out button; signed out, the same icon links to sign-in.
   on the sign-in screen. Passwords are compared in plaintext there because §11's
   adaptive hashing is the Java module's job, and imitating it would suggest that
   file is a security boundary. It is not.
-- **No account area.** Order history, saved addresses and a real wishlist are
-  still M6; signing in today gets you a name in the header and the wishlist
-  heart, nothing more.
-- **The wishlist is per-browser, and only offered to a signed-in customer.** A
-  real one belongs to an account (§28.3), so the heart is HIDDEN for guests —
-  offering it let them save into a list they could never open. Behind the mock
-  sign-in it persists to `localStorage`: it survives a reload on one device,
-  does not follow the customer to a phone, and is invisible to the operator.
-  `useWishlist` is shaped so a server-backed list replaces it without the cards
-  changing. Quick add stays available to guests, because guest checkout is
+- **No account area** beyond the saved items. Order history and saved addresses
+  are still M6.
+- **The wishlist has a PAGE now, at `/wishlist`**, reached from the account
+  menu — the heart used to save into a list with nowhere to open it. It renders
+  the same `ProductCard` as the catalogue, so the heart, the quick add and the
+  frame carousel work there for free, and un-hearting removes the item from the
+  page as you watch.
+
+  It is still per-browser and still only offered to a signed-in customer. A real
+  one belongs to an account (§28.3), so the heart is HIDDEN for guests —
+  offering it let them save into a list they could never open — and the page
+  itself asks a guest to sign in rather than showing an empty list they were
+  never allowed to fill. Behind the mock sign-in it persists to `localStorage`:
+  it survives a reload on one device, does not follow the customer to a phone,
+  and is invisible to the operator. `useWishlist` is shaped so a server-backed
+  list replaces it without the page or the cards changing.
+
+  Three details are load-bearing. `useWishlist` now returns `isReady`, because
+  the ids are read in an effect — so the server and client renders agree — and
+  without it the page flashed "nothing saved" on every load. A response SHORTER
+  than the request means a product was withdrawn since it was saved, and the
+  page says so rather than quietly shrinking. And the whole list is fetched in
+  ONE request through `/api/products`, a BFF that also merges the live
+  availability overlay, so a list of twenty is not twenty round trips. Quick add stays available to guests, because guest checkout is
   Release 1 scope (§28.2) and a guest really can buy.
 - **The language switcher is OFF**, via `CLIENT.features.languageSwitcher`.
   Nothing about the bilingual build was removed — `LOCALES`, both message files
@@ -746,6 +777,12 @@ out, and `/order/AA100001` still renders on a fresh load.
 - **A JSX comment cannot open a ternary branch.** `cond ? null : ( {/* … */}
   <ul/> )` parses as an object literal and fails with "')' expected" pointing at
   the wrong line. Put the comment above the conditional.
+- **A feature barrel that re-exports a Server Component poisons every client
+  import of it.** `@/features/catalogue` pulls in `CatalogueScreen`, which
+  reaches `next/headers`, so a Client Component importing the barrel for a
+  single grid fails the build with "you're importing a module that depends on
+  next/headers". The fix is a second client-safe barrel (`contract.ts`), which
+  is what STRUCT-06 is for and what `features/bag` already did.
 - **An animation restarts on a NAME change, not a direction change.** Writing the
   exit as the entry plus `reverse` looks economical and does nothing: the
   finished animation re-evaluates at its new end state and the element snaps.

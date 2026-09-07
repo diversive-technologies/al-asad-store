@@ -7,6 +7,7 @@ export { fetchAvailability } from './api/fetch-availability';
 export { evaluateFabric } from './api/evaluate-fabric';
 export { fetchFabricVerdict } from './api/fetch-fabric-verdict';
 export { fetchProduct } from './api/fetch-product';
+export { fetchProductsByIds } from './api/fetch-products-by-ids';
 export { fetchProductAvailability } from './api/fetch-product-availability';
 export { unifiedSizesFor, type QuickAddOffer, type QuickAddSize } from './lib/quick-add';
 export { findByCode } from './api/find-by-code';

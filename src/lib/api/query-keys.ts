@@ -32,6 +32,19 @@ export const queryKeys = {
       [...queryKeys.catalogue.all, 'fabric-verdict', productId, heightCm, styleId] as const,
   },
   /**
+   * §28.3's saved items.
+   *
+   * Keyed by the ids AND the locale: the list changes when something is saved
+   * or removed, and the same products carry different fabric and colour names
+   * in each language. The ids are joined rather than passed as an array so that
+   * the same set always produces the same key.
+   */
+  wishlist: {
+    all: ['wishlist'] as const,
+    products: (ids: readonly string[], locale: string) =>
+      [...queryKeys.wishlist.all, locale, ids.join(',')] as const,
+  },
+  /**
    * §16 — the bag is ONE server-owned object, so it is one key.
    *
    * Deliberately not keyed by cart id: the id lives in an httpOnly cookie the

@@ -30,6 +30,19 @@ export const ENDPOINTS = {
     /** Section 15 `byCode(code)` — the product-code lookup of section 28.1. */
     byCode: '/api/v1/catalogue/products/by-code',
     /**
+     * Several product projections in one read, by id.
+     *
+     * The saved-items list holds ids and nothing else, so rendering it means
+     * asking for those products by id. One request rather than one per id:
+     * a list of twenty would otherwise be twenty round trips, and the backend
+     * is the only party that can answer them together (PERF-02).
+     *
+     * A missing id is simply absent from the response rather than a 404 — a
+     * product withdrawn since it was saved is an expected outcome for this
+     * read, not a failure of it.
+     */
+    byIds: '/api/v1/catalogue/products/by-ids',
+    /**
      * Section 12 `CatalogueQuery.getProduct`. That signature reads
      * `getProduct(id | code)`; the storefront addresses products by SLUG because
      * section 30.5 wants one canonical, readable URL per product, so the slug is

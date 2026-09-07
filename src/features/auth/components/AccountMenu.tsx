@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import { ROUTES } from '@/config/routes';
 import type { Messages } from '@/i18n/messages/en';
-import { LogOut, User } from '@/lib/vendor/icons';
+import { Heart, LogOut, User } from '@/lib/vendor/icons';
 
 import { signOutAction } from '../actions';
 import { useSession } from './SessionProvider';
@@ -58,7 +58,12 @@ export function AccountMenu({ messages }: { messages: Messages }) {
         <User className="h-5 w-5" aria-hidden />
       </button>
 
-      <div id={id} popover="auto" aria-labelledby={`${id}-name`} className="account-popover popover-animated">
+      <div
+        id={id}
+        popover="auto"
+        aria-labelledby={`${id}-name`}
+        className="account-popover popover-animated"
+      >
         <p id={`${id}-name`} className="text-fg text-sm font-medium">
           {displayName}
         </p>
@@ -68,6 +73,21 @@ export function AccountMenu({ messages }: { messages: Messages }) {
         {email.length === 0 ? null : <p className="text-fg-muted mt-0.5 text-xs">{email}</p>}
         {mobile.length === 0 ? null : <p className="text-fg-muted text-xs">{mobile}</p>}
 
+        {/*
+         * The saved items live here because they are the customer's, and the
+         * heart that fills them is hidden from guests for the same reason. It
+         * is the only way into the page, so without it the heart would keep
+         * saving into a list with nowhere to open it.
+         */}
+        <Link
+          href={ROUTES.wishlist}
+          className="border-border text-fg hover:bg-surface-muted focus-visible:ring-brand-500 rounded-card mt-3 flex w-full items-center justify-center gap-2 border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        >
+          {/* I18N-05: a heart is not directional, so it must not mirror. */}
+          <Heart className="h-4 w-4" aria-hidden />
+          {messages.wishlist.navLabel}
+        </Link>
+
         <button
           type="button"
           onClick={() => {
@@ -76,7 +96,7 @@ export function AccountMenu({ messages }: { messages: Messages }) {
               router.refresh();
             });
           }}
-          className="border-border text-fg hover:bg-surface-muted focus-visible:ring-brand-500 mt-3 flex w-full items-center justify-center gap-2 rounded-card border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+          className="border-border text-fg hover:bg-surface-muted focus-visible:ring-brand-500 rounded-card mt-2 flex w-full items-center justify-center gap-2 border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
         >
           <LogOut className="h-4 w-4 rtl:rotate-180" aria-hidden />
           {t.signOut}

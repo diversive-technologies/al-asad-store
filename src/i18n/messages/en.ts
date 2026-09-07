@@ -139,7 +139,8 @@ export const en = {
     testAccountHeading: 'Test account',
     testAccountEmail: 'Email',
     testAccountPassword: 'Password',
-    testCode: 'Test code',    accountMenuLabel: 'Your account',
+    testCode: 'Test code',
+    accountMenuLabel: 'Your account',
 
     signOut: 'Sign out',
     resetHeading: 'Reset your password',
@@ -207,7 +208,8 @@ export const en = {
       'At that time the hold ends and the items go back on sale to everyone. They also leave your bag, so nothing sits there quietly out of stock.',
     heldInfoAction:
       'You can add them again afterwards if they are still available. Finishing checkout before then keeps them for good.',
-    heldInfoExtend: 'Changing your bag renews the hold, so you are not racing a clock while you shop.',
+    heldInfoExtend:
+      'Changing your bag renews the hold, so you are not racing a clock while you shop.',
     viewBag: 'View bag',
   },
   checkout: {
@@ -269,6 +271,22 @@ export const en = {
     giftNote: 'Wrapped as a gift',
     continueShopping: 'Continue shopping',
     notFound: 'We could not find that order.',
+  },
+  /** §28.3's saved items. */
+  wishlist: {
+    title: 'Saved items',
+    savedCount: { one: '{count} saved item', other: '{count} saved items' },
+    emptyHeading: 'Nothing saved yet',
+    emptyBody: 'Tap the heart on any product to keep it here.',
+    signedOutHeading: 'Sign in to see your saved items',
+    signedOutBody: 'Your saved list belongs to your account, so it follows you between visits.',
+    /* A product withdrawn from sale since it was saved. */
+    withdrawn: {
+      one: '{count} saved item is no longer available and is not shown.',
+      other: '{count} saved items are no longer available and are not shown.',
+    },
+    unreachable: 'We could not load your saved items. Please try again.',
+    navLabel: 'Saved items',
   },
   catalogue: {
     title: 'Catalogue',
