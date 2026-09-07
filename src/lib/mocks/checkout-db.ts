@@ -57,8 +57,6 @@ interface PaymentMethodRecord {
   /** §6.6: which state the ORDER enters, and which the PAYMENT enters. */
   readonly orderState: 'AWAITING_CONFIRMATION' | 'AWAITING_PAYMENT' | 'CONFIRMED';
   readonly paymentState: 'PENDING' | 'AWAITING_CONFIRMATION' | 'AWAITING_TRANSFER' | 'AUTHORIZED';
-  /** §7.2 step 7, `PaymentMethod.initiate()`, in the customer's words. */
-  readonly nextStep: Record<Locale, string>;
   /** Only Cash on Delivery is capped, and the cap is checked here. */
   readonly isCapped: boolean;
 }
@@ -69,10 +67,12 @@ interface PaymentMethodRecord {
  * §3.1 rejects a `charge(order)` abstraction because Cash on Delivery has
  * nothing to charge at checkout, and a subtype that cannot honour its
  * supertype's contract violates LSP. What survives is `initiate` — which every
- * method CAN do, and which means something different for each: authorise with
- * the gateway, arrange a confirmation, or issue a transfer reference. Those
- * three different meanings are the `nextStep` strings below, which is why the
- * interface needs no conditional per method.
+ * method CAN do, and which means something different for each.
+ *
+ * The confirmation screen used to render a per-method `nextStep` sentence, and
+ * that field is gone: this MVP has no confirmation or tracking flow, so there
+ * was nothing truthful to promise. The states below still differ per method,
+ * because §6.6 says they do — the interface simply does not narrate them yet.
  */
 const PAYMENT_METHODS: readonly PaymentMethodRecord[] = [
   {
@@ -84,16 +84,6 @@ const PAYMENT_METHODS: readonly PaymentMethodRecord[] = [
     },
     orderState: 'AWAITING_CONFIRMATION',
     paymentState: 'AWAITING_CONFIRMATION',
-    /*
-     * §28.2 has a COD confirmation SMS, and §7.2 step 8 enqueues it after
-     * commit — but there is no SMS provider wired up, so promising one would be
-     * the interface lying about something the customer would then wait for.
-     * The step is stated as what actually happens instead.
-     */
-    nextStep: {
-      en: 'We will call to confirm your order before dispatch. Have the cash ready when it arrives.',
-      ur: 'روانگی سے پہلے ہم تصدیق کے لیے آپ کو کال کریں گے۔ ڈیلیوری پر نقد رقم تیار رکھیں۔',
-    },
     isCapped: true,
   },
   {
@@ -105,10 +95,6 @@ const PAYMENT_METHODS: readonly PaymentMethodRecord[] = [
     },
     orderState: 'AWAITING_PAYMENT',
     paymentState: 'AUTHORIZED',
-    nextStep: {
-      en: 'Your card has been authorised. We will capture the payment when your order is dispatched.',
-      ur: 'آپ کا کارڈ منظور ہو چکا ہے۔ آرڈر روانہ ہوتے وقت رقم وصول کی جائے گی۔',
-    },
     isCapped: false,
   },
   {
@@ -120,10 +106,6 @@ const PAYMENT_METHODS: readonly PaymentMethodRecord[] = [
     },
     orderState: 'AWAITING_PAYMENT',
     paymentState: 'AUTHORIZED',
-    nextStep: {
-      en: 'Your wallet payment has been authorised. Nothing further is needed from you.',
-      ur: 'آپ کی والٹ ادائیگی منظور ہو چکی ہے۔ آپ کو مزید کچھ نہیں کرنا۔',
-    },
     isCapped: false,
   },
   {
@@ -135,10 +117,6 @@ const PAYMENT_METHODS: readonly PaymentMethodRecord[] = [
     },
     orderState: 'AWAITING_PAYMENT',
     paymentState: 'AWAITING_TRANSFER',
-    nextStep: {
-      en: 'Transfer the total using your order number as the reference. We dispatch once it clears.',
-      ur: 'اپنے آرڈر نمبر کو حوالہ بنا کر رقم منتقل کریں۔ رقم موصول ہوتے ہی ہم روانہ کر دیں گے۔',
-    },
     isCapped: false,
   },
 ];
@@ -243,7 +221,6 @@ export interface OrderPayload {
   deliveryCity: string;
   deliveryLabel: string;
   paymentLabel: string;
-  nextStep: string;
   isGift: boolean;
   giftMessage: string;
   lines: {
@@ -346,7 +323,6 @@ export function placeOrder(cartId: string, input: PlaceInput, locale: Locale): P
     deliveryCity: input.addressCity,
     deliveryLabel: option.label[locale],
     paymentLabel: method.label[locale],
-    nextStep: method.nextStep[locale],
     isGift: input.isGift,
     giftMessage: input.isGift ? input.giftMessage : '',
     lines: bag.lines.map((line, index) => ({

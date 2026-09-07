@@ -119,12 +119,10 @@ const PAGES: Record<string, (locale: Locale) => StaticPagePayload> = {
       en: [
         'Cash on delivery is available across Pakistan, up to a value limit shown at checkout.',
         'Card and wallet payments are authorised before the order is confirmed. If a payment does not complete, your bag is kept and nothing is charged.',
-        'Orders paid by cash on delivery are confirmed by SMS before dispatch.',
       ],
       ur: [
         'کیش آن ڈیلیوری پورے پاکستان میں دستیاب ہے، ایک مقررہ حد تک جو چیک آؤٹ پر دکھائی جاتی ہے۔',
         'کارڈ اور والٹ کی ادائیگی آرڈر کی تصدیق سے پہلے منظور کی جاتی ہے۔ اگر ادائیگی مکمل نہ ہو تو آپ کا تھیلا محفوظ رہتا ہے اور کوئی رقم نہیں کٹتی۔',
-        'کیش آن ڈیلیوری کے آرڈر روانگی سے پہلے ایس ایم ایس کے ذریعے تصدیق کیے جاتے ہیں۔',
       ],
     },
   ),

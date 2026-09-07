@@ -223,9 +223,6 @@ describe('§7.2 placing an order', () => {
       if (result.kind !== 'PLACED') throw new Error(`Expected ${methodId} to place.`);
       expect(result.order.state).toBe(states.state);
       expect(result.order.paymentState).toBe(states.paymentState);
-      // Each method says what happens next in its own words — which is what
-      // keeps a conditional per method out of the confirmation screen.
-      expect(result.order.nextStep.length).toBeGreaterThan(0);
     }
   });
 

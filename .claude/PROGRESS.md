@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-07. Last commit: `3a121af` (tree dirty — see below).
+Last updated: 2026-09-07. Last commit: `01e09cb` (tree dirty — see below).
 
 ---
 
@@ -192,11 +192,11 @@ quantity control and the hold explanation.
   the holds, and every availability read subtracts both — a unit sold this
   morning is as unavailable as one in somebody's bag.
 - **No conditional per payment method, anywhere.** §3.1 forbids it, so the four
-  methods are a LIST from `quote()`, each carrying its own label, description,
-  availability and — crucially — its own `nextStep` sentence. That last field is
-  what keeps the confirmation screen free of a branch: Cash on Delivery says an
-  SMS is coming, a card says it is authorised, a transfer asks for the money. A
-  fifth method is a configuration entry in Java and changes no file here.
+  methods are a LIST from `quote()`, each carrying its own label, description and
+  availability, and the interface renders the list. A fifth method is a
+  configuration entry in Java and changes no file here. `nextStep` was a sixth
+  field — a per-method sentence for the confirmation screen — and went with the
+  confirmation step itself; see M5's remaining work below.
 - **The COD cap is server-side.** `quote()` returns Cash on Delivery disabled
   with a reason above the cap, and `place()` refuses it again — a client that
   never called `quote` is still refused, which is what §17 means by "never only
@@ -208,8 +208,31 @@ quantity control and the hold explanation.
 
 ## M5 — what is left
 
-Order tracking by number and mobile (§28.3), and the payment gateway itself —
-the mock has no gateway to call, so `AUTHORIZED` is stated rather than obtained.
+The payment gateway itself: the mock has no gateway to call, so `AUTHORIZED` is
+stated rather than obtained.
+
+**Order tracking and the confirmation step are OUT of the MVP** by operator
+decision, not pending. The confirmation page no longer carries a "what happens
+next" section and no longer promises that an order can be tracked — there is no
+flow behind either, and copy that describes one would be a promise nothing can
+keep. `nextStep` was removed from the order contract with it, and the payment
+guide's promise that Cash on Delivery is "confirmed by SMS before dispatch" went
+with it for the same reason. §6.6's per-method order and payment STATES are
+untouched; the interface simply does not narrate them.
+
+The page leads instead with a **staged CSS mark**, on the shape of the Lottie
+"order placed" the operator linked: a disc that pops in, a ring drawn around it
+by `stroke-dashoffset`, the tick drawn last, and eight rays bursting outward as
+it lands. It runs **1.4s and starts 120ms late** — deliberately. The first
+version finished in 0.78s with no delay, which put it over before the eye had
+crossed the page from the navigation, and the operator reported seeing "just the
+same tick". An animation nobody catches is indistinguishable from none.
+
+Verified by driving the animation timeline by hand — the preview pane's clock is
+frozen, so `Animation.currentTime` was set directly: empty at 0ms, disc alone at
+400ms, ring complete with the tick half-drawn at 760ms, rays out at 920ms, whole
+mark at 1000ms. Text is plain server-rendered markup; only decoration animates,
+so nothing repeats the blank-page bug below.
 
 ## Search — the full-width panel
 
@@ -343,9 +366,11 @@ mobile plus a sign-out button; signed out, the same icon links to sign-in.
   and the RTL layout are untouched, and turning it back on is one word. It is
   off because D2's closing phase (Nastaliq, protected terms) is unfinished, and
   offering a switch to a half-reviewed translation is worse than offering none.
-- **No confirmation SMS.** §28.2 has one and §7.2 step 8 enqueues it, but no SMS
-  provider is wired up, so Cash on Delivery says a call is coming rather than
-  promising a message that never arrives.
+- **No confirmation SMS, and nothing that mentions one.** §28.2 has one and §7.2
+  step 8 enqueues it, but no SMS provider is wired up — so neither the
+  confirmation page nor the payment guide says a message is coming. The auth
+  code path is the one place an SMS is still named, and there the mock RETURNS
+  the code on screen rather than pretending to send it.
 - **No payment gateway.** Card and wallet orders come back `AUTHORIZED` because
   the mock says so. §7.2's honest consequence — an order existing in
   `AWAITING_PAYMENT` before authorisation returns — is modelled in the states,
@@ -425,9 +450,9 @@ modal bag panel, and its close button dismisses the popover while leaving the
 bag open. **Escape could not be exercised** — see the note below.
 
 M5 was exercised end to end in the running store: a two-piece order placed with
-Cash on Delivery produced order **AA100001**, the confirmation named the SMS
-step, the bag emptied, `/api/checkout/quote` then answered 404 because there was
-nothing left to check out, and `/order/AA100001` still renders on a fresh load.
+Cash on Delivery produced order **AA100001**, the bag emptied,
+`/api/checkout/quote` then answered 404 because there was nothing left to check
+out, and `/order/AA100001` still renders on a fresh load.
 
 ---
 
@@ -440,6 +465,19 @@ nothing left to check out, and `/order/AA100001` still renders on a fresh load.
 - **MSW dies on hot reload** unless it is a module-scoped singleton in `node.ts`
   with `ensureMockServer()` called from the root layout per request. A
   `globalThis` cache made it worse, not better.
+- **Do not run `npm run build` while `npm run dev` is up.** They share `.next`,
+  so the build writes into the directory the dev server watches, the dev server
+  re-evaluates modules, and MSW's interception does not survive it. Every
+  outbound call then escapes to `JAVA_API_BASE_URL` and gets `ECONNREFUSED`
+  — the whole store appears broken and only a dev-server restart fixes it.
+  Stop the server, build, start it again.
+- **`ECONNREFUSED` can surface as `CONTRACT_VIOLATION`, not `NETWORK`.** An
+  UNCACHED read (`/api/bag`) reports the transport failure honestly, but a
+  CACHED one (`searchProducts`, which carries `next.revalidate`) came back
+  through Next's fetch cache as a body that failed `resultPageSchema` instead.
+  So a dead backend reads as "the response did not match the expected schema"
+  on `/catalogue` and sends you to the schema. Check the log for a nearby
+  `TypeError: fetch failed` before believing a contract violation.
 - **Locale must be a query param, not `Accept-Language`.** Next's data cache is
   not keyed on that header, so both locales collided in one cache entry.
 - **`overflow-x: clip`, never `hidden`,** on the hero ambient wrapper — `hidden`
@@ -481,6 +519,17 @@ nothing left to check out, and `/order/AA100001` still renders on a fresh load.
   handler after a `flushSync`, not from an effect.
 - **React delegates `onMouseEnter` through `mouseover`/`mouseout`.** A synthetic
   `mouseenter` event proves nothing — test hover with a real pointer move.
+- **An animation short enough to be missed reads as no animation.** A 0.78s
+  entrance with no delay was reported as "just the same tick" — not because it
+  was broken, but because it was finished before the eye arrived from the
+  navigation. Give an arrival animation a start delay and enough duration to be
+  caught, and stage its parts so there is something still happening when the
+  reader looks.
+- **The preview pane's animation clock is frozen** — `document.timeline.currentTime`
+  stays at 0, so CSS animations never advance here and cannot be judged by
+  watching. Drive them: `el.getAnimations({subtree: true})` and set
+  `currentTime` on each, then screenshot. That is the only way to see a keyframe
+  sequence from this side.
 - **The preview pane throttles `requestAnimationFrame` while hidden,** so
   animations read as stuck at their initial values. Force a screenshot before
   measuring anything animated, and before any layout read.
@@ -529,6 +578,12 @@ nothing left to check out, and `/order/AA100001` still renders on a fresh load.
   vanished against a light film while the wordmark beside them stayed legible.
   Header controls should inherit and dim with `opacity`, which works whatever
   colour they inherit.
+- **`preserve-3d` falls back to DOM order when faces are parallel.** The
+  confirmation mark's dark back face painted over its green front one and hid
+  the tick entirely, even though the card computed `transform-style:
+  preserve-3d` and the faces were 12px apart in Z. At rest, with no rotation,
+  the engine stops sorting by z-position. Put the back face FIRST in the DOM so
+  it is correct either way.
 - **A submit latch set BEFORE validation never gets released.** `handleSubmit`
   flipped the ref, RHF then rejected the form, `onSubmit` never ran, and the
   clearing line inside it never ran either — one mismatched password left the

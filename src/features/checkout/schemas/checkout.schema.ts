@@ -91,7 +91,7 @@ export const checkoutFormSchema = z.object({
    * deployment in another market changes a regex rather than a component.
    */
   contactMobile: z.string().trim().regex(CLIENT.market.mobile.pattern),
-  /** §28.3 tracks a guest order by number and mobile, so email stays optional. */
+  /** Optional: this market reaches customers by mobile, not by email. */
   contactEmail: z.union([z.email(), z.literal('')]),
   addressLine: z.string().trim().min(6),
   addressCity: z.string().trim().min(2),
@@ -149,7 +149,7 @@ export const paymentStateSchema = z.enum([
 
 export const orderSchema = z.object({
   id: orderIdSchema,
-  /** What the customer quotes on the phone; §28.3 tracks by this plus mobile. */
+  /** What the customer quotes on the phone if they call about the order. */
   orderNumber: z.string().min(1),
   state: orderStateSchema,
   paymentState: paymentStateSchema,
@@ -160,12 +160,6 @@ export const orderSchema = z.object({
   deliveryCity: z.string().min(1),
   deliveryLabel: z.string().min(1),
   paymentLabel: z.string().min(1),
-  /**
-   * What happens next, in the backend's words — "We have sent an SMS to
-   * confirm", or a bank transfer reference. This is what lets the confirmation
-   * screen stay free of a conditional per payment method.
-   */
-  nextStep: z.string().min(1),
   isGift: z.boolean(),
   giftMessage: z.string(),
   lines: z.array(orderLineSchema).min(1),

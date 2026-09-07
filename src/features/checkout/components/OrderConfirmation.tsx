@@ -17,13 +17,13 @@ export interface OrderConfirmationProps {
 /**
  * The order, once it exists.
  *
- * Note what is NOT here: any branch on the payment method. Cash on Delivery
- * waits for an SMS reply, a card is already authorised, a bank transfer needs a
- * reference — three different things to tell the customer, and all three arrive
- * as `order.nextStep`, written by the method that knows (§3.1: "Checkout must
- * not contain a conditional per method"). A fifth method needs no change here.
+ * There is no "what happens next" section, and that is deliberate rather than
+ * missing: this MVP has no confirmation step and no order tracking, so anything
+ * written there would be a promise nothing behind it can keep. What the page
+ * does say is what is already true — the order exists, here is its number, and
+ * here is what was bought.
  *
- * A Server Component: it reads once and nothing on it moves.
+ * A Server Component. Only the mark at the top animates, and it does so in CSS.
  */
 export function OrderConfirmation({ order, locale, messages }: OrderConfirmationProps) {
   const t = messages.order;
@@ -38,14 +38,6 @@ export function OrderConfirmation({ order, locale, messages }: OrderConfirmation
         placedAt={formatDate(order.placedAt, locale)}
       />
 
-      <div className="bg-surface-muted rounded-card mt-8 p-5">
-        <h2 className="text-fg text-sm font-medium">{t.nextHeading}</h2>
-        {/*
-         * Written by the payment method, not chosen here — which is what keeps
-         * this page free of a conditional per method (§3.1).
-         */}
-        <p className="text-fg-muted mt-1 text-sm">{order.nextStep}</p>
-      </div>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div>
@@ -98,8 +90,6 @@ export function OrderConfirmation({ order, locale, messages }: OrderConfirmation
       <div className="mt-6 max-w-sm">
         <OrderSummary totals={order.totals} locale={locale} messages={messages} />
       </div>
-
-      <p className="text-fg-muted mt-6 text-xs">{t.keepNumber}</p>
 
       <div className="mt-6 flex justify-center">
         {/* Primary: it is the only thing to DO on this page, and the muted

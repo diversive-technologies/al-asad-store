@@ -180,8 +180,17 @@ export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
           role="alert"
           className="border-danger-500 bg-surface-muted rounded-card mt-6 border p-4"
         >
+          {/*
+           * Three outcomes, three headings. `PAYMENT_FAILED` used to fall
+           * through to "The total has changed", which told the customer the
+           * wrong thing about why their order did not go through.
+           */}
           <h2 className="text-fg text-sm font-medium">
-            {outcome.kind === 'RESERVATION_EXPIRED' ? t.expiredTitle : t.priceChangedTitle}
+            {outcome.kind === 'RESERVATION_EXPIRED'
+              ? t.expiredTitle
+              : outcome.kind === 'PRICE_CHANGED'
+                ? t.priceChangedTitle
+                : t.failedTitle}
           </h2>
           <p className="text-fg-muted mt-1 text-sm">
             {outcome.kind === 'RESERVATION_EXPIRED'

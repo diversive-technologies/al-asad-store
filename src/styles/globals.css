@@ -524,65 +524,6 @@ body:has([data-hero]) header[data-scrolled='false']::before {
  * whole point here, since the trigger lives inside the bag panel.
  */
 /*
- * The order-confirmation mark.
- *
- * CSS rather than `motion`, deliberately. The JS version put `opacity: 0` in
- * the server HTML and the whole confirmation rendered blank until the leaf
- * hydrated — on this page of all pages. These keyframes need no hydration, no
- * bundle, and stop entirely under `prefers-reduced-motion` (A11Y-10), where the
- * mark simply appears already drawn.
- */
-@keyframes order-placed-pop {
-  from {
-    transform: scale(0.6);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.06);
-    opacity: 1;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes order-placed-draw {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-.order-placed-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: 6rem;
-  block-size: 6rem;
-  border-radius: 9999px;
-  background-color: color-mix(in oklab, var(--color-brand-600) 12%, transparent);
-  box-shadow: 0 0 0 0.5rem color-mix(in oklab, var(--color-brand-600) 12%, transparent);
-  animation: order-placed-pop 500ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
-}
-
-.order-placed-tick {
-  inline-size: 3rem;
-  block-size: 3rem;
-  color: var(--color-brand-600);
-  animation: order-placed-draw 420ms ease-out 220ms both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .order-placed-mark,
-  .order-placed-tick {
-    animation: none;
-  }
-}
-
-/*
  * The catalogue card's overlay controls: wishlist, quick add, and the arrows
  * that walk a product's frames.
  *
@@ -873,6 +814,153 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
   box-shadow: 0 1rem 3rem color-mix(in oklab, black 28%, transparent);
+}
+
+/*
+ * The order-confirmation mark, in the shape a Lottie of this kind takes: a disc
+ * that pops, a ring that draws itself around it, a tick stroked on after, and a
+ * burst opening outward as it lands.
+ *
+ * Everything here is SVG stroke geometry driven by CSS keyframes — no player,
+ * no bundle, and nothing that waits for hydration. That last point is the one
+ * this page learned the hard way: a JS-driven version put `opacity: 0` into the
+ * server HTML and the confirmation rendered blank until the leaf hydrated.
+ *
+ * The whole sequence runs 1.4s and starts 120ms late, on purpose. Its
+ * predecessor was over in 780ms starting the instant the page painted, which
+ * finished before the eye had crossed from the navigation — indistinguishable
+ * from no animation at all.
+ */
+@keyframes order-disc-pop {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 2πr for r=52 is ~327, so 330 covers the circumference with a little slack. */
+@keyframes order-ring-draw {
+  from {
+    stroke-dashoffset: 330;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes order-tick-draw {
+  from {
+    stroke-dashoffset: 70;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes order-ray-burst {
+  from {
+    transform: rotate(var(--ray-angle)) translateY(-2.6rem) scaleY(0.2);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    transform: rotate(var(--ray-angle)) translateY(-4.4rem) scaleY(1);
+    opacity: 0;
+  }
+}
+
+@utility order-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 7.5rem;
+  block-size: 7.5rem;
+}
+
+@utility order-mark-svg {
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.order-mark-disc {
+  fill: var(--color-brand-600);
+  transform-origin: 60px 60px;
+  animation: order-disc-pop 520ms cubic-bezier(0.34, 1.5, 0.64, 1) 120ms both;
+}
+
+.order-mark-ring {
+  fill: none;
+  stroke: var(--color-brand-500);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 330;
+  /* Start the stroke at twelve o'clock rather than at three. */
+  transform: rotate(-90deg);
+  transform-origin: 60px 60px;
+  animation: order-ring-draw 760ms ease-out 120ms both;
+}
+
+.order-mark-tick {
+  fill: none;
+  stroke: var(--color-on-brand);
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 70;
+  animation: order-tick-draw 420ms cubic-bezier(0.65, 0, 0.35, 1) 620ms both;
+}
+
+.order-mark-ray {
+  position: absolute;
+  inline-size: 0.25rem;
+  block-size: 0.75rem;
+  border-radius: 9999px;
+  background-color: var(--color-brand-500);
+  transform-origin: center;
+  animation: order-ray-burst 700ms ease-out 700ms both;
+}
+
+/* Eight rays, evenly spread. Set here rather than inline, so STY-01 holds. */
+.order-mark-ray:nth-child(1) { --ray-angle: 0deg; }
+.order-mark-ray:nth-child(2) { --ray-angle: 45deg; }
+.order-mark-ray:nth-child(3) { --ray-angle: 90deg; }
+.order-mark-ray:nth-child(4) { --ray-angle: 135deg; }
+.order-mark-ray:nth-child(5) { --ray-angle: 180deg; }
+.order-mark-ray:nth-child(6) { --ray-angle: 225deg; }
+.order-mark-ray:nth-child(7) { --ray-angle: 270deg; }
+.order-mark-ray:nth-child(8) { --ray-angle: 315deg; }
+
+/*
+ * A11Y-10 — reduced motion gets the finished mark, not a faster version of the
+ * sequence. The rays are removed entirely: a burst is exactly the kind of
+ * expanding, radiating movement the preference exists to suppress.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .order-mark-disc,
+  .order-mark-ring,
+  .order-mark-tick {
+    animation: none;
+  }
+
+  .order-mark-ring,
+  .order-mark-tick {
+    stroke-dashoffset: 0;
+  }
+
+  .order-mark-ray {
+    display: none;
+  }
 }
 
 @utility info-popover {

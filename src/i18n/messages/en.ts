@@ -247,6 +247,7 @@ export const en = {
     expiredTitle: 'Some items are no longer held',
     expiredBody: 'These went back on sale before you finished: {items}. Please review your bag.',
     backToBag: 'Back to the bag',
+    failedTitle: 'We could not place your order',
     failed: 'We could not place your order. Nothing has been charged. Please try again.',
     /* Errors, in the customer's words rather than the validator's (ERR-11). */
     nameInvalid: 'Please enter your full name.',
@@ -261,13 +262,11 @@ export const en = {
     /* Prominent, because §28.3 tracks a guest order by exactly this. */
     numberLabel: 'Order number',
     placedLabel: 'Placed',
-    nextHeading: 'What happens next',
     deliveringTo: 'Delivering to',
     paymentLabel: 'Payment',
     itemsHeading: 'What you ordered',
     total: 'Total',
     giftNote: 'Wrapped as a gift',
-    keepNumber: 'Keep your order number. You can track the order with it and your mobile number.',
     continueShopping: 'Continue shopping',
     notFound: 'We could not find that order.',
   },
