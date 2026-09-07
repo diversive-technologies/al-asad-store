@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-05. Last commit: `3cb214e` (tree dirty — see below).
+Last updated: 2026-09-05. Last commit: `7b00ea3` (tree dirty — see below).
 
 ---
 
@@ -232,6 +232,14 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
   `assets/photography/`. See "Photography" below for what this changed and what
   is still missing.
 - **Sign-in is a mock (D3).** No credentials are stored or validated.
+- **The language switcher is OFF**, via `CLIENT.features.languageSwitcher`.
+  Nothing about the bilingual build was removed — `LOCALES`, both message files
+  and the RTL layout are untouched, and turning it back on is one word. It is
+  off because D2's closing phase (Nastaliq, protected terms) is unfinished, and
+  offering a switch to a half-reviewed translation is worse than offering none.
+- **No confirmation SMS.** §28.2 has one and §7.2 step 8 enqueues it, but no SMS
+  provider is wired up, so Cash on Delivery says a call is coming rather than
+  promising a message that never arrives.
 - **No payment gateway.** Card and wallet orders come back `AUTHORIZED` because
   the mock says so. §7.2's honest consequence — an order existing in
   `AWAITING_PAYMENT` before authorisation returns — is modelled in the states,
@@ -389,6 +397,16 @@ nothing left to check out, and `/order/AA100001` still renders on a fresh load.
 - **`react-hooks/refs` flags a ref read by a callback composed during render.**
   `form.handleSubmit(onSubmit)` in JSX counts, even though the callback only
   runs on submit. Compose it inside the event handler instead.
+- **`inset-block-start-0` and `inset-inline-end-0` are NOT Tailwind utilities.**
+  They are CSS property names; Tailwind's logical inset utilities are `start-*`
+  and `end-*`, with `top-*`/`bottom-*` for the block axis (which does not flip in
+  a horizontal writing mode). Written as properties they compile to nothing, and
+  the bag badge silently fell out of its corner.
+- **Never animate content in from `opacity: 0` with `motion` on a page that must
+  be readable.** Motion writes the `initial` styles into the SERVER HTML, so
+  until that client leaf hydrates the content is invisible — the order
+  confirmation rendered blank. Decoration animates via CSS (no hydration, no
+  bundle); text is plain server-rendered markup.
 - **The preview harness swallows `Escape`.** It reaches neither a modal
   `<dialog>` nor an open popover, even with focus inside them, so that dismissal
   path cannot be verified from here — it needs a human keypress. Do not conclude

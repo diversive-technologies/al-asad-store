@@ -5,6 +5,7 @@ import type { Messages } from '@/i18n/messages/en';
 import { formatDate, formatMoneyMinor } from '@/lib/utils/format';
 
 import type { Order } from '../schemas/checkout.schema';
+import { OrderPlacedHero } from './OrderPlacedHero';
 import { OrderSummary } from './OrderSummary';
 
 export interface OrderConfirmationProps {
@@ -29,20 +30,20 @@ export function OrderConfirmation({ order, locale, messages }: OrderConfirmation
 
   return (
     <section className="page-shell max-w-3xl py-12">
-      <h1 className="text-fg text-2xl font-semibold">{t.title}</h1>
+      <OrderPlacedHero
+        title={t.title}
+        orderNumberLabel={t.numberLabel}
+        orderNumber={order.orderNumber}
+        placedLabel={t.placedLabel}
+        placedAt={formatDate(order.placedAt, locale)}
+      />
 
-      <div className="border-border rounded-card mt-6 border p-5">
-        <p className="text-fg-muted text-xs">{t.numberLabel}</p>
-        {/* The number is the thing to remember: §28.3 tracks a guest order by
-            it plus the mobile number, so it is the largest text on the page. */}
-        <p className="text-fg text-2xl font-semibold tracking-wide">{order.orderNumber}</p>
-        <p className="text-fg-muted mt-1 text-xs">
-          {t.placedLabel}: {formatDate(order.placedAt, locale)}
-        </p>
-      </div>
-
-      <div className="bg-surface-muted rounded-card mt-4 p-5">
+      <div className="bg-surface-muted rounded-card mt-8 p-5">
         <h2 className="text-fg text-sm font-medium">{t.nextHeading}</h2>
+        {/*
+         * Written by the payment method, not chosen here — which is what keeps
+         * this page free of a conditional per method (§3.1).
+         */}
         <p className="text-fg-muted mt-1 text-sm">{order.nextStep}</p>
       </div>
 
@@ -100,8 +101,10 @@ export function OrderConfirmation({ order, locale, messages }: OrderConfirmation
 
       <p className="text-fg-muted mt-6 text-xs">{t.keepNumber}</p>
 
-      <div className="mt-6">
-        <ButtonLink href={ROUTES.catalogue.list} variant="secondary">
+      <div className="mt-6 flex justify-center">
+        {/* Primary: it is the only thing to DO on this page, and the muted
+            variant read as a disabled control rather than an invitation. */}
+        <ButtonLink href={ROUTES.catalogue.list} variant="primary" size="lg">
           {t.continueShopping}
         </ButtonLink>
       </div>

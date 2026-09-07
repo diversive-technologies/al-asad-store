@@ -3,7 +3,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 
@@ -35,6 +35,7 @@ export interface CheckoutScreenProps {
 export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
   const t = messages.checkout;
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   /*
    * Two fields drive a re-quote, because both change the total — and the total
@@ -79,6 +80,18 @@ export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
       unwrap(placeOrder(input)),
     onSuccess: (result: PlaceOrderResult) => {
       if (result.kind === 'PLACED') {
+        /*
+         * DATA-06 — the bag is GONE, so its cache entry must go with it.
+         *
+         * §7.2 discards the cart on commit, but nothing had told the browser
+         * that: the header badge and the panel kept rendering the summary from
+         * before the order, so a customer who had just checked out still saw
+         * two items waiting for them. `removeQueries` clears it immediately
+         * rather than leaving the stale count on screen until a refetch
+         * resolves, and the provider re-reads an empty bag from the server.
+         */
+        queryClient.removeQueries({ queryKey: queryKeys.bag.all });
+
         /*
          * The order number is the address (§28.3), so this is a navigation
          * rather than a state change — the customer can bookmark it, share it,

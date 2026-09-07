@@ -87,6 +87,15 @@ export interface FeatureProfile {
    * removes the control rather than the capability.
    */
   readonly themeToggle: boolean;
+  /**
+   * The language switcher in the header.
+   *
+   * Off does NOT mean the store is monolingual: `LOCALES`, every message file
+   * and the whole RTL layout stay exactly as they are, and turning this back on
+   * is a one-word change. It removes the CONTROL, for a client who is launching
+   * in one language while the second is still being reviewed.
+   */
+  readonly languageSwitcher: boolean;
 }
 
 export interface ClientProfile {
@@ -107,5 +116,12 @@ export const CLIENT: ClientProfile = {
   features: {
     newsletter: true,
     themeToggle: true,
+    /*
+     * Off for launch. The Urdu content is written and shipped — D2's closing
+     * phase (Nastaliq, the protected-terms list) is what is not finished, and
+     * offering a switch to a half-reviewed translation is worse than offering
+     * no switch at all.
+     */
+    languageSwitcher: false,
   },
 };

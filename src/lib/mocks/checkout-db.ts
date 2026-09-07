@@ -70,7 +70,7 @@ interface PaymentMethodRecord {
  * nothing to charge at checkout, and a subtype that cannot honour its
  * supertype's contract violates LSP. What survives is `initiate` — which every
  * method CAN do, and which means something different for each: authorise with
- * the gateway, send a confirmation SMS, or issue a transfer reference. Those
+ * the gateway, arrange a confirmation, or issue a transfer reference. Those
  * three different meanings are the `nextStep` strings below, which is why the
  * interface needs no conditional per method.
  */
@@ -84,9 +84,15 @@ const PAYMENT_METHODS: readonly PaymentMethodRecord[] = [
     },
     orderState: 'AWAITING_CONFIRMATION',
     paymentState: 'AWAITING_CONFIRMATION',
+    /*
+     * §28.2 has a COD confirmation SMS, and §7.2 step 8 enqueues it after
+     * commit — but there is no SMS provider wired up, so promising one would be
+     * the interface lying about something the customer would then wait for.
+     * The step is stated as what actually happens instead.
+     */
     nextStep: {
-      en: 'We have sent an SMS to your mobile. Reply to confirm the order and we will dispatch it.',
-      ur: 'ہم نے آپ کے موبائل پر ایس ایم ایس بھیجا ہے۔ تصدیق کے لیے جواب دیں، پھر ہم آرڈر روانہ کر دیں گے۔',
+      en: 'We will call to confirm your order before dispatch. Have the cash ready when it arrives.',
+      ur: 'روانگی سے پہلے ہم تصدیق کے لیے آپ کو کال کریں گے۔ ڈیلیوری پر نقد رقم تیار رکھیں۔',
     },
     isCapped: true,
   },

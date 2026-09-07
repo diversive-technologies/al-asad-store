@@ -477,6 +477,65 @@ body:has([data-hero]) header[data-scrolled='false']::before {
  * sits in the top layer, so it renders ABOVE an open `<dialog>` — which is the
  * whole point here, since the trigger lives inside the bag panel.
  */
+/*
+ * The order-confirmation mark.
+ *
+ * CSS rather than `motion`, deliberately. The JS version put `opacity: 0` in
+ * the server HTML and the whole confirmation rendered blank until the leaf
+ * hydrated — on this page of all pages. These keyframes need no hydration, no
+ * bundle, and stop entirely under `prefers-reduced-motion` (A11Y-10), where the
+ * mark simply appears already drawn.
+ */
+@keyframes order-placed-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes order-placed-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.order-placed-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 6rem;
+  block-size: 6rem;
+  border-radius: 9999px;
+  background-color: color-mix(in oklab, var(--color-brand-600) 12%, transparent);
+  box-shadow: 0 0 0 0.5rem color-mix(in oklab, var(--color-brand-600) 12%, transparent);
+  animation: order-placed-pop 500ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.order-placed-tick {
+  inline-size: 3rem;
+  block-size: 3rem;
+  color: var(--color-brand-600);
+  animation: order-placed-draw 420ms ease-out 220ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-placed-mark,
+  .order-placed-tick {
+    animation: none;
+  }
+}
+
 @utility info-popover {
   position: fixed;
   margin: auto;

@@ -43,7 +43,15 @@ export function BagTrigger({ messages }: BagTriggerProps) {
         <span
           // A11Y-04: the label above already says it, so the badge is decorative.
           aria-hidden
-          className="bg-brand-600 absolute inset-block-start-0 inset-inline-end-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] leading-none font-medium text-white"
+          /*
+           * `top-0 end-0`, NOT `inset-block-start-0 inset-inline-end-0`: those
+           * two are CSS property names, not Tailwind utilities, so they
+           * compiled to nothing and the badge fell out of the corner and hung
+           * below the icon. `end-0` is the logical inline edge and still
+           * mirrors under `dir="rtl"`; `top-0` is the block edge, which does
+           * not flip in a horizontal writing mode.
+           */
+          className="bg-brand-600 absolute top-0 end-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] leading-none font-medium text-white"
         >
           {count}
         </span>

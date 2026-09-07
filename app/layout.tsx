@@ -107,7 +107,14 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                  * Derived, not flagged: a client with one language has nothing
                  * to switch to, and a separate flag could contradict LOCALES.
                  */
-                localeSwitcher={LOCALES.length > 1 ? <LocaleSwitcher currentLocale={locale} /> : null}
+                localeSwitcher={
+                  /* D5: two conditions, and they mean different things. More
+                     than one locale must EXIST, and the client must want the
+                     control offered — see `features.languageSwitcher`. */
+                  LOCALES.length > 1 && CLIENT.features.languageSwitcher ? (
+                    <LocaleSwitcher currentLocale={locale} />
+                  ) : null
+                }
                 search={<HeaderSearch locale={locale} messages={messages} />}
                 bagTrigger={<BagTrigger messages={messages} />}
               />
