@@ -77,33 +77,38 @@ export async function CatalogueScreen({
         </ol>
       </nav>
 
-      <header className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-fg text-2xl font-semibold">{heading}</h1>
-        {/* I18N-07: the count goes through the locale's plural rules. */}
-        <p className="text-fg-muted text-sm">
-          <bdi>{formatPlural(t.productCount, results.totalCount, locale)}</bdi>
-        </p>
-      </header>
-
       <GridColumnsScope initialColumns={mobileColumns}>
-        <FilterPanel
-          query={query}
-          facets={results.facets}
-          basePath={basePath}
-          locale={locale}
-          messages={messages}
-        />
-
         {/* A11Y-01: the results are the page's main content, and say so. */}
         <main className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          {/*
+           * Title, count and controls in ONE grid, which lays itself out
+           * differently at the two sizes rather than being written twice.
+           *
+           * On a phone it is two rows — title and count on the first, the
+           * controls spread across the second — which is exactly what it was
+           * before. From 64rem it collapses to a single row, because on a wide
+           * screen the two rows were mostly empty: a heading alone on one line
+           * and two small buttons alone on the next, with a page-width of gap
+           * between them.
+           *
+           * A grid rather than flexbox because the count has to move BETWEEN
+           * groups — beside the title on a phone, beside the controls on a
+           * desktop — and `grid-template-areas` can re-place a child that
+           * flex-wrapping cannot.
+           */}
+          <header className="listing-head">
+            <h1 className="listing-title text-fg text-2xl font-semibold">{heading}</h1>
+
+            {/* I18N-07: the count goes through the locale's plural rules. */}
+            <p className="listing-count text-fg-muted text-sm">
+              <bdi>{formatPlural(t.productCount, results.totalCount, locale)}</bdi>
+            </p>
+
+            <div className="listing-controls">
             {/*
-             * Rendered a SECOND time, for the drawer. The duplicate is the
-             * price of keeping `FilterPanel` a Server Component on both
-             * surfaces: it ships no JavaScript either way, and moving one DOM
-             * subtree between two parents at a breakpoint is not something CSS
-             * can do. `PriceFilter` generates its ids, so the two copies do not
-             * collide.
+             * The ONLY copy of the panel now. It used to be rendered twice —
+             * once for a permanent desktop rail and once here — and dropping
+             * the rail dropped the duplicate with it.
              */}
             <FilterDrawer messages={messages} activeCount={activeFilterCount}>
               <FilterPanel
@@ -122,7 +127,8 @@ export async function CatalogueScreen({
             <GridColumnsControl messages={messages} />
 
             <SortControl query={query} basePath={basePath} messages={messages} />
-          </div>
+            </div>
+          </header>
 
           <FilterChips
             query={query}

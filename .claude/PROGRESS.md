@@ -119,7 +119,75 @@ Last updated: 2026-09-07. Last commit: `01e09cb` (tree dirty — see below).
   `<Link>`, so the panel is a Server Component shipping no JavaScript and every
   filter combination is a crawlable URL; `PriceFilter` is the single client leaf,
   because a range needs a submit rather than a navigation per keystroke.
-- **Sort** — the four options of section 28.1, as links with `aria-current`.
+
+  **There is no rail at any width** — it is a Filters button and a drawer on
+  desktop exactly as on a phone, by operator decision. The rail bought one tap
+  and cost a fixed 16rem on every listing, which is a sixth of a 1536px page
+  spent on controls that are empty most of the time. Removing it also removed
+  the DUPLICATE render: `FilterPanel` used to be built twice, once per surface.
+  Tiles at 1440px went from 246px to 318px, and four columns now start at 64rem
+  rather than 80rem because no rail takes 16rem out of the row.
+
+  `FilterChips` still sits under the toolbar, so what is applied stays visible
+  and removable without opening anything — the part of the rail worth keeping,
+  at no width.
+- **Both toolbar surfaces animate in AND out.** The drawer only ever animated on
+  the way out: a `<dialog>` is `display: none` until it opens, and a transition
+  cannot run on the first frame an element is rendered, so it snapped open and
+  glided shut. `@starting-style` supplies the missing previous value — the
+  backdrop fades and the panel slides over 220ms in both directions now.
+
+  The sort popover had no transition at all. It fades, lifts 0.4rem and scales
+  from 0.98 over 160ms, and the chevron turns over while it is open — driven by
+  `:has(+ .sort-panel:popover-open)`, so there is still no class to toggle and
+  still no JavaScript. `display` and `overlay` are transitioned with
+  `allow-discrete`; the second is the load-bearing one, because without it the
+  panel leaves the TOP LAYER the instant it closes and the exit animation plays
+  somewhere nobody can see.
+
+  Verified by driving the transitions by hand, the pane's clock being frozen:
+  entry invisible at 0ms, part-faded and still rising at 80ms, settled at 160ms;
+  the drawer off-screen at 0ms, halfway at 110ms, seated at 220ms; and all five
+  exit transitions present on the popover once the entry is allowed to finish.
+
+  A11Y-10 throughout: reduced motion keeps the fades — something appearing from
+  nothing is harder to follow than something that arrives — and drops the travel.
+- **Listing head** — title, product count and both controls in ONE grid that
+  lays itself out differently at the two sizes rather than being written twice.
+  A phone keeps exactly what it had: title and count on the first row, the
+  controls spread across the second. From 64rem it collapses to a SINGLE row —
+  title at the reading start, then count, Filters and Sort at the end — because
+  the two-row version was mostly empty on a wide screen: a heading alone on one
+  line, two small buttons alone on the next, a page-width of nothing between
+  them. Measured 90px of head height down to 38px at 1440px.
+
+  `grid-template-areas`, not flexbox, and that is the whole reason it works: the
+  count has to move BETWEEN groups — beside the title on a phone, beside the
+  controls on a desktop — and wrapping only ever pushes the next item onto the
+  next line in source order.
+- **Sort** — the four options of section 28.1 as a DROPDOWN, not an open row of
+  pills. The row spent a whole toolbar line on three choices nobody had made and
+  wrapped onto a second line on a phone; collapsed, the toolbar says what the
+  order IS and offers to change it.
+
+  It is still a **Server Component shipping no JavaScript**: the panel is a
+  native `popover` reached by `popoverTarget`, so the top layer, light-dismiss,
+  `Escape` and focus return come from the platform and work before hydration.
+  The options stay `<a>` elements, so every sort is still a crawlable URL and
+  the `<select>` keyboard trap is still avoided.
+
+  Two details are load-bearing. It is placed with CSS ANCHOR positioning
+  (`anchor-name` / `position-anchor`) because a top-layer element's containing
+  block is the viewport — `position: absolute` has nothing to hang from — with an
+  `@supports not` fallback that pins it under the header rather than letting the
+  UA centre it. And the panel is KEYED on the canonical query string: Next
+  navigates on the client, so the element survived and the menu stayed open over
+  the re-ordered grid; a new key unmounts it, which is how the platform closes a
+  popover anyway.
+
+  Below 40rem the "Sort by" prefix is hidden — it was the ~55px that made the
+  toolbar wrap at 375px — and an `aria-label` states the full name, because
+  `display: none` takes the prefix out of the accessibility tree too.
 - **Type-ahead** — a product row opens that product; a term row runs a search.
   `SuggestionOption` carries a typed `destination` union rather than a bare
   search term, so the two cannot be confused. `app/api/suggest/route.ts` is the
@@ -652,6 +720,24 @@ out, and `/order/AA100001` still renders on a fresh load.
 - **A JSX comment cannot open a ternary branch.** `cond ? null : ( {/* … */}
   <ul/> )` parses as an object literal and fails with "')' expected" pointing at
   the wrong line. Put the comment above the conditional.
+- **A transition cannot run on the first frame an element is rendered.** Anything
+  that goes from `display: none` — a `<dialog>`, a `[popover]` — has no previous
+  value to animate from, so it appears instantly however complete the transition
+  looks. Only the EXIT works, which is a distinctive symptom: snaps open, glides
+  shut. `@starting-style` supplies the missing value.
+- **A closing popover leaves the top layer immediately.** Transition `overlay`
+  with `allow-discrete` alongside `display`, or the exit animation plays behind
+  the rest of the page. `display` alone keeps it rendered but not on top.
+- **A popover survives a client-side navigation.** Next keeps the DOM element,
+  so a menu of links stayed open over the page it had just re-ordered. Keying it
+  on the URL unmounts and remounts it, which closes it with no JavaScript —
+  removing the element is how a popover closes anyway.
+- **A top-layer element cannot be positioned with `position: absolute`.** Its
+  containing block is the viewport, so it has no positioned ancestor to hang
+  from; `anchor-name` on the trigger plus `position-anchor` on the popover is
+  what re-establishes the relationship. Always pair it with `@supports not`,
+  since the UA default is to centre the popover in the viewport, which reads as
+  a broken dropdown rather than a missing feature.
 - **A control revealed on hover does not exist on a phone.** `group-hover` is
   invisible to touch, so the card's frame arrows were unreachable there. Test
   with `@media (hover: none)` — it asks whether the PRIMARY input can hover, so

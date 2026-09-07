@@ -63,7 +63,7 @@ export function GridColumnsScope({ initialColumns, children }: GridColumnsScopeP
 
   return (
     <GridColumnsContext.Provider value={value}>
-      <div className="listing-layout" {...{ [GRID_COLUMNS_ATTRIBUTE]: String(columns) }}>
+      <div {...{ [GRID_COLUMNS_ATTRIBUTE]: String(columns) }}>
         {children}
       </div>
     </GridColumnsContext.Provider>

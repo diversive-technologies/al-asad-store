@@ -21,15 +21,24 @@ export interface FilterDrawerProps {
 }
 
 /**
- * §28.1's filters on a small screen.
+ * §28.1's filters, at every width.
  *
- * Below 64rem the rail has nowhere to go — at 768px a fixed 16rem column took
- * more than a third of the row and squeezed the tiles to ~115px — so the panel
- * moves into a drawer behind a button. `SlideOver` takes `side` for exactly
- * this, which is why it was built in `components/ui` rather than inside the bag.
+ * This used to be the small-screen answer beside a permanent desktop rail, and
+ * the rail is now gone by operator decision. What it bought was one tap saved;
+ * what it cost was a fixed 16rem column on every listing, which is a sixth of a
+ * 1536px page spent on controls that are empty most of the time — and it made
+ * the grid narrower on exactly the screens with room for more products.
+ *
+ * Removing it also removed a duplicate. `FilterPanel` was rendered TWICE, once
+ * for the rail and once for the drawer, which is why `PriceFilter` had to
+ * generate its ids; there is one copy now.
+ *
+ * `FilterChips` still sits under the toolbar, so which filters are applied stays
+ * visible and removable without opening anything — that is the part of the rail
+ * worth keeping, and it costs no width.
  *
  * It opens from `inline-start`: the filters belong to the reading-start edge in
- * both directions, matching where the rail sits on a wide screen.
+ * both directions, which is where the rail used to be.
  */
 export function FilterDrawer({ messages, activeCount, children }: FilterDrawerProps) {
   const t = messages.catalogue;
@@ -42,7 +51,7 @@ export function FilterDrawer({ messages, activeCount, children }: FilterDrawerPr
         onClick={() => {
           setIsOpen(true);
         }}
-        className="border-border rounded-card text-fg focus-visible:ring-brand-500 flex items-center gap-2 border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none lg:hidden"
+        className="border-border rounded-card text-fg hover:bg-surface-muted focus-visible:ring-brand-500 flex items-center gap-2 border px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
         {/* I18N-05: sliders are not directional, so this glyph must not mirror. */}
         <SlidersHorizontal className="h-4 w-4" aria-hidden />
