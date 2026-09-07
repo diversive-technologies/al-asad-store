@@ -18,16 +18,20 @@ export interface SlideOverProps {
   footer?: ReactNode;
 }
 
-/** How long the panel takes to slide, matched by `slide-over` in globals.css. */
+/**
+ * How long the exit takes, matched by `slide-over-motion` in globals.css. The
+ * element cannot be closed until its transition has played, so this number and
+ * the CSS have to agree.
+ */
 const EXIT_MS = 220;
 
 /**
  * A11Y-08 — a modal slide-over, built on the native `<dialog>` element.
  *
- * The rule says the bot SHOULD use a headless accessible primitive rather than
- * hand-rolling. `<dialog>` with `showModal()` IS that primitive — the platform's
- * — and it is the reason no dependency was added (BASE-01). It gives, for free
- * and correctly:
+ * The rule says to use a headless accessible primitive rather than hand-rolling.
+ * `<dialog>` with `showModal()` IS that primitive — the platform's — and it is
+ * the reason no dependency was added (BASE-01). It gives, for free and
+ * correctly:
  *
  * - a real focus trap, including from the browser's own UI;
  * - `Escape` to dismiss, via `cancel`;
@@ -39,8 +43,8 @@ const EXIT_MS = 220;
  * Hand-rolling a focus trap over a `<div>` would be several hundred lines of
  * the subtlest code in any component library, and it would be wrong.
  *
- * Reused by M2's small-screen filter drawer, which is why `side` exists and why
- * this lives in `components/ui` rather than inside the bag feature.
+ * Reused by M2's filter drawer, which is why `side` exists and why this lives
+ * in `components/ui` rather than inside the bag feature.
  */
 export function SlideOver({
   isOpen,
@@ -73,14 +77,11 @@ export function SlideOver({
     if (!dialog.open) return;
 
     /*
-     * The exit animation, and the reason it needs a timer.
+     * The exit, and the reason it needs a timer.
      *
      * `close()` removes the element from the top layer immediately, so a panel
-     * that simply closed would vanish rather than slide out. The attribute
-     * drives the outgoing transition; the element is closed once it has played.
-     * `transition-behavior: allow-discrete` would express this in CSS alone,
-     * but it silently does nothing where it is unsupported and the panel would
-     * hang open — a timer fails in neither direction.
+     * that simply closed would vanish rather than leave. The attribute drives
+     * the outgoing transition; the element is closed once it has played.
      */
     dialog.setAttribute('data-closing', 'true');
     closingTimer.current = setTimeout(() => {
@@ -100,7 +101,10 @@ export function SlideOver({
     <dialog
       ref={dialogRef}
       aria-label={title}
-      className={cn('slide-over', side === 'inline-start' ? 'slide-over-start' : null)}
+      className={cn(
+        'slide-over slide-over-motion',
+        side === 'inline-start' ? 'slide-over-start' : null,
+      )}
       /*
        * `cancel` is Escape. Routed through `onClose` so the parent's state is
        * the single source of truth for whether the panel is open (PD-01) — the

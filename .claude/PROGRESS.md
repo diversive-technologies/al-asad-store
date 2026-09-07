@@ -131,6 +131,32 @@ Last updated: 2026-09-07. Last commit: `01e09cb` (tree dirty — see below).
   `FilterChips` still sits under the toolbar, so what is applied stays visible
   and removable without opening anything — the part of the rail worth keeping,
   at no width.
+- **Every native popover animates, from one definition.** `popover-animated` in
+  `globals.css` carries the fade, the 0.4rem rise, the 0.98 scale and — the
+  subtle part — the `display` / `overlay` `allow-discrete` plumbing and the
+  `@starting-style`. The sort menu, the bag's "held for you" explanation and the
+  account menu all wear it, so there is one implementation rather than three
+  (PD-01).
+- **The bag and the filter drawer travel identically** — `slide-over-motion`,
+  220ms, each from its own edge. The direction is ONE custom property,
+  `--slide-from`, set on `slide-over` and flipped by `slide-over-start` and two
+  `[dir='rtl']` rules; it replaced four sign-flipped translate blocks.
+
+  The bag briefly had a fade of its own, after being reported as appearing
+  part-way out from the edge and snapping home. Three attempts to fix that as a
+  timing problem changed nothing, and it was only settled by REMOVING the
+  transition entirely — the operator's suggestion — which showed the panel was
+  otherwise correct. The operator then asked for the two to match, so there is
+  one implementation again. If the jump returns it is now a clean question:
+  identical code and CSS on two surfaces, one of them wrong.
+- **The search panel's exit was broken, and had been.** Both states named the
+  same animation, with the closing one adding `reverse`. Changing only
+  `animation-direction` does NOT restart an animation — the NAME is what the
+  browser keys on — so the entry animation, finished long before and held by
+  `fill: both`, simply re-evaluated at its reversed end state and the panel
+  vanished instantly. It opened beautifully and closed as if the transition had
+  been forgotten. `search-overlay-out` is a second name, so a second animation
+  starts; verified `running` rather than finished on close.
 - **Both toolbar surfaces animate in AND out.** The drawer only ever animated on
   the way out: a `<dialog>` is `display: none` until it opens, and a transition
   cannot run on the first frame an element is rendered, so it snapped open and
@@ -720,6 +746,34 @@ out, and `/order/AA100001` still renders on a fresh load.
 - **A JSX comment cannot open a ternary branch.** `cond ? null : ( {/* … */}
   <ul/> )` parses as an object literal and fails with "')' expected" pointing at
   the wrong line. Put the comment above the conditional.
+- **An animation restarts on a NAME change, not a direction change.** Writing the
+  exit as the entry plus `reverse` looks economical and does nothing: the
+  finished animation re-evaluates at its new end state and the element snaps.
+  Give the exit its own `@keyframes`.
+- **When two fixes in a row change nothing the operator can see, STOP fixing and
+  bisect.** Remove the feature entirely, confirm the rest is sound, then add it
+  back. Three attempts went into fixing the bag's entry as a timing problem
+  before the transition was simply deleted — which proved in one step that the
+  travel itself was the fault, not its timing. The operator suggested it; it
+  should have been proposed two attempts earlier, especially given that
+  animation timing cannot be observed from this pane at all.
+- **A `str.replace` anchored on a common CSS pattern will land in the wrong
+  block.** A backdrop rule intended for `slide-over` went into `search-overlay`,
+  which shares the identical `&::backdrop { background-color: ... }` line, and
+  quietly gave the search panel a backdrop fade it never asked for. Anchor on
+  something unique to the target, or slice from the utility's own opening line
+  — and assert the count.
+- **A transition starts at the style change, not at the first painted frame.**
+  If displaying the element involves real work — first layout of a large
+  subtree, image decode — the clock runs through it and the reader only ever
+  sees the tail, which looks like the element popping in near its destination
+  and finishing. `@starting-style` does not help: it supplies the value to
+  animate FROM, not the moment the clock starts. Push the element to its start
+  position, show it, and release it a frame or two later.
+- **The preview pane throttles `requestAnimationFrame` AND `setTimeout`.** A
+  rAF sampling loop recorded ZERO samples, and a 120ms timeout fired at 434ms.
+  Animation timing simply cannot be observed from here — verify the mechanism
+  (attribute order, keyframe values) and let a human confirm the feel.
 - **A transition cannot run on the first frame an element is rendered.** Anything
   that goes from `display: none` — a `<dialog>`, a `[popover]` — has no previous
   value to animate from, so it appears instantly however complete the transition

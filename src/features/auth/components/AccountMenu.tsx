@@ -58,7 +58,7 @@ export function AccountMenu({ messages }: { messages: Messages }) {
         <User className="h-5 w-5" aria-hidden />
       </button>
 
-      <div id={id} popover="auto" aria-labelledby={`${id}-name`} className="account-popover">
+      <div id={id} popover="auto" aria-labelledby={`${id}-name`} className="account-popover popover-animated">
         <p id={`${id}-name`} className="text-fg text-sm font-medium">
           {displayName}
         </p>

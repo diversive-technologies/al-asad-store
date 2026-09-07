@@ -61,7 +61,7 @@ export function InfoPopover({ label, title, closeLabel, children }: InfoPopoverP
         id={id}
         popover="auto"
         aria-labelledby={`${id}-title`}
-        className="info-popover"
+        className="info-popover popover-animated"
       >
         <div className="flex items-start justify-between gap-3">
           <h3 id={`${id}-title`} className="text-fg text-sm font-medium">

@@ -672,11 +672,7 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   z-index: 10;
   padding: 0.75rem;
   text-align: center;
-  background: linear-gradient(
-    to top,
-    color-mix(in oklab, black 85%, transparent),
-    transparent
-  );
+  background: linear-gradient(to top, color-mix(in oklab, black 85%, transparent), transparent);
   animation: card-tray-rise 200ms ease-out both;
 }
 
@@ -757,6 +753,26 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   }
 }
 
+/*
+ * The exit needs its OWN keyframes rather than the entry played in reverse.
+ *
+ * Changing only `animation-direction` does not restart an animation — the name
+ * is what the browser keys on — so the entry animation, long since finished and
+ * held by `fill: both`, simply re-evaluated at its new end state and the panel
+ * vanished instantly. It opened beautifully and closed as if the transition had
+ * been forgotten. A second name means a second animation, which starts.
+ */
+@keyframes search-overlay-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-1rem);
+  }
+}
+
 @utility search-overlay {
   inline-size: 100vw;
   max-inline-size: 100vw;
@@ -769,7 +785,7 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   animation: search-overlay-in 180ms ease-out both;
 
   &[data-closing='true'] {
-    animation: search-overlay-in 180ms ease-in reverse both;
+    animation: search-overlay-out 180ms ease-in both;
   }
 
   &::backdrop {
@@ -992,47 +1008,6 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   box-shadow: 0 1rem 3rem color-mix(in oklab, black 28%, transparent);
 
   /*
-   * Entry and exit.
-   *
-   * A popover toggles `display`, and a transition cannot run on a property that
-   * jumps from `none` — which is why the two discrete properties are listed
-   * with `allow-discrete`. `display` keeps the panel rendered until the fade
-   * finishes; `overlay` keeps it in the TOP LAYER while it does, and without
-   * that second one the panel drops behind the page for the whole exit and the
-   * animation is spent on something nobody can see.
-   *
-   * `@starting-style` below supplies the value it animates FROM, for the same
-   * reason the slide-over needs one: there is no previous value on the first
-   * frame an element is rendered.
-   *
-   * 160ms and a 0.4rem drop — a menu should feel immediate. Anything longer
-   * puts a wait between the click and the options.
-   */
-  opacity: 0;
-  translate: 0 -0.4rem;
-  scale: 0.98;
-  transform-origin: top;
-  transition:
-    opacity 160ms ease,
-    translate 160ms cubic-bezier(0.32, 0.72, 0, 1),
-    scale 160ms cubic-bezier(0.32, 0.72, 0, 1),
-    overlay 160ms allow-discrete,
-    display 160ms allow-discrete;
-
-  &:popover-open {
-    opacity: 1;
-    translate: 0 0;
-    scale: 1;
-  }
-
-  /* A11Y-10 — the panel still fades, because a thing appearing from nothing is
-     harder to follow than one that arrives; only the travel is dropped. */
-  @media (prefers-reduced-motion: reduce) {
-    translate: 0 0;
-    scale: 1;
-  }
-
-  /*
    * Fallback for a browser without anchor positioning. The UA default centres a
    * popover in the viewport, which reads as a broken dropdown; a small sheet
    * pinned under the header reads as a deliberate one.
@@ -1043,27 +1018,6 @@ body:has([data-hero]) header[data-scrolled='false']::before {
     inset-inline-start: auto;
     inset-block-end: auto;
     margin: 0;
-  }
-}
-
-/*
- * The popover's arriving state. Unlayered, for the same reason as the
- * slide-over's: `@utility` output is layered and this must not lose to it.
- */
-@starting-style {
-  .sort-panel:popover-open {
-    opacity: 0;
-    translate: 0 -0.4rem;
-    scale: 0.98;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  @starting-style {
-    .sort-panel:popover-open {
-      translate: 0 0;
-      scale: 1;
-    }
   }
 }
 
@@ -1086,6 +1040,91 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   &:focus-visible {
     outline: 2px solid var(--color-brand-500);
     outline-offset: -2px;
+  }
+}
+
+/*
+ * Entry and exit for anything on the native popover API — the sort menu, the
+ * bag's "held for you" explanation, the account menu.
+ *
+ * One definition rather than three (PD-01), because the plumbing is the subtle
+ * part and it is identical everywhere:
+ *
+ * - A popover toggles `display`, and a transition cannot run on a property that
+ *   jumps from `none`. Both discrete properties therefore carry
+ *   `allow-discrete`. `display` keeps the panel rendered until the fade
+ *   finishes; `overlay` keeps it in the TOP LAYER while it does — without that
+ *   second one it drops behind the page the instant it closes and the exit
+ *   plays where nobody can see it.
+ * - `@starting-style` supplies the value it animates FROM, since there is no
+ *   previous value on the first frame an element is rendered. Without it only
+ *   the exit animates, which reads as a panel that snaps open and glides shut.
+ *
+ * 160ms and a 0.4rem rise: these are menus, and a menu should feel immediate.
+ * Anything longer puts a wait between the click and the answer.
+ */
+@utility popover-animated {
+  opacity: 0;
+  translate: 0 -0.4rem;
+  scale: 0.98;
+  transform-origin: top;
+  transition:
+    opacity 160ms ease,
+    translate 160ms cubic-bezier(0.32, 0.72, 0, 1),
+    scale 160ms cubic-bezier(0.32, 0.72, 0, 1),
+    overlay 160ms allow-discrete,
+    display 160ms allow-discrete;
+
+  &:popover-open {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+
+  /* Some of these carry a scrim; it fades with the panel rather than snapping. */
+  &::backdrop {
+    opacity: 0;
+    transition:
+      opacity 160ms ease,
+      overlay 160ms allow-discrete,
+      display 160ms allow-discrete;
+  }
+
+  &:popover-open::backdrop {
+    opacity: 1;
+  }
+
+  /* A11Y-10 — the fade stays, because something appearing from nothing is
+     harder to follow than something that arrives; only the travel goes. */
+  @media (prefers-reduced-motion: reduce) {
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+/*
+ * The arriving state. Unlayered and out here, for the reason the slide-over's
+ * is: `@utility` output lands in `@layer utilities` and this must not lose to
+ * it.
+ */
+@starting-style {
+  .popover-animated:popover-open {
+    opacity: 0;
+    translate: 0 -0.4rem;
+    scale: 0.98;
+  }
+
+  .popover-animated:popover-open::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @starting-style {
+    .popover-animated:popover-open {
+      translate: 0 0;
+      scale: 1;
+    }
   }
 }
 
@@ -1218,14 +1257,30 @@ body:has([data-hero]) header[data-scrolled='false']::before {
 }
 
 /* Eight rays, evenly spread. Set here rather than inline, so STY-01 holds. */
-.order-mark-ray:nth-child(1) { --ray-angle: 0deg; }
-.order-mark-ray:nth-child(2) { --ray-angle: 45deg; }
-.order-mark-ray:nth-child(3) { --ray-angle: 90deg; }
-.order-mark-ray:nth-child(4) { --ray-angle: 135deg; }
-.order-mark-ray:nth-child(5) { --ray-angle: 180deg; }
-.order-mark-ray:nth-child(6) { --ray-angle: 225deg; }
-.order-mark-ray:nth-child(7) { --ray-angle: 270deg; }
-.order-mark-ray:nth-child(8) { --ray-angle: 315deg; }
+.order-mark-ray:nth-child(1) {
+  --ray-angle: 0deg;
+}
+.order-mark-ray:nth-child(2) {
+  --ray-angle: 45deg;
+}
+.order-mark-ray:nth-child(3) {
+  --ray-angle: 90deg;
+}
+.order-mark-ray:nth-child(4) {
+  --ray-angle: 135deg;
+}
+.order-mark-ray:nth-child(5) {
+  --ray-angle: 180deg;
+}
+.order-mark-ray:nth-child(6) {
+  --ray-angle: 225deg;
+}
+.order-mark-ray:nth-child(7) {
+  --ray-angle: 270deg;
+}
+.order-mark-ray:nth-child(8) {
+  --ray-angle: 315deg;
+}
 
 /*
  * A11Y-10 — reduced motion gets the finished mark, not a faster version of the
@@ -1286,6 +1341,14 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   background: transparent;
   overflow: hidden;
 
+  /*
+   * The edge the panel travels from, as ONE value rather than four sign-flipped
+   * rules. `translate` takes no logical values, so the direction has to be
+   * stated somewhere; stating it once here keeps `slide-over-slide` free of any
+   * knowledge of which side or which writing direction it is in.
+   */
+  --slide-from: 100%;
+
   &::backdrop {
     background-color: color-mix(in oklab, black 45%, transparent);
     opacity: 0;
@@ -1308,13 +1371,46 @@ body:has([data-hero]) header[data-scrolled='false']::before {
     inline-size: min(26rem, 100%);
     margin-inline-start: auto;
     box-shadow: 0 0 3rem color-mix(in oklab, black 22%, transparent);
+  }
+}
 
-    /*
-     * `translate` with a percentage is resolved against the element's own box
-     * and is NOT direction-aware, so the sign is flipped for RTL rather than
-     * left to a logical property that does not exist for transforms.
-     */
-    translate: 100% 0;
+/* The mirror image, for a drawer that belongs on the reading-start edge. */
+@utility slide-over-start {
+  --slide-from: -100%;
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+
+  & > .slide-over-panel {
+    margin-inline-start: 0;
+    margin-inline-end: auto;
+  }
+}
+
+/* RTL flips which edge each one points at. Order matters: both selectors are
+   (0,2,0), and a start-side drawer carries both classes. */
+[dir='rtl'] .slide-over {
+  --slide-from: -100%;
+}
+
+[dir='rtl'] .slide-over-start {
+  --slide-from: 100%;
+}
+
+/*
+ * ENTRY AND EXIT. One behaviour for every slide-over — the bag and the filter
+ * drawer travel identically, from their own edge, over the same 220ms.
+ *
+ * The bag briefly had a fade of its own, because it had been reported as
+ * appearing part-way out from the edge and snapping home. The operator asked
+ * for the two to match instead, so there is one implementation again.
+ *
+ * `@starting-style` supplies the value it animates FROM: a transition cannot
+ * run on the first frame an element is rendered, and a `<dialog>` is
+ * `display: none` until it opens — without this only the exit would animate.
+ */
+@utility slide-over-motion {
+  & > .slide-over-panel {
+    translate: var(--slide-from) 0;
     transition: translate 220ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
@@ -1323,118 +1419,30 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   }
 
   &[data-closing] > .slide-over-panel {
-    translate: 100% 0;
-  }
-
-  /* A11Y-10 — no travel for anyone who asked for less motion. */
-  @media (prefers-reduced-motion: reduce) {
-    &::backdrop,
-    & > .slide-over-panel {
-      transition: none;
-    }
-
-    & > .slide-over-panel,
-    &[data-closing] > .slide-over-panel {
-      translate: 0 0;
-    }
+    translate: var(--slide-from) 0;
   }
 }
 
-/* The mirror image, for a drawer that belongs on the reading-start edge. */
-@utility slide-over-start {
-  margin-inline-start: 0;
-  margin-inline-end: auto;
-
-  & > .slide-over-panel {
-    margin-inline-start: 0;
-    margin-inline-end: auto;
-    translate: -100% 0;
-  }
-
-  &[open] > .slide-over-panel {
-    translate: 0 0;
-  }
-
-  &[data-closing] > .slide-over-panel {
-    translate: -100% 0;
-  }
-}
-
-/*
- * RTL flips which edge "100%" points at. This is the one place the sign has to
- * be stated, because `translate` takes no logical values.
- */
-[dir='rtl'] .slide-over > .slide-over-panel,
-[dir='rtl'] .slide-over[data-closing] > .slide-over-panel {
-  translate: -100% 0;
-}
-
-[dir='rtl'] .slide-over[open] > .slide-over-panel {
-  translate: 0 0;
-}
-
-[dir='rtl'] .slide-over-start > .slide-over-panel,
-[dir='rtl'] .slide-over-start[data-closing] > .slide-over-panel {
-  translate: 100% 0;
-}
-
-[dir='rtl'] .slide-over-start[open] > .slide-over-panel {
-  translate: 0 0;
-}
-
-/*
- * The ENTRY animation, which the exit rules above could not provide on their
- * own.
- *
- * A `<dialog>` is `display: none` until it opens, and a transition does not run
- * on the first frame an element is rendered — there is no previous value to
- * move from. So the panel arrived instantly and only the exit slid, which reads
- * as a drawer that snaps open and glides shut. `@starting-style` supplies that
- * missing previous value.
- *
- * The declarations mirror the resting rules exactly, and their ORDER matters
- * for the same reason it does there: `.slide-over-start[open]` and
- * `.slide-over[open]` are both (0,2,0) and every start-side drawer carries both
- * classes, so source order breaks the tie. The `[dir='rtl']` pair is (0,3,0)
- * and wins outright.
- *
- * Unlayered and out here beside the rules it completes, rather than nested in
- * `@utility`, following the same rule the rest of this file follows: `@utility`
- * output lands in `@layer utilities`, and an unlayered rule beats a layered one.
- */
 @starting-style {
   .slide-over[open]::backdrop {
     opacity: 0;
   }
 
-  .slide-over[open] > .slide-over-panel {
-    translate: 100% 0;
-  }
-
-  .slide-over-start[open] > .slide-over-panel {
-    translate: -100% 0;
-  }
-
-  [dir='rtl'] .slide-over[open] > .slide-over-panel {
-    translate: -100% 0;
-  }
-
-  [dir='rtl'] .slide-over-start[open] > .slide-over-panel {
-    translate: 100% 0;
+  .slide-over-motion[open] > .slide-over-panel {
+    translate: var(--slide-from) 0;
   }
 }
 
-/*
- * A11Y-10 — no arrival travel either, for a reader who asked for less motion.
- * The resting rules already switch their transitions off; without this the
- * panel would still start off-screen and jump into place.
- */
+/* A11Y-10 — no travel for a reader who asked for less motion. */
 @media (prefers-reduced-motion: reduce) {
+  .slide-over-motion > .slide-over-panel,
+  .slide-over-motion[data-closing] > .slide-over-panel {
+    translate: 0 0;
+    transition: none;
+  }
+
   @starting-style {
-    .slide-over[open] > .slide-over-panel,
-    .slide-over-start[open] > .slide-over-panel,
-    [dir='rtl'] .slide-over[open] > .slide-over-panel,
-    [dir='rtl'] .slide-over-start[open] > .slide-over-panel {
+    .slide-over-motion[open] > .slide-over-panel {
       translate: 0 0;
     }
   }
@@ -1692,7 +1700,6 @@ input[type='search']::-webkit-search-cancel-button,
 input[type='search']::-webkit-search-decoration {
   display: none;
 }
-
 
 /* STY-10 — a visible focus ring is never removed without an equivalent replacement. */
 :focus-visible {
