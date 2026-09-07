@@ -41,3 +41,8 @@ desktop.ini
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Gemini collage sources for the product frames (34MB of intermediates).
+# The CROPS they produce are committed under public/products/; these are only
+# needed to re-cut them differently. Kept on disk, out of history by size.
+/assets/photography/collages/

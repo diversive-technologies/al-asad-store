@@ -536,6 +536,165 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   }
 }
 
+/*
+ * The catalogue card's overlay controls: wishlist, quick add, and the arrows
+ * that walk a product's frames.
+ *
+ * A single scrim-on-glass treatment for all of them, so a card never shows two
+ * different kinds of round button. They are hidden until the card is hovered or
+ * something inside it takes focus — a grid of 24 cards each showing three
+ * controls is a wall of chrome — but `focus-visible` always brings them back,
+ * because a keyboard user has no hover to reveal them with (A11Y-02/A11Y-03).
+ */
+@utility card-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: 9999px;
+  color: var(--color-fg);
+  background-color: color-mix(in oklab, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    background-color 180ms ease;
+
+  .group:hover &,
+  .group:focus-within & {
+    opacity: 1;
+  }
+
+  &:hover {
+    background-color: var(--color-surface);
+    transform: scale(1.08);
+  }
+
+  &:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+
+  /* A11Y-10: the lift is decoration; the reveal is not. */
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 180ms ease;
+
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+@utility card-frame-control {
+  position: absolute;
+  /*
+   * Above the card's link overlay, which covers the whole image at z-1. Without
+   * this the anchor swallows the pointer and an arrow click opens the product
+   * instead of turning the page — the handler never even runs.
+   */
+  z-index: 2;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border-radius: 9999px;
+  color: var(--color-fg);
+  background-color: color-mix(in oklab, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(4px);
+  transition: opacity 180ms ease;
+
+  &:hover {
+    background-color: var(--color-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * The size tray, over the foot of the image. It rises rather than appearing, so
+ * the eye follows it up from the bag button that opened it.
+ */
+@utility card-size-tray {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 10;
+  padding: 0.75rem;
+  text-align: center;
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, black 85%, transparent),
+    transparent
+  );
+  animation: card-tray-rise 200ms ease-out both;
+}
+
+@keyframes card-tray-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility card-size {
+  min-inline-size: 2.25rem;
+  padding-block: 0.3rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--radius-card);
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--color-fg);
+  background-color: color-mix(in oklab, var(--color-surface) 90%, transparent);
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease;
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-brand-600);
+    color: var(--color-on-brand);
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+
+  /* A11Y-06: a sold-out size is struck through, not merely dimmed. */
+  &:disabled {
+    opacity: 0.45;
+    text-decoration: line-through;
+    cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: background-color 160ms ease;
+
+    &:hover:not(:disabled) {
+      transform: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-size-tray {
+    animation: none;
+  }
+}
+
 @utility info-popover {
   position: fixed;
   margin: auto;

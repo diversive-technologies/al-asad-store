@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-05. Last commit: `7b00ea3` (tree dirty — see below).
+Last updated: 2026-09-07. Last commit: `0bc5964` (tree dirty — see below).
 
 ---
 
@@ -38,8 +38,22 @@ Last updated: 2026-09-05. Last commit: `7b00ea3` (tree dirty — see below).
 - **Routes** — `/catalogue`, `/search`, `/help/[slug]`, `/bag`, each with its own
   `loading.tsx` and `error.tsx`.
 - **Product card** — persistent strip (name + price, fabric · colour + was-price)
-  plus a `motion` hover reveal carrying piece count, metreage and the quick
-  action. Client Component; the PERF-01 cost is documented in the file.
+  plus a `motion` hover reveal carrying piece count and metreage. It now also
+  carries three real controls:
+  - a **wishlist heart** (`hooks/use-wishlist.ts`, localStorage — see the gap
+    note below);
+  - a **quick add**: the bag button opens a size tray that asks
+    `/api/quick-add` at that moment, and choosing a size adds the product with
+    ONE size applied to every piece;
+  - a **frame carousel**: hover advances through the product's photographs
+    every 2.5s, arrows step and wrap, dots show position. Using an arrow PINS
+    the frame — the automatic advance stops for the rest of that hover, because
+    someone who steered to a frame is looking at that frame. Leaving the card
+    clears the pin and returns to the first image.
+
+  The card's `<Link>` is an OVERLAY rather than a wrapper, because a `<button>`
+  inside an `<a>` is invalid HTML whose clicks navigate before their own handler
+  runs. Every control sits above it on its own z-index.
 - **Grid** — vertical stagger via the `staggered-grid` utility in `globals.css`,
   scaling 2 / 3 / 4 / 5 / 6 columns from mobile to 2560px.
 - **Filter panel** — all six filters of section 28.1 with contextual facet
@@ -97,6 +111,20 @@ Last updated: 2026-09-05. Last commit: `7b00ea3` (tree dirty — see below).
 Notify Me on sold-out sizes, size guides, WhatsApp and copy-link sharing,
 you-may-also-like, and the gallery's desktop magnifier and mobile
 tap-to-fullscreen. None is started; none is faked.
+
+## Card-level single entity — the operator's rule
+
+A catalogue card always sells a product as ONE entity: one unified size, applied
+to every piece. The SET model is untouched — `product_type` is still declared,
+the fixture still holds two- and three-piece suits, the piece-count filters and
+the product page's per-piece override panel all still work. What changed is that
+a grid tile is no longer where someone sizes a waistcoat differently from its
+shalwar.
+
+`lib/quick-add.ts` holds the one rule that follows: the sizes a card may offer
+are the INTERSECTION across pieces, because offering M when the shalwar has none
+produces an add the §7.1 transaction refuses — a button that looks live and
+fails. §30.2 still holds: an unknown availability is not sold out.
 
 ## M2 — what is left
 
@@ -232,6 +260,14 @@ Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
   `assets/photography/`. See "Photography" below for what this changed and what
   is still missing.
 - **Sign-in is a mock (D3).** No credentials are stored or validated.
+- **The wishlist is per-browser, and only offered to a signed-in customer.** A
+  real one belongs to an account (§28.3), so the heart is HIDDEN for guests —
+  offering it let them save into a list they could never open. Behind the mock
+  sign-in it persists to `localStorage`: it survives a reload on one device,
+  does not follow the customer to a phone, and is invisible to the operator.
+  `useWishlist` is shaped so a server-backed list replaces it without the cards
+  changing. Quick add stays available to guests, because guest checkout is
+  Release 1 scope (§28.2) and a guest really can buy.
 - **The language switcher is OFF**, via `CLIENT.features.languageSwitcher`.
   Nothing about the bilingual build was removed — `LOCALES`, both message files
   and the RTL layout are untouched, and turning it back on is one word. It is
@@ -285,8 +321,17 @@ the size guide, in both locales.
 
 - **No cloth photography.** The unstitched line (the adult kurta) shows a
   stitched example, because no photograph of fabric on the bolt exists yet.
-- **One frame per garment.** No second angles, no detail shots, so the gallery
-  renders a single image and hides its thumbnail strip.
+- **Four of every five frames are GENERATED, not photographed.** Each garment
+  now has five: the client's own photograph, plus full-length, three-quarter,
+  side-profile and collar-detail views cropped from one Gemini 2x2 collage
+  (originals in `collage/`). They are consistent with the real photograph and
+  with each other, but they are not a second shoot — real alternate angles
+  replace them file-for-file, and `FRAMES` in `catalogue-db.ts` is the one
+  number to change.
+
+  Mapping the collages to garments was done by COMPARING each against the
+  original photograph, not by reading filenames — the filenames are opaque
+  hashes, and three of the fourteen would have been mis-assigned on a glance.
 - **The two brand pieces are unused** — `assets/photography/brand-poster-lion.jpeg`
   carries the gold lion crest and would make a real logo and favicon; both it and
   `brand-banner-rust.jpeg` have a phone number burned into them, so neither is
@@ -407,6 +452,24 @@ nothing left to check out, and `/order/AA100001` still renders on a fresh load.
   until that client leaf hydrates the content is invisible — the order
   confirmation rendered blank. Decoration animates via CSS (no hydration, no
   bundle); text is plain server-rendered markup.
+- **`cn` keeps the LAST of two conflicting Tailwind classes**, which is what
+  tailwind-merge is for — but it means a state class layered over a per-item one
+  silently wins for every item. `opacity-60` for sold-out, applied to each
+  frame, overrode the `opacity-0` hiding the inactive ones: all five rendered at
+  60% at once, ghosted over each other, and stepping the carousel changed
+  nothing visible. A whole-element state belongs on a WRAPPER.
+- **An absolutely positioned control lands where its CONTAINING BLOCK says.**
+  The card's size tray sat directly under the `<article>`, so its
+  `inset-block-end: 0` resolved against the whole card and it covered the name
+  and price instead of the photograph. It belongs inside the image box.
+- **A card's link must be an OVERLAY, not a wrapper, once it has controls.**
+  Sibling buttons plus `position: absolute; inset: 0` on the anchor. And the
+  controls need a HIGHER z-index than that overlay — otherwise the anchor
+  swallows the pointer and an arrow click opens the product without the
+  handler ever running.
+- **`getComputedStyle` goes stale in the preview pane.** Style recalculation is
+  deferred while it is not painting, so opacity reads can lag by seconds and
+  suggest an animation is stuck. Read the CLASS LIST instead — it is the truth.
 - **The preview harness swallows `Escape`.** It reaches neither a modal
   `<dialog>` nor an open popover, even with focus inside them, so that dismissal
   path cannot be verified from here — it needs a human keypress. Do not conclude

@@ -134,23 +134,43 @@ interface Photograph {
   readonly file: string;
   readonly colour: ColourKey;
   readonly garment: GarmentKey;
+  /**
+   * How many frames exist for this garment, including the original.
+   *
+   * One today: the client sent a single photograph per garment. Additional
+   * frames arrive as `<file>-2.avif`, `-3` and so on — the same garment at a
+   * different distance or angle — and adding them is bumping this number, not
+   * editing a component. `frameUrls` below is the only place the naming lives.
+   */
+  readonly frames?: number;
 }
 
+/**
+ * Five frames per garment: the client's own photograph, plus four generated
+ * views of the SAME garment — full length, three-quarter, side profile and a
+ * collar detail — cropped from one 2x2 collage each.
+ *
+ * They are generated, and that is worth knowing rather than discovering: they
+ * are consistent with the real photograph and with each other, but they are not
+ * a second photo shoot. Real alternate angles replace them file-for-file.
+ */
+const FRAMES = 5;
+
 const PHOTOGRAPHY: readonly Photograph[] = [
-  { file: 'waistcoat-maroon', colour: 'maroon', garment: 'waistcoat' },
-  { file: 'waistcoat-emerald', colour: 'emerald', garment: 'waistcoat' },
-  { file: 'waistcoat-bottle', colour: 'bottle', garment: 'waistcoat' },
-  { file: 'waistcoat-olive', colour: 'olive', garment: 'waistcoat' },
-  { file: 'waistcoat-walnut', colour: 'walnut', garment: 'waistcoat' },
-  { file: 'waistcoat-graphite', colour: 'graphite', garment: 'waistcoat' },
-  { file: 'waistcoat-stone', colour: 'stone', garment: 'waistcoat' },
-  { file: 'waistcoat-ivory', colour: 'ivory', garment: 'waistcoat' },
-  { file: 'kameez-charcoal', colour: 'charcoal', garment: 'kameez' },
-  { file: 'kameez-slate', colour: 'slate', garment: 'kameez' },
-  { file: 'kameez-taupe', colour: 'taupe', garment: 'kameez' },
-  { file: 'kurta-rust', colour: 'rust', garment: 'kurta' },
-  { file: 'boys-kurta-charcoal', colour: 'charcoal', garment: 'boys-kurta' },
-  { file: 'boys-kurta-navy', colour: 'navy', garment: 'boys-kurta' },
+  { file: 'waistcoat-maroon', colour: 'maroon', garment: 'waistcoat' , frames: FRAMES },
+  { file: 'waistcoat-emerald', colour: 'emerald', garment: 'waistcoat' , frames: FRAMES },
+  { file: 'waistcoat-bottle', colour: 'bottle', garment: 'waistcoat' , frames: FRAMES },
+  { file: 'waistcoat-olive', colour: 'olive', garment: 'waistcoat' , frames: FRAMES },
+  { file: 'waistcoat-walnut', colour: 'walnut', garment: 'waistcoat' , frames: FRAMES },
+  { file: 'waistcoat-graphite', colour: 'graphite', garment: 'waistcoat' , frames: FRAMES },
+  { file: 'waistcoat-stone', colour: 'stone', garment: 'waistcoat' , frames: FRAMES },
+  { file: 'waistcoat-ivory', colour: 'ivory', garment: 'waistcoat' , frames: FRAMES },
+  { file: 'kameez-charcoal', colour: 'charcoal', garment: 'kameez' , frames: FRAMES },
+  { file: 'kameez-slate', colour: 'slate', garment: 'kameez' , frames: FRAMES },
+  { file: 'kameez-taupe', colour: 'taupe', garment: 'kameez' , frames: FRAMES },
+  { file: 'kurta-rust', colour: 'rust', garment: 'kurta' , frames: FRAMES },
+  { file: 'boys-kurta-charcoal', colour: 'charcoal', garment: 'boys-kurta' , frames: FRAMES },
+  { file: 'boys-kurta-navy', colour: 'navy', garment: 'boys-kurta' , frames: FRAMES },
 ];
 
 /**
@@ -167,6 +187,19 @@ const PIECES: Record<GarmentKey, number> = {
 
 export function photoUrl(file: string): string {
   return `/products/${file}.avif`;
+}
+
+/**
+ * Every frame for a garment, first one first.
+ *
+ * The card rests on `[0]`, advances through the rest on hover, and its
+ * previous/next controls walk the same list.
+ */
+export function frameUrls(photo: Photograph): string[] {
+  const total = photo.frames ?? 1;
+  return Array.from({ length: total }, (_, index) =>
+    photoUrl(index === 0 ? photo.file : `${photo.file}-${String(index + 1)}`),
+  );
 }
 
 export interface CatalogueRecord {
@@ -285,8 +318,7 @@ export interface ProductCardPayload {
   name: string;
   type: 'SIMPLE' | 'SET';
   pieceCount: number;
-  imageUrl: string;
-  hoverImageUrl: string | null;
+  images: string[];
   workType: string;
   fabricName: string;
   colourName: string;
@@ -311,18 +343,7 @@ export function toProductCard(record: CatalogueRecord, locale: Locale): ProductC
     name: `${vocabularyLabel(locale, record.workType)} ${vocabularyLabel(locale, record.garment)}`,
     type: record.type,
     pieceCount: record.pieceCount,
-    imageUrl: photoUrl(record.photo.file),
-    /*
-     * Null everywhere, and that is the honest answer rather than a gap.
-     *
-     * The contract has always kept this nullable "because a real catalogue will
-     * have products shot only once" — and now that the fixture holds the
-     * client's real photography, that is precisely the situation: one shot per
-     * garment. Pointing the hover at a DIFFERENT garment's photograph is worse
-     * than no hover, because it tells the customer they are looking at a second
-     * view of the thing they are about to buy.
-     */
-    hoverImageUrl: null,
+    images: frameUrls(record.photo),
     workType: vocabularyLabel(locale, record.workType),
     fabricName: vocabularyLabel(locale, record.fabric),
     colourName: vocabularyLabel(locale, record.colour),

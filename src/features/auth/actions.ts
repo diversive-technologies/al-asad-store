@@ -55,3 +55,20 @@ export async function signInAction(input: unknown): Promise<Result<Session, ApiE
 
   return result;
 }
+
+/**
+ * Whether this browser holds a session, for the interface to branch on.
+ *
+ * SEC-01: the cookie is httpOnly, so the client cannot read it and must be
+ * TOLD. It confers no authority either way — the Java service re-checks
+ * authorization on every request (SEC-03), and this only decides what is worth
+ * offering someone on screen.
+ */
+export async function readSession(): Promise<Session | null> {
+  const store = await cookies(); // NEXT-04: cookies() is async.
+  const displayName = store.get(SESSION_COOKIE)?.value;
+
+  return displayName === undefined || displayName.length === 0
+    ? null
+    : { displayName, mobile: '' };
+}

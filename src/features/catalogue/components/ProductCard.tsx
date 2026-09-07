@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -10,11 +9,12 @@ import { ROUTES } from '@/config/routes';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { cn } from '@/lib/utils/cn';
 import { formatMetres, formatMoneyMinor } from '@/lib/utils/format';
 
 import { deriveProductBadges, type ProductCardWithAvailability } from '../lib/product-card';
 import { ProductBadge } from './ProductBadge';
+import { ProductCardActions } from './ProductCardActions';
+import { ProductCardFrames } from './ProductCardFrames';
 
 export interface ProductCardProps {
   entry: ProductCardWithAvailability;
@@ -58,7 +58,6 @@ export function ProductCard({
   const badges = deriveProductBadges(product, availability);
   const isSoldOut = availability?.status === 'SOLD_OUT';
   const t = messages.product;
-  const tc = messages.catalogue;
 
   const [isRevealed, setIsRevealed] = useState(false);
   // A11Y-10: a reader who asked for less motion gets the panel without the slide.
@@ -81,120 +80,123 @@ export function ProductCard({
         setIsRevealed(false);
       }}
     >
-      <Link
-        href={ROUTES.catalogue.detail(product.slug)}
-        className="rounded-card focus-visible:ring-brand-500 flex flex-col focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <div className="rounded-card bg-surface-muted relative aspect-[4/5] w-full overflow-hidden">
-          <Image
-            src={product.imageUrl}
-            alt={product.name}
-            fill
-            sizes={sizes}
-            priority={hasPriorityImage}
-            className={cn(
-              'object-cover transition-opacity duration-500 motion-reduce:transition-none',
-              isSoldOut ? 'opacity-60' : null,
-              product.hoverImageUrl === null ? null : 'group-hover:opacity-0',
-            )}
-          />
+      <div className="relative">
+        {/*
+         * Inside the IMAGE box, not the card.
+         *
+         * These are absolutely positioned, so their containing block decides
+         * where they land — and while they sat directly under the `<article>`
+         * the size tray's `inset-block-end: 0` resolved against the whole card
+         * and the tray covered the name and price instead of the photograph.
+         *
+         * Still outside the `<Link>`: a `<button>` inside an `<a>` is invalid
+         * HTML whose clicks navigate before their own handler runs.
+         */}
+        <ProductCardActions product={product} isSoldOut={isSoldOut} messages={messages} />
 
-          {product.hoverImageUrl === null ? null : (
-            <Image
-              src={product.hoverImageUrl}
-              // A11Y-04: the second view is decorative; the first image names it.
-              alt=""
-              aria-hidden
-              fill
-              sizes={sizes}
-              className="object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100 motion-reduce:transition-none"
-            />
-          )}
+        <ProductCardFrames
+          images={product.images}
+          alt={product.name}
+          isActive={isRevealed}
+          isSoldOut={isSoldOut}
+          messages={messages}
+          hasPriorityImage={hasPriorityImage}
+          sizes={sizes}
+        />
 
-          {badges.length > 0 ? (
-            // I18N-04: `start-3` is logical — badges hug the reading-start corner.
-            <ul className="absolute start-3 top-3 flex flex-wrap gap-1">
-              {badges.map((badge) => (
-                <li key={badge}>
-                  <ProductBadge kind={badge} messages={messages} />
-                </li>
-              ))}
-            </ul>
-          ) : null}
+        {/*
+         * The link is an OVERLAY rather than a wrapper.
+         *
+         * A card carries real controls now — two arrows, a heart, a quick add —
+         * and a `<button>` inside an `<a>` is invalid HTML whose clicks navigate
+         * before their own handler runs. Covering the image with the anchor
+         * instead keeps the whole tile clickable while leaving every control a
+         * sibling that sits above it.
+         */}
+        <Link
+          href={ROUTES.catalogue.detail(product.slug)}
+          className="rounded-card focus-visible:ring-brand-500 absolute inset-0 z-[1] focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <span className="sr-only">{product.name}</span>
+        </Link>
 
-          {/*
-           * The reveal sits OVER the lower image rather than below it, so showing
-           * it costs no layout height and the grid never reflows on hover.
-           */}
-          <AnimatePresence>
-            {isRevealed ? (
-              <motion.div
-                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
-                className="from-media-scrim/90 absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent p-3 pt-10"
-              >
-                <dl className="text-on-media/90 flex flex-wrap gap-x-3 text-xs">
+        {badges.length > 0 ? (
+          // I18N-04: `start-3` is logical — badges hug the reading-start corner.
+          <ul className="absolute start-3 top-3 flex flex-wrap gap-1">
+            {badges.map((badge) => (
+              <li key={badge}>
+                <ProductBadge kind={badge} messages={messages} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {/*
+         * The reveal sits OVER the lower image rather than below it, so showing
+         * it costs no layout height and the grid never reflows on hover.
+         */}
+        <AnimatePresence>
+          {isRevealed ? (
+            <motion.div
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="from-media-scrim/90 absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent p-3 pt-10"
+            >
+              <dl className="text-on-media/90 flex flex-wrap gap-x-3 text-xs">
+                <div>
+                  <dt className="sr-only">{t.pieceCountLabel}</dt>
+                  <dd>{product.type === 'SET' ? t.setLabel : t.singleLabel}</dd>
+                </div>
+                {product.metreage === null ? null : (
                   <div>
-                    <dt className="sr-only">{t.pieceCountLabel}</dt>
-                    <dd>{product.type === 'SET' ? t.setLabel : t.singleLabel}</dd>
+                    <dt className="sr-only">{t.metreageLabel}</dt>
+                    <dd>
+                      <bdi>{formatMetres(product.metreage, locale)}</bdi>
+                    </dd>
                   </div>
-                  {product.metreage === null ? null : (
-                    <div>
-                      <dt className="sr-only">{t.metreageLabel}</dt>
-                      <dd>
-                        <bdi>{formatMetres(product.metreage, locale)}</bdi>
-                      </dd>
-                    </div>
-                  )}
-                </dl>
+                )}
+              </dl>
 
-                {/*
-                 * Section 28.2 offers quick add on SIMPLE and quick view on SET,
-                 * chosen from the DECLARED type (DATA-13a), never by counting
-                 * pieces. Quick add says plainly that it is not live yet rather
-                 * than looking active and doing nothing when clicked — the bag
-                 * arrives in M4.
-                 */}
-                <p className="text-on-media mt-2 text-xs font-medium">
-                  {isSoldOut
-                    ? t.soldOutBadge
-                    : product.type === 'SET'
-                      ? tc.quickView
-                      : tc.quickAddPending}
-                </p>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+              {/*
+               * §28.2's quick add is a real control now — the bag button in
+               * `ProductCardActions` — so this line no longer announces one.
+               * Only the sold-out state still needs saying here.
+               */}
+              {!isSoldOut ? null : (
+                <p className="text-on-media mt-2 text-xs font-medium">{t.soldOutBadge}</p>
+              )}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+
+      {/* The persistent strip: the two facts a grid is scanned for. */}
+      <div className="mt-3 flex flex-col gap-1 text-start">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="text-fg truncate text-sm font-medium">{product.name}</h3>
+          <bdi className="text-fg shrink-0 text-sm font-medium">
+            {formatMoneyMinor(product.pricing.currentMinor, locale)}
+          </bdi>
         </div>
 
-        {/* The persistent strip: the two facts a grid is scanned for. */}
-        <div className="mt-3 flex flex-col gap-1 text-start">
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="text-fg truncate text-sm font-medium">{product.name}</h3>
-            <bdi className="text-fg shrink-0 text-sm font-medium">
-              {formatMoneyMinor(product.pricing.currentMinor, locale)}
+        <div className="text-fg-muted flex items-baseline justify-between gap-3 text-xs">
+          {/* I18N-06: independent nouns as separate nodes, not one string. */}
+          <p className="truncate">
+            <span>{product.fabricName}</span>
+            <span aria-hidden> · </span>
+            <span>{product.colourName}</span>
+          </p>
+
+          {product.pricing.originalMinor === null ? null : (
+            <bdi className="shrink-0 line-through">
+              <span className="sr-only">{t.originalPriceLabel}: </span>
+              {formatMoneyMinor(product.pricing.originalMinor, locale)}
             </bdi>
-          </div>
-
-          <div className="text-fg-muted flex items-baseline justify-between gap-3 text-xs">
-            {/* I18N-06: independent nouns as separate nodes, not one string. */}
-            <p className="truncate">
-              <span>{product.fabricName}</span>
-              <span aria-hidden> · </span>
-              <span>{product.colourName}</span>
-            </p>
-
-            {product.pricing.originalMinor === null ? null : (
-              <bdi className="shrink-0 line-through">
-                <span className="sr-only">{t.originalPriceLabel}: </span>
-                {formatMoneyMinor(product.pricing.originalMinor, locale)}
-              </bdi>
-            )}
-          </div>
+          )}
         </div>
-      </Link>
+      </div>
     </article>
   );
 }

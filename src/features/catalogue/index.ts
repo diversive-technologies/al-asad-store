@@ -8,6 +8,7 @@ export { evaluateFabric } from './api/evaluate-fabric';
 export { fetchFabricVerdict } from './api/fetch-fabric-verdict';
 export { fetchProduct } from './api/fetch-product';
 export { fetchProductAvailability } from './api/fetch-product-availability';
+export { unifiedSizesFor, type QuickAddOffer, type QuickAddSize } from './lib/quick-add';
 export { findByCode } from './api/find-by-code';
 export { searchProducts } from './api/search-products';
 export { suggest } from './api/suggest';

@@ -25,6 +25,8 @@ export const queryKeys = {
      */
     suggestions: (term: string, locale: string) =>
       [...queryKeys.catalogue.all, 'suggestions', locale, term] as const,
+    /** §28.2's card quick add: the sizes one product may be added in. */
+    quickAdd: (slug: string) => [...queryKeys.catalogue.all, 'quick-add', slug] as const,
     /** §25 is a pure function of these three, so they are the whole key. */
     fabricVerdict: (productId: string, heightCm: number, styleId: string) =>
       [...queryKeys.catalogue.all, 'fabric-verdict', productId, heightCm, styleId] as const,

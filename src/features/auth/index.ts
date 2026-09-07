@@ -5,7 +5,8 @@
  * module (section 11) lands, deleting this directory and repointing this
  * barrel's consumers is the whole migration.
  */
-export { signInAction } from './actions';
+export { readSession, signInAction } from './actions';
+export { SessionProvider, useSession } from './components/SessionProvider';
 export { SignInForm } from './components/SignInForm';
 export {
   sessionSchema,

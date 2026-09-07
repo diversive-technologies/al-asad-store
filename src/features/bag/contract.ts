@@ -45,4 +45,10 @@ export { BagContents, type BagContentsProps } from './components/BagContents';
 export { BagPageScreen, type BagPageScreenProps } from './components/BagPageScreen';
 export { BagPanel, type BagPanelProps } from './components/BagPanel';
 export { BagProvider, useBag } from './components/BagProvider';
+/*
+ * STRUCT-04 — the catalogue's card adds to the bag from inside a grid tile, and
+ * a cross-feature import is legal only through this barrel. The browser client
+ * is exported rather than the server one: `api/bag-server.ts` is `server-only`.
+ */
+export { addToBag } from './api/bag-browser';
 export { BagTrigger, type BagTriggerProps } from './components/BagTrigger';

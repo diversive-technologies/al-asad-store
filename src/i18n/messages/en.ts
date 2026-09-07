@@ -245,6 +245,14 @@ export const en = {
     quickAdd: 'Quick add',
     quickAddPending: 'Quick add arrives with the bag',
     quickView: 'Quick view',
+    /* §28.1's card actions. */
+    wishlistAdd: 'Save to wishlist',
+    wishlistRemove: 'Remove from wishlist',
+    quickAddOpen: 'Choose a size',
+    quickAddClose: 'Close sizes',
+    quickAddFailed: 'Could not add. Please try again.',
+    previousImage: 'Previous image',
+    nextImage: 'Next image',
     filtersHeading: 'Filters',
     filterGroups: {
       fabric: 'Fabric',

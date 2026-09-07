@@ -10,6 +10,7 @@ import { fontVariables } from '@/config/fonts';
 import { SITE } from '@/config/site';
 import { BagPanel, BagProvider, BagTrigger } from '@/features/bag/contract';
 import { HeaderSearch } from '@/features/catalogue';
+import { readSession, SessionProvider } from '@/features/auth';
 import { LocaleSwitcher } from '@/features/localisation';
 import { NewsletterForm } from '@/features/newsletter';
 import { ThemeProvider } from '@/hooks/use-theme';
@@ -68,10 +69,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   await ensureMockServer();
 
   // PERF-02: independent reads run in parallel, never as a waterfall.
-  const [locale, messages, themePreference] = await Promise.all([
+  const [locale, messages, themePreference, session] = await Promise.all([
     getLocale(),
     getMessages(),
     getThemePreference(),
+    readSession(),
   ]);
 
   return (
@@ -93,50 +95,57 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           <ThemeProvider initialPreference={themePreference}>
             <MessagesProvider value={messages}>
               {/*
-               * The bag wraps everything below the query client, because both
-               * the header's count and a product page's Add to bag read the
-               * same cart. It holds one boolean and the query handle — the
-               * contents are server state and stay in TanStack Query (STATE-02).
+               * D3 — the session, read on the server because its cookie is
+               * httpOnly. It gates what is OFFERED (the wishlist heart today);
+               * the backend still decides what is allowed (SEC-03).
                */}
-              <BagProvider>
-              <SkipLink label={messages.nav.skipToContent} targetId={MAIN_CONTENT_ID} />
+              <SessionProvider displayName={session?.displayName ?? null}>
+                {/*
+                 * The bag wraps everything below the query client, because both
+                 * the header's count and a product page's Add to bag read the
+                 * same cart. It holds one boolean and the query handle — the
+                 * contents are server state and stay in TanStack Query (STATE-02).
+                 */}
+                <BagProvider>
+                  <SkipLink label={messages.nav.skipToContent} targetId={MAIN_CONTENT_ID} />
 
-              <Header
-                messages={messages}
-                /*
-                 * Derived, not flagged: a client with one language has nothing
-                 * to switch to, and a separate flag could contradict LOCALES.
-                 */
-                localeSwitcher={
-                  /* D5: two conditions, and they mean different things. More
+                  <Header
+                    messages={messages}
+                    /*
+                     * Derived, not flagged: a client with one language has nothing
+                     * to switch to, and a separate flag could contradict LOCALES.
+                     */
+                    localeSwitcher={
+                      /* D5: two conditions, and they mean different things. More
                      than one locale must EXIST, and the client must want the
                      control offered — see `features.languageSwitcher`. */
-                  LOCALES.length > 1 && CLIENT.features.languageSwitcher ? (
-                    <LocaleSwitcher currentLocale={locale} />
-                  ) : null
-                }
-                search={<HeaderSearch locale={locale} messages={messages} />}
-                bagTrigger={<BagTrigger messages={messages} />}
-              />
+                      LOCALES.length > 1 && CLIENT.features.languageSwitcher ? (
+                        <LocaleSwitcher currentLocale={locale} />
+                      ) : null
+                    }
+                    search={<HeaderSearch locale={locale} messages={messages} />}
+                    bagTrigger={<BagTrigger messages={messages} />}
+                  />
 
-              {/*
-               * The bar is fixed, so it occupies no layout space. Padding here
-               * clears it for every page by default; a full-bleed section such
-               * as the hero opts out with a matching negative margin.
-               */}
-              <main id={MAIN_CONTENT_ID} className="pt-header flex-1">
-                {children}
-              </main>
+                  {/*
+                   * The bar is fixed, so it occupies no layout space. Padding here
+                   * clears it for every page by default; a full-bleed section such
+                   * as the hero opts out with a matching negative margin.
+                   */}
+                  <main id={MAIN_CONTENT_ID} className="pt-header flex-1">
+                    {children}
+                  </main>
 
-              <Footer
-                messages={messages}
-                /* D5: an optional feature, so the slot is empty when it is off. */
-                newsletter={CLIENT.features.newsletter ? <NewsletterForm /> : null}
-              />
+                  <Footer
+                    messages={messages}
+                    /* D5: an optional feature, so the slot is empty when it is off. */
+                    newsletter={CLIENT.features.newsletter ? <NewsletterForm /> : null}
+                  />
 
-              {/* Mounted once, above the routes: one dialog, one top layer. */}
-              <BagPanel locale={locale} messages={messages} />
-              </BagProvider>
+                  {/* Mounted once, above the routes: one dialog, one top layer. */}
+                  <BagPanel locale={locale} messages={messages} />
+                </BagProvider>
+              </SessionProvider>
             </MessagesProvider>
           </ThemeProvider>
         </QueryProvider>

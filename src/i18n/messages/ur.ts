@@ -232,6 +232,13 @@ export const ur: Messages = {
     quickAdd: 'فوری شامل کریں',
     quickAddPending: 'فوری شامل کرنا تھیلے کے ساتھ آئے گا',
     quickView: 'فوری جھلک',
+    wishlistAdd: 'پسندیدہ فہرست میں محفوظ کریں',
+    wishlistRemove: 'پسندیدہ فہرست سے نکالیں',
+    quickAddOpen: 'سائز منتخب کریں',
+    quickAddClose: 'سائز بند کریں',
+    quickAddFailed: 'شامل نہیں ہو سکا۔ دوبارہ کوشش کریں۔',
+    previousImage: 'پچھلی تصویر',
+    nextImage: 'اگلی تصویر',
     filtersHeading: 'فلٹر',
     filterGroups: {
       fabric: 'کپڑا',

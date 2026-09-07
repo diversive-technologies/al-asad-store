@@ -35,9 +35,19 @@ export const productCardSchema = z.object({
    * customer filters on and the rows the system reserves are the same fact.
    */
   pieceCount: z.number().int().positive(),
-  imageUrl: z.string().min(1),
-  /** Section 28.1: cards show a second image on hover. Not every product has one. */
-  hoverImageUrl: z.string().min(1).nullable(),
+  /**
+   * Every frame the catalogue holds for this product, in the order the operator
+   * arranged them. The first is the one a card rests on.
+   *
+   * An ARRAY rather than `imageUrl` plus `hoverImageUrl`, because a card now
+   * advances through the set on hover and offers explicit previous/next
+   * controls. Two named fields could express "there is a second shot" and
+   * nothing beyond it, and a third would have had to be `hoverImageUrl2`.
+   *
+   * `min(1)` is the real invariant: a product without a photograph is a card
+   * with a hole in it, and the backend must not send one.
+   */
+  images: z.array(z.string().min(1)).min(1),
   /** The "work + fabric" line from section 28.1, supplied already localised. */
   workType: z.string().min(1),
   fabricName: z.string().min(1),

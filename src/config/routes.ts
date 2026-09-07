@@ -26,6 +26,8 @@ export const ROUTES = {
   api: {
     suggest: '/api/suggest',
     fabricCalculator: '/api/fabric-calculator',
+    /** §28.2's quick add: the sizes a card may offer, read on demand. */
+    quickAdd: '/api/quick-add',
     /** §16 — GET the summary, POST to add a line. */
     bag: '/api/bag',
     /** PATCH the quantity, DELETE the line. */

@@ -71,7 +71,8 @@ export function SearchSuggestions({
           {option.product === null ? null : (
             <span className="rounded-card bg-surface-muted relative size-10 shrink-0 overflow-hidden">
               <Image
-                src={option.product.imageUrl}
+                // The first frame is the one a thumbnail should show.
+                src={option.product.images[0] ?? ''}
                 // A11Y-04: the row's own text names it; the thumbnail repeats it.
                 alt=""
                 aria-hidden
