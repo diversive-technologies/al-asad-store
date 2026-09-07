@@ -1,0 +1,29 @@
+# What `npm run format` must not touch.
+#
+# Prettier has no `.gitignore` awareness beyond `node_modules`, so anything
+# generated or hand-authored has to be named here or the format script rewrites
+# it. Everything below is excluded for a reason, not for tidiness.
+
+# Build output and caches. Machine-written, never read by a human.
+.next/
+out/
+coverage/
+node_modules/
+
+# THE PROJECT'S OWN BINDING DOCUMENTS.
+#
+# `CLAUDE.md`, `GIT.md`, `PROGRESS.md`, the architecture specification and the
+# Next.js guidelines are hand-formatted prose whose line breaks carry meaning —
+# tables, wrapped paragraphs, deliberate emphasis. Prettier reflows Markdown by
+# its own rules and would rewrite all of it, producing an enormous diff over
+# documents that are a source of truth. They are edited by hand and reviewed by
+# eye; that is the standard they are held to.
+.claude/
+
+# Resolved by npm, not by anyone. Reformatting it guarantees a conflict on the
+# next install and gains nothing.
+package-lock.json
+
+# The editor's own file, in the editor's own conventions (4-space here). It is
+# not application source and does not follow the source's style.
+.vscode/
