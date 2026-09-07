@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-07. Last commit: `7178913` (tree dirty — see below).
+Last updated: 2026-09-07. Last commit: `66dd887` (tree dirty — see below).
 
 ---
 
@@ -210,6 +210,32 @@ quantity control and the hold explanation.
 
 Order tracking by number and mobile (§28.3), and the payment gateway itself —
 the mock has no gateway to call, so `AUTHORIZED` is stated rather than obtained.
+
+## Search — the full-width panel
+
+Rebuilt to the Gymshark pattern the operator asked for. It is a `<dialog>`
+sheet dropping from the top, not a dropdown: it holds four real product cards
+with photography, price, wishlist and quick add, and a field-width menu has
+nowhere to put them.
+
+- **The panel is never empty.** Before a keystroke it shows TRENDING SEARCHES
+  and BEST SELLERS with a View all; after one, SUGGESTIONS and PRODUCTS with
+  `View all "term"`. Same two-column shape either way, so nothing jumps when the
+  first character lands.
+- **The typed fragment is emboldened inside each suggestion** — `**Bos**ki`.
+  That is what makes a row read as "your search, continued" rather than an
+  unrelated word, and it is why the suggestions are query REFINEMENTS rather
+  than product names.
+- **The cards are `ProductCard`**, not a reduced copy, so the hover frames, the
+  heart and the quick-add size tray all work inside the panel for free (PD-01).
+- `suggest('')` used to short-circuit in `api/suggest.ts` — correct while this
+  was a dropdown, wrong now: what fills an empty panel is the BACKEND's answer
+  to the empty query, and deciding here that it is nothing would overrule it
+  (DATA-13). The test that pinned the old behaviour was rewritten to pin the new.
+
+**Not copied: the star ratings.** §28.6 defers reviews — "a review system with
+nothing in it is worse than none" — so there is no rating to show and inventing
+one would be a fabricated number on a product card.
 
 ## Header and search
 

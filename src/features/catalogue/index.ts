@@ -21,8 +21,8 @@ export { ProductScreen, type ProductScreenProps } from './components/ProductScre
 export { SizeSelector, type SizeSelectorProps } from './components/SizeSelector';
 export { ListingSkeleton } from './components/ListingSkeleton';
 export { FacetGroup, type FacetGroupProps } from './components/FacetGroup';
+export { SearchOverlay } from './components/SearchOverlay';
 export { HeaderSearch, type HeaderSearchProps } from './components/HeaderSearch';
-export { SearchSuggestions, type SearchSuggestionsProps } from './components/SearchSuggestions';
 export { FilterChips, type FilterChipsProps } from './components/FilterChips';
 export { FilterDisclosure, type FilterDisclosureProps } from './components/FilterDisclosure';
 export { FilterPanel, type FilterPanelProps } from './components/FilterPanel';

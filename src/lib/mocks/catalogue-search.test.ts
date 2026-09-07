@@ -141,8 +141,20 @@ describe('sorting', () => {
 });
 
 describe('suggest and code lookup', () => {
-  it('returns nothing for an empty term rather than the whole catalogue', () => {
-    expect(suggestCatalogue(new URL('http://mock/s?q=')).products).toEqual([]);
+  it('merchandises an empty term instead of returning nothing', () => {
+    /*
+     * This asserted the opposite until the search panel became a full sheet.
+     * It opens BEFORE anyone types, and a blank sheet wastes the most attentive
+     * second the customer will give it — so an empty query gets the terms the
+     * operator wants searched and the products they want seen. Which ones is
+     * the backend's decision; the frontend only knows the answer is not empty.
+     */
+    const suggested = suggestCatalogue(new URL('http://mock/s?q='));
+
+    expect(suggested.terms.length).toBeGreaterThan(0);
+    expect(suggested.products.length).toBeGreaterThan(0);
+    // Still a shortlist, never the catalogue: the panel shows one row.
+    expect(suggested.products.length).toBeLessThanOrEqual(4);
   });
 
   it('suggests products matching a partial term', () => {

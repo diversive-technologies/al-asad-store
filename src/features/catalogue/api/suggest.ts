@@ -2,11 +2,9 @@ import type { Locale } from '@/i18n/locales';
 import { apiRequest } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
-import { ok, type Result } from '@/lib/result';
+import type { Result } from '@/lib/result';
 
 import { suggestionsSchema, type Suggestions } from '../schemas/search.schema';
-
-const EMPTY_SUGGESTIONS: Suggestions = { terms: [], products: [] };
 
 /**
  * DATA-04 — section 15 `suggest(partial)`.
@@ -18,9 +16,16 @@ const EMPTY_SUGGESTIONS: Suggestions = { terms: [], products: [] };
 export function suggest(term: string, locale: Locale): Promise<Result<Suggestions, ApiError>> {
   const trimmed = term.trim();
 
-  // A round trip for an empty box would spend the 100ms budget on nothing.
-  if (trimmed.length === 0) return Promise.resolve(ok(EMPTY_SUGGESTIONS));
-
+  /*
+   * An empty term is FORWARDED, and used to be short-circuited here.
+   *
+   * The reasoning was sound while the type-ahead was a dropdown: a round trip
+   * for an empty box spent the §30.1 budget on nothing. The search panel now
+   * opens before anyone types, and what fills it — the trending terms and the
+   * merchandised products — is the backend's answer to exactly that empty
+   * query. Deciding here that the answer is nothing would be the frontend
+   * overruling it (DATA-13).
+   */
   return apiRequest({
     path: ENDPOINTS.catalogue.suggest,
     schema: suggestionsSchema,

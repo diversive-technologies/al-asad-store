@@ -324,6 +324,17 @@ export const en = {
     },
   },
   search: {
+    /* §28.1's full-width search panel. */
+    overlayPlaceholder: 'What are you looking for today?',
+    trendingHeading: 'Trending searches',
+    suggestionsHeading: 'Suggestions',
+    bestSellersHeading: 'Best sellers',
+    productsHeading: 'Products',
+    viewAll: 'View all',
+    viewAllTerm: 'View all "{term}"',
+    clear: 'Clear search',
+    close: 'Close search',
+    resultCount: '{count} results',
     title: 'Search',
     inputLabel: 'Search products',
     placeholder: 'Boski, karandi, a product code…',

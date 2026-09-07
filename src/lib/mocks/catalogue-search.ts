@@ -256,7 +256,25 @@ export function searchCatalogue(url: URL): ResultPagePayload {
 /** Section 15 `suggest(partial)`. Terms come from the vocabulary, not free text. */
 export function suggestCatalogue(url: URL): SuggestionsPayload {
   const query = readQuery(url);
-  if (query.term.length === 0) return { terms: [], products: [] };
+
+  /*
+   * An EMPTY query is not an empty answer.
+   *
+   * The search panel opens before anyone types, and a blank sheet at that
+   * moment wastes the most attentive second the customer will give it. So the
+   * backend merchandises: the terms it would like people to search for, and the
+   * products it would like them to see. Which terms and which products are the
+   * operator's decision (§21 content), not the interface's — the frontend only
+   * knows that an empty box still gets an answer.
+   */
+  if (query.term.length === 0) {
+    return {
+      terms: TRENDING_TERMS[query.locale].slice(0, 5),
+      products: CATALOGUE.filter((record) => record.isInStock)
+        .slice(0, 4)
+        .map((record) => toProductCard(record, query.locale)),
+    };
+  }
 
   const matched = CATALOGUE.filter((record) => matchesTerm(record, query));
 
@@ -274,6 +292,19 @@ export function suggestCatalogue(url: URL): SuggestionsPayload {
     products: matched.slice(0, 4).map((record) => toProductCard(record, query.locale)),
   };
 }
+
+/**
+ * What the operator wants searched for, shown while the box is still empty.
+ *
+ * Hand-written rather than derived from popularity: there is no search log yet,
+ * and inventing one from the fixture would produce whatever happens to sort
+ * first rather than anything a customer would type. §26's filter-usage report is
+ * where the real list eventually comes from.
+ */
+const TRENDING_TERMS: Record<Locale, readonly string[]> = {
+  en: ['Waistcoat Suit', 'Boski', 'Kameez Shalwar', 'Karandi', 'Unstitched'],
+  ur: ['واسکٹ سوٹ', 'بوسکی', 'قمیض شلوار', 'کرنڈی', 'بغیر سلے'],
+};
 
 /** Section 15 `byCode(code) -> Product?`. */
 export function findRecordByCode(code: string, locale: Locale): ProductCardPayload | null {
