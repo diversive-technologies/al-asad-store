@@ -5,13 +5,20 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 interface SessionContextValue {
   /** D3: a mock session today, a real one when §11 lands. */
   isSignedIn: boolean;
-  displayName: string | null;
+  displayName: string;
+  /** Empty when the customer signed in by code and has no email on file. */
+  email: string;
+  mobile: string;
 }
 
-const SessionContext = createContext<SessionContextValue>({
+const EMPTY: SessionContextValue = {
   isSignedIn: false,
-  displayName: null,
-});
+  displayName: '',
+  email: '',
+  mobile: '',
+};
+
+const SessionContext = createContext<SessionContextValue>(EMPTY);
 
 /**
  * STATE-01 rung 5 — Context, for the "low-frequency, app-wide concern" the rule
@@ -23,15 +30,15 @@ const SessionContext = createContext<SessionContextValue>({
  * what to allow.
  */
 export function SessionProvider({
-  displayName,
+  session,
   children,
 }: {
-  displayName: string | null;
+  session: { displayName: string; email: string; mobile: string } | null;
   children: ReactNode;
 }) {
   const value = useMemo(
-    () => ({ isSignedIn: displayName !== null, displayName }),
-    [displayName],
+    () => (session === null ? EMPTY : { isSignedIn: true, ...session }),
+    [session],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

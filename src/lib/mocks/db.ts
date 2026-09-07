@@ -200,7 +200,3 @@ export const NEWSLETTER_SUBSCRIPTION = {
   status: 'SUBSCRIBED',
 } as const;
 
-export const MOCK_SESSION = {
-  mobile: '03001234567',
-  displayName: 'Guest tester',
-} as const;

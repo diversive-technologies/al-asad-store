@@ -35,7 +35,15 @@ export function BagTrigger({ messages }: BagTriggerProps) {
        * registry; nothing appends an "s".
        */
       aria-label={`${t.open}, ${count === 1 ? t.itemsOne : t.itemsOther.replace('{count}', String(count))}`}
-      className="text-fg hover:text-fg-muted focus-visible:ring-brand-500 relative rounded-full p-2 focus-visible:ring-2 focus-visible:outline-none"
+      /*
+       * No `text-fg`. Over the hero the header sets `color: on-media`, and a
+       * pinned colour does not inherit it — which left this icon in the theme's
+       * foreground colour on top of a light film, where it nearly vanished.
+       * Inheriting is what makes the bar's transparent and solid states both
+       * legible. `opacity` dims on hover instead, because that works whatever
+       * the inherited colour turns out to be.
+       */
+      className="focus-visible:ring-brand-500 relative rounded-full p-2 transition-opacity hover:opacity-70 focus-visible:ring-2 focus-visible:outline-none"
     >
       <ShoppingBag className="h-5 w-5" aria-hidden />
 

@@ -15,6 +15,7 @@ export {
   Heart,
   Info,
   Loader2,
+  LogOut,
   Menu,
   Minus,
   Moon,
@@ -23,6 +24,7 @@ export {
   SlidersHorizontal,
   ShoppingBag,
   Sun,
+  User,
   Trash2,
   X,
 } from 'lucide-react';

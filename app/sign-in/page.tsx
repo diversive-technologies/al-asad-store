@@ -1,27 +1,36 @@
 import type { Metadata } from 'next';
 
-import { SignInForm } from '@/features/auth';
+import { CLIENT } from '@/config/client';
+import { SignInScreen } from '@/features/auth';
 import { getMessages } from '@/i18n';
+import { serverEnv } from '@/config/env.server';
+import { TEST_CREDENTIALS } from '@/lib/mocks/auth-db';
 
 export async function generateMetadata(): Promise<Metadata> {
   const messages = await getMessages();
-  return { title: messages.auth.signInHeading };
+  // A sign-in page has nothing to offer a search engine (§30.5).
+  return { title: messages.auth.signInHeading, robots: { index: false, follow: false } };
 }
 
-/** D3 — the placeholder sign-in screen. STRUCT-02: it composes only. */
+/** §11's two ways in. STRUCT-02: the route composes only. */
 export default async function SignInPage() {
   const messages = await getMessages();
 
+  /*
+   * The seeded credentials are shown ONLY while the mock layer is armed. With a
+   * real backend `API_MOCKING` is off, this is null, and the notice disappears
+   * — a test account printed on a live sign-in page would be a way in.
+   */
+  const testHint =
+    serverEnv.API_MOCKING === 'enabled'
+      ? { email: TEST_CREDENTIALS.email, password: TEST_CREDENTIALS.password }
+      : null;
+
   return (
-    <section className="page-shell flex max-w-sm flex-col gap-4 py-12">
-      <h1 className="text-fg text-2xl font-semibold">{messages.auth.signInHeading}</h1>
-      <p className="text-fg-muted">{messages.auth.signInBody}</p>
-
-      <p className="rounded-card border-border bg-surface-muted text-fg-muted border p-3 text-sm">
-        {messages.auth.placeholderNotice}
-      </p>
-
-      <SignInForm />
-    </section>
+    <SignInScreen
+      messages={messages}
+      mobileExample={CLIENT.market.mobile.example}
+      testHint={testHint}
+    />
   );
 }

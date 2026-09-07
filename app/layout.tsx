@@ -10,7 +10,7 @@ import { fontVariables } from '@/config/fonts';
 import { SITE } from '@/config/site';
 import { BagPanel, BagProvider, BagTrigger } from '@/features/bag/contract';
 import { HeaderSearch } from '@/features/catalogue';
-import { readSession, SessionProvider } from '@/features/auth';
+import { AccountMenu, readSession, SessionProvider } from '@/features/auth';
 import { LocaleSwitcher } from '@/features/localisation';
 import { NewsletterForm } from '@/features/newsletter';
 import { ThemeProvider } from '@/hooks/use-theme';
@@ -99,7 +99,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                * httpOnly. It gates what is OFFERED (the wishlist heart today);
                * the backend still decides what is allowed (SEC-03).
                */}
-              <SessionProvider displayName={session?.displayName ?? null}>
+              <SessionProvider session={session}>
                 {/*
                  * The bag wraps everything below the query client, because both
                  * the header's count and a product page's Add to bag read the
@@ -125,6 +125,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                     }
                     search={<HeaderSearch locale={locale} messages={messages} />}
                     bagTrigger={<BagTrigger messages={messages} />}
+                    accountMenu={<AccountMenu messages={messages} />}
                   />
 
                   {/*

@@ -75,7 +75,17 @@ export const ENDPOINTS = {
   newsletter: {
     subscribe: '/api/v1/newsletter/subscriptions',
   },
+  /** Section 11 Identity and Access. */
   auth: {
-    session: '/api/v1/auth/session',
+    /** `authenticate(email, password) -> Session`. */
+    authenticate: '/api/v1/auth/sessions',
+    /** `issueCode(mobile) -> void`. */
+    issueCode: '/api/v1/auth/codes',
+    /** `authenticateByCode(mobile, code) -> Session`. */
+    authenticateByCode: '/api/v1/auth/sessions/by-code',
+    /** Registration. Section 11 owns accounts. */
+    register: '/api/v1/auth/accounts',
+    /** `resetPassword(email) -> void`. */
+    resetPassword: '/api/v1/auth/password-resets',
   },
 } as const;

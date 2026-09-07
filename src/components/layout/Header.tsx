@@ -21,6 +21,8 @@ export interface HeaderProps {
   search: ReactNode;
   /** The bag button and its item count, from `features/bag`. */
   bagTrigger: ReactNode;
+  /** Sign-in link or the signed-in name plus sign out, per the session. */
+  accountMenu: ReactNode;
 }
 
 /**
@@ -42,8 +44,13 @@ export interface HeaderProps {
  * it needs the cart's server state and its open/close context, both of which
  * live in `features/bag`, and `components/` may not import from `features/`.
  */
-export function Header({ messages, localeSwitcher, search, bagTrigger }: HeaderProps) {
-  const t = messages.nav;
+export function Header({
+  messages,
+  localeSwitcher,
+  search,
+  bagTrigger,
+  accountMenu,
+}: HeaderProps) {
 
   return (
     <StickyHeaderShell>
@@ -71,12 +78,9 @@ export function Header({ messages, localeSwitcher, search, bagTrigger }: HeaderP
 
           {bagTrigger}
 
-          <Link
-            href={ROUTES.signIn}
-            className="rounded-card px-3 py-2 text-sm transition-opacity hover:opacity-70"
-          >
-            {t.signIn}
-          </Link>
+          {/* MOD-01: `components/` may not import from `features/`, so the
+              account control arrives as a slot from the root layout. */}
+          {accountMenu}
         </div>
       </div>
     </StickyHeaderShell>

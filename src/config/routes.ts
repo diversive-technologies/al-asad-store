@@ -5,6 +5,8 @@
 export const ROUTES = {
   home: '/',
   signIn: '/sign-in',
+  signUp: '/sign-up',
+  forgotPassword: '/forgot-password',
   catalogue: {
     list: '/catalogue',
     detail: (slug: string) => `/catalogue/${slug}`,

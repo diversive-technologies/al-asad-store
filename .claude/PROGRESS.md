@@ -7,7 +7,7 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-07. Last commit: `0bc5964` (tree dirty — see below).
+Last updated: 2026-09-07. Last commit: `7178913` (tree dirty — see below).
 
 ---
 
@@ -20,7 +20,7 @@ Last updated: 2026-09-07. Last commit: `0bc5964` (tree dirty — see below).
 | M3 | Product page | **In progress** — contract, mock, route and shell done; extras remain. |
 | M4 | Bag & reservation | **Core done.** Reservations, panel, quantity, remove, promo code. |
 | M5 | Checkout | **Core done.** Quote, single-page checkout, §7.2 placement, confirmation. |
-| M6 | Real auth & account | Deferred by D3. |
+| M6 | Real auth & account | **Auth screens built** against §11's shape; account area still deferred. |
 
 ## M2 — what is built
 
@@ -253,13 +253,57 @@ Two rules follow from the fix and should not be undone casually:
 Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 2560 → 6 at 343px, all at 100% of viewport width.
 
+## Auth — what is built
+
+Sign-in, sign-up and password reset, built against architecture §11's exposed
+operations rather than invented:
+
+```
+authenticate(email, password)      -> Session
+authenticateByCode(mobile, code)   -> Session
+issueCode(mobile)                  -> void
+resetPassword(email)               -> void
+```
+
+**Both ways in are first-class.** §11 offers password and mobile-code, and in
+this market a customer reliably has a number and may not use email — so the
+choice is a visible `radiogroup`, not a "trouble signing in?" link.
+
+§11's invariants are MODELLED in `lib/mocks/auth-db.ts`, not assumed, and **11
+tests** pin them:
+
+- **No account enumeration.** A wrong password, an unknown email and a locked
+  account return the identical refusal. The password-reset screen says the same
+  sentence whatever happened — it is the easiest enumeration oracle to leave
+  lying around, because saying "we have no account for that" feels helpful.
+- **Codes are single-use and expire** (5 minutes). A spent code is refused.
+- **Failed attempts are rate-limited per identifier**, and the lockout applies
+  even to a subsequently correct password — the limit is on the identifier, not
+  on whether this attempt would have worked.
+- **Registration DOES report a collision**, and the asymmetry is deliberate:
+  §11's rule governs authentication responses, and a sign-up that refused
+  without saying why loses the customer.
+
+The header now shows who is signed in and offers a way out, which it did not
+before — it claimed "Sign in" in every state. It is a USER ICON beside the other
+header glyphs, and clicking it opens a native popover with the name, email and
+mobile plus a sign-out button; signed out, the same icon links to sign-in.
+
 ## Deliberate gaps — do not "fix" these
 
 - **Product imagery is now the client's own.** Fourteen photographs in
   `public/products/`, converted to 4:5 AVIF from the originals kept in
   `assets/photography/`. See "Photography" below for what this changed and what
   is still missing.
-- **Sign-in is a mock (D3).** No credentials are stored or validated.
+- **Auth is still D3's placeholder, now with a real shape.** The seeded account
+  is `customer@example.com` / `password1234`, and it lives ONLY in the mock
+  layer — `API_MOCKING=disabled` removes both the account and the hint printed
+  on the sign-in screen. Passwords are compared in plaintext there because §11's
+  adaptive hashing is the Java module's job, and imitating it would suggest that
+  file is a security boundary. It is not.
+- **No account area.** Order history, saved addresses and a real wishlist are
+  still M6; signing in today gets you a name in the header and the wishlist
+  heart, nothing more.
 - **The wishlist is per-browser, and only offered to a signed-in customer.** A
   real one belongs to an account (§28.3), so the heart is HIDDEN for guests —
   offering it let them save into a list they could never open. Behind the mock
@@ -452,6 +496,18 @@ nothing left to check out, and `/order/AA100001` still renders on a fresh load.
   until that client leaf hydrates the content is invisible — the order
   confirmation rendered blank. Decoration animates via CSS (no hydration, no
   bundle); text is plain server-rendered markup.
+- **A header child that pins its own text colour will not follow the bar over
+  the hero.** `body:has([data-hero]) header[data-scrolled='false']` sets
+  `color: on-media`, and anything carrying `text-fg` or `text-fg-muted`
+  overrides that inheritance — the bag icon and the customer's name nearly
+  vanished against a light film while the wordmark beside them stayed legible.
+  Header controls should inherit and dim with `opacity`, which works whatever
+  colour they inherit.
+- **A submit latch set BEFORE validation never gets released.** `handleSubmit`
+  flipped the ref, RHF then rejected the form, `onSubmit` never ran, and the
+  clearing line inside it never ran either — one mismatched password left the
+  sign-up form permanently dead. `form.handleSubmit(fn)(event)` returns a
+  promise that settles on every path, so clear the latch in its `.finally`.
 - **`cn` keeps the LAST of two conflicting Tailwind classes**, which is what
   tailwind-merge is for — but it means a state class layered over a per-item one
   silently wins for every item. `opacity-60` for sold-out, applied to each

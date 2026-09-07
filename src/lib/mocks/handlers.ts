@@ -14,11 +14,18 @@ import {
   updateQuantity,
 } from './bag-db';
 import { reservedLookup } from './bag-reservations';
+import {
+  authenticate,
+  authenticateByCode,
+  issueCode,
+  register,
+  requestPasswordReset,
+} from './auth-db';
 import { findOrder, placeOrder, quoteFor } from './checkout-db';
 import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue-search';
 import { pageFor } from './pages-db';
 import { evaluateFabric, findProductBySlug, productAvailabilityFor } from './product-detail-db';
-import { AVAILABILITY, homepageFor, MOCK_SESSION, NEWSLETTER_SUBSCRIPTION } from './db';
+import { AVAILABILITY, homepageFor, NEWSLETTER_SUBSCRIPTION } from './db';
 
 /**
  * D1 / TEST-04 — network is mocked at the HTTP layer, never by stubbing the
@@ -168,7 +175,6 @@ export const handlers = [
     HttpResponse.json(NEWSLETTER_SUBSCRIPTION, { status: 201 }),
   ),
 
-  http.post(`*${ENDPOINTS.auth.session}`, () => HttpResponse.json(MOCK_SESSION, { status: 201 })),
 
   /*
    * §16 CartService. The cart id is in the PATH because that is how the Java
@@ -326,5 +332,68 @@ export const handlers = [
     const order = findOrder(String(params.orderNumber));
     if (order === null) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(order);
+  }),
+
+  /*
+   * §11 Identity. Every refusal below is deliberately the same shape, because
+   * "authentication responses never reveal whether an account exists" — a 401
+   * that differs for an unknown email turns this endpoint into a directory.
+   */
+  http.post(`*${ENDPOINTS.auth.authenticate}`, async ({ request }) => {
+    const body = (await request.clone().json()) as { email?: string; password?: string };
+    const outcome = authenticate(body.email ?? '', body.password ?? '');
+
+    if (outcome.kind === 'AUTHENTICATED') return HttpResponse.json(outcome.session);
+    // 429 for a lockout, 401 otherwise. Neither says which account, or why.
+    return new HttpResponse(null, { status: outcome.kind === 'RATE_LIMITED' ? 429 : 401 });
+  }),
+
+  http.post(`*${ENDPOINTS.auth.issueCode}`, async ({ request }) => {
+    const body = (await request.clone().json()) as { mobile?: string };
+    const code = issueCode(body.mobile ?? '');
+
+    /*
+     * D1 — the code comes back in the RESPONSE, and that is a mock-only
+     * affordance with a real reason: no SMS provider is wired up, so without it
+     * the code-sign-in path could not be exercised at all. The real §11 returns
+     * void and delivers by SMS; the interface treats this field as optional and
+     * shows it only as a testing hint.
+     */
+    return HttpResponse.json({ devCode: code });
+  }),
+
+  http.post(`*${ENDPOINTS.auth.authenticateByCode}`, async ({ request }) => {
+    const body = (await request.clone().json()) as { mobile?: string; code?: string };
+    const outcome = authenticateByCode(body.mobile ?? '', body.code ?? '');
+
+    if (outcome.kind === 'AUTHENTICATED') return HttpResponse.json(outcome.session);
+    return new HttpResponse(null, { status: outcome.kind === 'RATE_LIMITED' ? 429 : 401 });
+  }),
+
+  http.post(`*${ENDPOINTS.auth.register}`, async ({ request }) => {
+    const body = (await request.clone().json()) as {
+      fullName?: string;
+      email?: string;
+      mobile?: string;
+      password?: string;
+    };
+
+    const outcome = register({
+      fullName: body.fullName ?? '',
+      email: body.email ?? '',
+      mobile: body.mobile ?? '',
+      password: body.password ?? '',
+    });
+
+    // 409 is the one place a collision IS reported — see `register`'s note.
+    if (outcome.kind === 'TAKEN') return new HttpResponse(null, { status: 409 });
+    return HttpResponse.json(outcome.session, { status: 201 });
+  }),
+
+  http.post(`*${ENDPOINTS.auth.resetPassword}`, async ({ request }) => {
+    const body = (await request.clone().json()) as { email?: string };
+    requestPasswordReset(body.email ?? '');
+    // Always 204: the caller learns nothing about who has an account.
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

@@ -9,6 +9,13 @@ export type ApiError =
   | { kind: 'NOT_FOUND'; message: string; resource?: string }
   | { kind: 'VALIDATION'; message: string; fieldErrors: Record<string, string[]> }
   | { kind: 'CONFLICT'; message: string }
+  /**
+   * ERR-03 — 429. A distinct kind because §11 rate-limits failed sign-in
+   * attempts "per identifier and per source", and a customer who has been
+   * locked out needs to be told to wait rather than shown "wrong password"
+   * again and again while they try harder.
+   */
+  | { kind: 'RATE_LIMITED'; message: string }
   | { kind: 'CONTRACT_VIOLATION'; message: string; issues: readonly $ZodIssue[]; path: string }
   | { kind: 'SERVER'; message: string; status: number };
 
@@ -42,6 +49,8 @@ export function fromHttpStatus(response: Response): ApiError {
       return { kind: 'NOT_FOUND', message: 'The requested resource does not exist.' };
     case 409:
       return { kind: 'CONFLICT', message: 'The resource changed before the request completed.' };
+    case 429:
+      return { kind: 'RATE_LIMITED', message: 'Too many attempts were made.' };
     case 422:
       return { kind: 'VALIDATION', message: 'The submitted data was rejected.', fieldErrors: {} };
     default:

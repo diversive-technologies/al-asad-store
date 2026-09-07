@@ -695,6 +695,24 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   }
 }
 
+/*
+ * The account panel. Anchored to the viewport's top-end corner rather than
+ * centred: it belongs to a control in the header, and a centred card would read
+ * as a modal interrupting the page rather than a menu hanging off a button.
+ */
+@utility account-popover {
+  position: fixed;
+  inset-block-start: calc(var(--spacing-header) + 0.5rem);
+  inset-inline-end: 1rem;
+  inset-inline-start: auto;
+  inline-size: min(16rem, calc(100vw - 2rem));
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface);
+  box-shadow: 0 1rem 3rem color-mix(in oklab, black 28%, transparent);
+}
+
 @utility info-popover {
   position: fixed;
   margin: auto;
