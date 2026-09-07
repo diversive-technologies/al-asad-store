@@ -337,8 +337,7 @@ export function removeLine(cartId: string, lineId: string, locale: Locale): Cart
 }
 
 export type CodeResult =
-  | { kind: 'APPLIED'; summary: BagSummaryPayload }
-  | { kind: 'REJECTED'; reason: string };
+  { kind: 'APPLIED'; summary: BagSummaryPayload } | { kind: 'REJECTED'; reason: string };
 
 /** §16 `applyCode(cart, code)`. Validity is Pricing's answer, never the UI's. */
 export function applyCode(cartId: string, code: string, locale: Locale): CodeResult {

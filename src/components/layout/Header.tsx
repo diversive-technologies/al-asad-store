@@ -44,14 +44,7 @@ export interface HeaderProps {
  * it needs the cart's server state and its open/close context, both of which
  * live in `features/bag`, and `components/` may not import from `features/`.
  */
-export function Header({
-  messages,
-  localeSwitcher,
-  search,
-  bagTrigger,
-  accountMenu,
-}: HeaderProps) {
-
+export function Header({ messages, localeSwitcher, search, bagTrigger, accountMenu }: HeaderProps) {
   return (
     <StickyHeaderShell>
       <div className="page-shell h-header flex items-center gap-2">

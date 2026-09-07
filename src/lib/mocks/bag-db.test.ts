@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { addItem, applyCode, removeLine, resetCarts, summaryFor, updateQuantity, createCart } from './bag-db';
+import {
+  addItem,
+  applyCode,
+  removeLine,
+  resetCarts,
+  summaryFor,
+  updateQuantity,
+  createCart,
+} from './bag-db';
 import { reservedQuantity, resetReservations, sweepExpired } from './bag-reservations';
 import { CATALOGUE } from './catalogue-db';
 import { onHandFor, toProductDetail } from './product-detail-db';

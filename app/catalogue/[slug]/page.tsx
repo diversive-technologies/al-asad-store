@@ -3,11 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 import { ErrorState } from '@/components/shared/ErrorState';
-import {
-  fetchProduct,
-  fetchProductAvailability,
-  ProductScreen,
-} from '@/features/catalogue';
+import { fetchProduct, fetchProductAvailability, ProductScreen } from '@/features/catalogue';
 import { getLocale, getMessages } from '@/i18n';
 import { logApiError } from '@/lib/utils/log';
 

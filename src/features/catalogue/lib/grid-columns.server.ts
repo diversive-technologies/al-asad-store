@@ -2,11 +2,7 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 
-import {
-  GRID_COLUMNS_COOKIE,
-  parseMobileColumns,
-  type MobileColumns,
-} from './grid-columns';
+import { GRID_COLUMNS_COOKIE, parseMobileColumns, type MobileColumns } from './grid-columns';
 
 /**
  * Resolves the stored small-screen column choice so the FIRST paint already has

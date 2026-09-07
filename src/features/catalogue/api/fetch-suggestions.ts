@@ -24,8 +24,7 @@ import { suggestionsSchema, type Suggestions } from '../schemas/search.schema';
  * mismatch means our own BFF and our own schema disagree, which is a defect.
  */
 export type SuggestionsError =
-  | { kind: 'UNAVAILABLE' }
-  | { kind: 'CONTRACT_VIOLATION'; issues: string };
+  { kind: 'UNAVAILABLE' } | { kind: 'CONTRACT_VIOLATION'; issues: string };
 
 export async function fetchSuggestions(
   term: string,
@@ -60,7 +59,10 @@ export async function fetchSuggestions(
 
   const parsed = suggestionsSchema.safeParse(payload);
   if (!parsed.success) {
-    return err({ kind: 'CONTRACT_VIOLATION', issues: parsed.error.issues[0]?.message ?? 'unknown' });
+    return err({
+      kind: 'CONTRACT_VIOLATION',
+      issues: parsed.error.issues[0]?.message ?? 'unknown',
+    });
   }
 
   return ok(parsed.data);

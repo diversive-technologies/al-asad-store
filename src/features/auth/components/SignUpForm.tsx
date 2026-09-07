@@ -83,9 +83,11 @@ export function SignUpForm({ messages, mobileExample }: SignUpFormProps) {
     }
 
     inFlight.current = true;
-    void form.handleSubmit(onSubmit)(event).finally(() => {
-      inFlight.current = false;
-    });
+    void form
+      .handleSubmit(onSubmit)(event)
+      .finally(() => {
+        inFlight.current = false;
+      });
   }
 
   return (
@@ -115,7 +117,13 @@ export function SignUpForm({ messages, mobileExample }: SignUpFormProps) {
         error={errors.mobile === undefined ? undefined : t.mobileInvalid}
       >
         {(aria) => (
-          <Input {...aria} type="tel" inputMode="tel" autoComplete="tel" {...form.register('mobile')} />
+          <Input
+            {...aria}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            {...form.register('mobile')}
+          />
         )}
       </Field>
 

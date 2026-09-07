@@ -199,4 +199,3 @@ export const NEWSLETTER_SUBSCRIPTION = {
   email: 'someone@example.com',
   status: 'SUBSCRIBED',
 } as const;
-

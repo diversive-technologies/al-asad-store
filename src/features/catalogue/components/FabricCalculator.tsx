@@ -102,7 +102,10 @@ export function FabricCalculator({ productId, offer, locale, messages }: FabricC
   }
 
   return (
-    <section aria-labelledby="fabric-calculator-heading" className="rounded-card bg-surface-muted p-6">
+    <section
+      aria-labelledby="fabric-calculator-heading"
+      className="rounded-card bg-surface-muted p-6"
+    >
       <h2 id="fabric-calculator-heading" className="text-fg text-lg font-medium">
         {t.fabricCalcHeading}
       </h2>
@@ -155,9 +158,7 @@ export function FabricCalculator({ productId, offer, locale, messages }: FabricC
        */}
       <p aria-live="polite" className="text-fg mt-4 text-sm">
         {verdictQuery.isError ? t.fabricCalcUnavailable : null}
-        {verdictQuery.data === undefined
-          ? null
-          : verdictText(verdictQuery.data, locale, messages)}
+        {verdictQuery.data === undefined ? null : verdictText(verdictQuery.data, locale, messages)}
       </p>
 
       <p className="text-fg-muted mt-2 text-xs">{t.fabricCalcNote}</p>

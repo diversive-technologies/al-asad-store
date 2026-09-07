@@ -94,9 +94,6 @@ export function formatPlural(
  * left intact rather than replaced with `undefined` — a visible `{min}` in the
  * interface is a bug report; the word "undefined" is a mystery.
  */
-export function formatTemplate(
-  template: string,
-  values: Readonly<Record<string, string>>,
-): string {
+export function formatTemplate(template: string, values: Readonly<Record<string, string>>): string {
   return template.replace(/\{(\w+)\}/g, (match: string, key: string) => values[key] ?? match);
 }

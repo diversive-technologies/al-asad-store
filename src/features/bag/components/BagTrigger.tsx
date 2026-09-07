@@ -59,7 +59,7 @@ export function BagTrigger({ messages }: BagTriggerProps) {
            * mirrors under `dir="rtl"`; `top-0` is the block edge, which does
            * not flip in a horizontal writing mode.
            */
-          className="bg-brand-600 absolute top-0 end-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] leading-none font-medium text-white"
+          className="bg-brand-600 absolute end-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] leading-none font-medium text-white"
         >
           {count}
         </span>

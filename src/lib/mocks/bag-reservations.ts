@@ -168,8 +168,7 @@ export function reserve(
 
   for (const key of sorted) {
     const existing = RESERVATIONS.find(
-      (row) =>
-        row.lineId === lineId && row.pieceId === key.pieceId && row.sizeId === key.sizeId,
+      (row) => row.lineId === lineId && row.pieceId === key.pieceId && row.sizeId === key.sizeId,
     );
 
     if (existing === undefined) {

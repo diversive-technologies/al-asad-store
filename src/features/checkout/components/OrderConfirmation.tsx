@@ -38,7 +38,6 @@ export function OrderConfirmation({ order, locale, messages }: OrderConfirmation
         placedAt={formatDate(order.placedAt, locale)}
       />
 
-
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div>
           <h2 className="text-fg text-sm font-medium">{t.deliveringTo}</h2>

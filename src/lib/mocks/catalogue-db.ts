@@ -157,20 +157,20 @@ interface Photograph {
 const FRAMES = 5;
 
 const PHOTOGRAPHY: readonly Photograph[] = [
-  { file: 'waistcoat-maroon', colour: 'maroon', garment: 'waistcoat' , frames: FRAMES },
-  { file: 'waistcoat-emerald', colour: 'emerald', garment: 'waistcoat' , frames: FRAMES },
-  { file: 'waistcoat-bottle', colour: 'bottle', garment: 'waistcoat' , frames: FRAMES },
-  { file: 'waistcoat-olive', colour: 'olive', garment: 'waistcoat' , frames: FRAMES },
-  { file: 'waistcoat-walnut', colour: 'walnut', garment: 'waistcoat' , frames: FRAMES },
-  { file: 'waistcoat-graphite', colour: 'graphite', garment: 'waistcoat' , frames: FRAMES },
-  { file: 'waistcoat-stone', colour: 'stone', garment: 'waistcoat' , frames: FRAMES },
-  { file: 'waistcoat-ivory', colour: 'ivory', garment: 'waistcoat' , frames: FRAMES },
-  { file: 'kameez-charcoal', colour: 'charcoal', garment: 'kameez' , frames: FRAMES },
-  { file: 'kameez-slate', colour: 'slate', garment: 'kameez' , frames: FRAMES },
-  { file: 'kameez-taupe', colour: 'taupe', garment: 'kameez' , frames: FRAMES },
-  { file: 'kurta-rust', colour: 'rust', garment: 'kurta' , frames: FRAMES },
-  { file: 'boys-kurta-charcoal', colour: 'charcoal', garment: 'boys-kurta' , frames: FRAMES },
-  { file: 'boys-kurta-navy', colour: 'navy', garment: 'boys-kurta' , frames: FRAMES },
+  { file: 'waistcoat-maroon', colour: 'maroon', garment: 'waistcoat', frames: FRAMES },
+  { file: 'waistcoat-emerald', colour: 'emerald', garment: 'waistcoat', frames: FRAMES },
+  { file: 'waistcoat-bottle', colour: 'bottle', garment: 'waistcoat', frames: FRAMES },
+  { file: 'waistcoat-olive', colour: 'olive', garment: 'waistcoat', frames: FRAMES },
+  { file: 'waistcoat-walnut', colour: 'walnut', garment: 'waistcoat', frames: FRAMES },
+  { file: 'waistcoat-graphite', colour: 'graphite', garment: 'waistcoat', frames: FRAMES },
+  { file: 'waistcoat-stone', colour: 'stone', garment: 'waistcoat', frames: FRAMES },
+  { file: 'waistcoat-ivory', colour: 'ivory', garment: 'waistcoat', frames: FRAMES },
+  { file: 'kameez-charcoal', colour: 'charcoal', garment: 'kameez', frames: FRAMES },
+  { file: 'kameez-slate', colour: 'slate', garment: 'kameez', frames: FRAMES },
+  { file: 'kameez-taupe', colour: 'taupe', garment: 'kameez', frames: FRAMES },
+  { file: 'kurta-rust', colour: 'rust', garment: 'kurta', frames: FRAMES },
+  { file: 'boys-kurta-charcoal', colour: 'charcoal', garment: 'boys-kurta', frames: FRAMES },
+  { file: 'boys-kurta-navy', colour: 'navy', garment: 'boys-kurta', frames: FRAMES },
 ];
 
 /**
@@ -293,7 +293,7 @@ export const CATALOGUE: readonly CatalogueRecord[] = Array.from(
        * unstitched products land on 4.5m and 2.5m, which gives COMFORTABLE on
        * one and JUST_ENOUGH or INSUFFICIENT on the other depending on height.
        */
-      metreage: garmentType === 'unstitched' ? 2.0 + ((index % 6) * 0.5) : null,
+      metreage: garmentType === 'unstitched' ? 2.0 + (index % 6) * 0.5 : null,
       isNew: index % 5 === 0,
       launchedAt: new Date(LAUNCH_EPOCH - index * DAY_MS).toISOString(),
       // Roughly one in seven is out of stock, so empty states are reachable.

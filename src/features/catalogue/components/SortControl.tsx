@@ -98,7 +98,12 @@ export function SortControl({ query, basePath, messages }: SortControlProps) {
        * case it does not cover — same URL, same key — and there the trigger and
        * light-dismiss still close it.
        */}
-      <div key={toQueryString(query)} id={MENU_ID} popover="auto" className="sort-panel popover-animated">
+      <div
+        key={toQueryString(query)}
+        id={MENU_ID}
+        popover="auto"
+        className="sort-panel popover-animated"
+      >
         {/* A11Y-01: a list of destinations is a nav, and it carries the name the
             trigger showed, so the panel is identifiable on its own. */}
         <nav aria-label={t.sort.label}>

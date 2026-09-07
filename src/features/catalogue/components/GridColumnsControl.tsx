@@ -44,7 +44,7 @@ export function GridColumnsControl({ messages }: { messages: Messages }) {
     <div
       role="radiogroup"
       aria-label={t.layoutLabel}
-      className="border-border flex items-center gap-0.5 rounded-card border p-0.5 md:hidden"
+      className="border-border rounded-card flex items-center gap-0.5 border p-0.5 md:hidden"
     >
       {MOBILE_COLUMN_OPTIONS.map((option) => {
         const Icon = ICONS[option];

@@ -77,7 +77,10 @@ export function PasswordResetForm({ messages }: { messages: Messages }) {
         {t.resetCta}
       </Button>
 
-      <Link href={ROUTES.signIn} className="text-fg-muted hover:text-fg text-center text-xs underline">
+      <Link
+        href={ROUTES.signIn}
+        className="text-fg-muted hover:text-fg text-center text-xs underline"
+      >
         {t.backToSignIn}
       </Link>
     </form>

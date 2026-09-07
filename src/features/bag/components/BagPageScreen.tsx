@@ -41,12 +41,7 @@ export function BagPageScreen({ locale, messages }: BagPageScreenProps) {
         {!hasLines ? null : (
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <BagTotals summary={summary} locale={locale} messages={messages} />
-            <ButtonLink
-              href={ROUTES.checkout}
-              variant="primary"
-              size="lg"
-              className="mt-4 w-full"
-            >
+            <ButtonLink href={ROUTES.checkout} variant="primary" size="lg" className="mt-4 w-full">
               {t.checkout}
             </ButtonLink>
           </aside>

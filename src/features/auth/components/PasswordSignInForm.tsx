@@ -70,9 +70,11 @@ export function PasswordSignInForm({ messages }: { messages: Messages }) {
     }
 
     inFlight.current = true;
-    void form.handleSubmit(onSubmit)(event).finally(() => {
-      inFlight.current = false;
-    });
+    void form
+      .handleSubmit(onSubmit)(event)
+      .finally(() => {
+        inFlight.current = false;
+      });
   }
 
   return (
@@ -82,7 +84,9 @@ export function PasswordSignInForm({ messages }: { messages: Messages }) {
         label={t.emailLabel}
         error={form.formState.errors.email === undefined ? undefined : t.emailInvalid}
       >
-        {(aria) => <Input {...aria} type="email" autoComplete="email" {...form.register('email')} />}
+        {(aria) => (
+          <Input {...aria} type="email" autoComplete="email" {...form.register('email')} />
+        )}
       </Field>
 
       <Field

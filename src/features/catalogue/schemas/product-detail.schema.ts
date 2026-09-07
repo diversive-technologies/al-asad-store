@@ -147,10 +147,10 @@ const productDetailShape = z.object({
  * agree with each other.
  */
 export const productDetailSchema = productDetailShape.refine(
-  (product) => (product.type === 'SIMPLE' ? product.pieces.length === 1 : product.pieces.length > 1),
+  (product) =>
+    product.type === 'SIMPLE' ? product.pieces.length === 1 : product.pieces.length > 1,
   {
-    error:
-      'A SIMPLE product must have exactly one piece and a SET must have two or more (§6.1).',
+    error: 'A SIMPLE product must have exactly one piece and a SET must have two or more (§6.1).',
     path: ['pieces'],
   },
 );

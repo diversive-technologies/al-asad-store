@@ -36,7 +36,9 @@ export function ProductScreen({ product, availability, locale, messages }: Produ
 
   // §6.3 — care text is held against the fabric, so a product with pieces in
   // two fabrics has two care notes. De-duplicated by fabric id, not by text.
-  const fabrics = [...new Map(product.pieces.map((piece) => [piece.fabric.id, piece.fabric])).values()];
+  const fabrics = [
+    ...new Map(product.pieces.map((piece) => [piece.fabric.id, piece.fabric])).values(),
+  ];
 
   return (
     <div className="page-shell py-10">

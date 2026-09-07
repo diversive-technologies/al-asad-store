@@ -111,7 +111,11 @@ export function CodeSignInForm({ messages, mobileExample }: CodeSignInFormProps)
       </Field>
 
       {!isSent ? null : (
-        <Field id="code" label={t.codeLabel} hint={devCode === null ? undefined : `${t.testCode}: ${devCode}`}>
+        <Field
+          id="code"
+          label={t.codeLabel}
+          hint={devCode === null ? undefined : `${t.testCode}: ${devCode}`}
+        >
           {(aria) => (
             <Input
               {...aria}

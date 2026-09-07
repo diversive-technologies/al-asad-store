@@ -22,8 +22,7 @@ import type { Suggestions } from '../schemas/search.schema';
  * plausible-looking, and wrong the moment two products share a word.
  */
 export type SuggestionDestination =
-  | { kind: 'SEARCH'; term: string }
-  | { kind: 'PRODUCT'; slug: string };
+  { kind: 'SEARCH'; term: string } | { kind: 'PRODUCT'; slug: string };
 
 export interface SuggestionOption {
   id: string;
@@ -38,31 +37,27 @@ export interface SuggestionOption {
 export const NO_ACTIVE_OPTION = -1;
 
 export function toSuggestionOptions(suggestions: Suggestions): readonly SuggestionOption[] {
-  const terms = suggestions.terms.map(
-    (term): SuggestionOption => ({
-      // Prefixed so a term and a product that happen to share text cannot
-      // collide on `key` or on `aria-activedescendant` (CMP-10).
-      id: `term:${term}`,
-      label: term,
-      destination: { kind: 'SEARCH', term },
-      product: null,
-    }),
-  );
+  const terms = suggestions.terms.map((term): SuggestionOption => ({
+    // Prefixed so a term and a product that happen to share text cannot
+    // collide on `key` or on `aria-activedescendant` (CMP-10).
+    id: `term:${term}`,
+    label: term,
+    destination: { kind: 'SEARCH', term },
+    product: null,
+  }));
 
-  const products = suggestions.products.map(
-    (product): SuggestionOption => ({
-      id: `product:${product.id}`,
-      label: product.name,
-      /*
-       * Straight to the product. This used to run a search for the product's
-       * NAME, because `/catalogue/[slug]` did not exist yet and a suggestion
-       * leading to a 404 is worse than one leading to a result set containing
-       * the item. M3 built that route, so the compromise is gone.
-       */
-      destination: { kind: 'PRODUCT', slug: product.slug },
-      product,
-    }),
-  );
+  const products = suggestions.products.map((product): SuggestionOption => ({
+    id: `product:${product.id}`,
+    label: product.name,
+    /*
+     * Straight to the product. This used to run a search for the product's
+     * NAME, because `/catalogue/[slug]` did not exist yet and a suggestion
+     * leading to a 404 is worse than one leading to a result set containing
+     * the item. M3 built that route, so the compromise is gone.
+     */
+    destination: { kind: 'PRODUCT', slug: product.slug },
+    product,
+  }));
 
   return [...terms, ...products];
 }

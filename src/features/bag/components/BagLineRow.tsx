@@ -48,12 +48,21 @@ export function BagLineRow({
         href={ROUTES.catalogue.detail(line.slug)}
         className="rounded-card bg-surface-muted focus-visible:ring-brand-500 relative size-20 shrink-0 overflow-hidden focus-visible:ring-2 focus-visible:outline-none"
       >
-        <Image src={line.imageUrl} alt={line.name} fill sizes={THUMB_SIZES} className="object-cover" />
+        <Image
+          src={line.imageUrl}
+          alt={line.name}
+          fill
+          sizes={THUMB_SIZES}
+          className="object-cover"
+        />
       </Link>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <Link href={ROUTES.catalogue.detail(line.slug)} className="text-fg text-sm hover:underline">
+          <Link
+            href={ROUTES.catalogue.detail(line.slug)}
+            className="text-fg text-sm hover:underline"
+          >
             {line.name}
           </Link>
           <span className="text-fg shrink-0 text-sm">

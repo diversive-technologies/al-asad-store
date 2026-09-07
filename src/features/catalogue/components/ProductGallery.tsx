@@ -94,7 +94,14 @@ export function ProductGallery({ media, productName, messages }: ProductGalleryP
                   index === activeIndex ? 'ring-brand-600 ring-2' : 'opacity-70 hover:opacity-100',
                 )}
               >
-                <Image src={item.url} alt="" aria-hidden fill sizes={THUMB_SIZES} className="object-cover" />
+                <Image
+                  src={item.url}
+                  alt=""
+                  aria-hidden
+                  fill
+                  sizes={THUMB_SIZES}
+                  className="object-cover"
+                />
               </button>
             </li>
           ))}

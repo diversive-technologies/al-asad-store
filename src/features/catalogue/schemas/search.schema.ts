@@ -115,4 +115,3 @@ export const suggestionsSchema = z.object({
 });
 
 export type Suggestions = z.infer<typeof suggestionsSchema>;
-  

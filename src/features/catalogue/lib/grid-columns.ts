@@ -45,9 +45,7 @@ export const GRID_COLUMNS_COOKIE = 'grid-columns';
 export const GRID_COLUMNS_ATTRIBUTE = 'data-grid-columns';
 
 export function isMobileColumns(value: unknown): value is MobileColumns {
-  return (
-    typeof value === 'number' && (MOBILE_COLUMN_OPTIONS as readonly number[]).includes(value)
-  );
+  return typeof value === 'number' && (MOBILE_COLUMN_OPTIONS as readonly number[]).includes(value);
 }
 
 /**

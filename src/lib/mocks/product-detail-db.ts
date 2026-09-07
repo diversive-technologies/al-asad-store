@@ -1,11 +1,6 @@
 import type { Locale } from '@/i18n/locales';
 
-import {
-  CATALOGUE,
-  frameUrls,
-  vocabularyLabel,
-  type CatalogueRecord,
-} from './catalogue-db';
+import { CATALOGUE, frameUrls, vocabularyLabel, type CatalogueRecord } from './catalogue-db';
 
 /**
  * D1 — the product-page fixture, derived from the SAME `CATALOGUE` records the
@@ -119,15 +114,24 @@ interface ColourDetail {
 const COLOUR_DETAIL: Record<string, ColourDetail> = {
   maroon: {
     hex: '#5c2b38',
-    description: { en: 'A deep wine red, closer to brown than to scarlet.', ur: 'گہرا مرون، سرخ سے زیادہ بھورے کی طرف۔' },
+    description: {
+      en: 'A deep wine red, closer to brown than to scarlet.',
+      ur: 'گہرا مرون، سرخ سے زیادہ بھورے کی طرف۔',
+    },
   },
   emerald: {
     hex: '#3c5a3a',
-    description: { en: 'A rich mid green with a warm undertone.', ur: 'گہرا سبز، گرم جھلک کے ساتھ۔' },
+    description: {
+      en: 'A rich mid green with a warm undertone.',
+      ur: 'گہرا سبز، گرم جھلک کے ساتھ۔',
+    },
   },
   bottle: {
     hex: '#26382c',
-    description: { en: 'A very dark green that reads almost black indoors.', ur: 'بہت گہرا سبز، اندر تقریباً کالا لگتا ہے۔' },
+    description: {
+      en: 'A very dark green that reads almost black indoors.',
+      ur: 'بہت گہرا سبز، اندر تقریباً کالا لگتا ہے۔',
+    },
   },
   olive: {
     hex: '#5b6340',
@@ -135,11 +139,17 @@ const COLOUR_DETAIL: Record<string, ColourDetail> = {
   },
   walnut: {
     hex: '#4c352b',
-    description: { en: 'A warm dark brown, like polished wood.', ur: 'گرم گہرا بھورا، پالش شدہ لکڑی جیسا۔' },
+    description: {
+      en: 'A warm dark brown, like polished wood.',
+      ur: 'گرم گہرا بھورا، پالش شدہ لکڑی جیسا۔',
+    },
   },
   graphite: {
     hex: '#585d63',
-    description: { en: 'A mid grey with a cool, slightly blue cast.', ur: 'درمیانہ سرمئی، ہلکی نیلی جھلک کے ساتھ۔' },
+    description: {
+      en: 'A mid grey with a cool, slightly blue cast.',
+      ur: 'درمیانہ سرمئی، ہلکی نیلی جھلک کے ساتھ۔',
+    },
   },
   stone: {
     hex: '#b4a99c',
@@ -147,27 +157,45 @@ const COLOUR_DETAIL: Record<string, ColourDetail> = {
   },
   ivory: {
     hex: '#efe9dd',
-    description: { en: 'A warm off-white with a soft cream cast.', ur: 'گرم سفیدی، ہلکی کریمی جھلک کے ساتھ۔' },
+    description: {
+      en: 'A warm off-white with a soft cream cast.',
+      ur: 'گرم سفیدی، ہلکی کریمی جھلک کے ساتھ۔',
+    },
   },
   charcoal: {
     hex: '#3f4147',
-    description: { en: 'A near-black grey that reads softer than black.', ur: 'سیاہی مائل سرمئی، کالے سے نرم۔' },
+    description: {
+      en: 'A near-black grey that reads softer than black.',
+      ur: 'سیاہی مائل سرمئی، کالے سے نرم۔',
+    },
   },
   slate: {
     hex: '#59637d',
-    description: { en: 'A dusty blue-grey, muted rather than bright.', ur: 'دھیما نیلا سرمئی، چمکدار نہیں۔' },
+    description: {
+      en: 'A dusty blue-grey, muted rather than bright.',
+      ur: 'دھیما نیلا سرمئی، چمکدار نہیں۔',
+    },
   },
   taupe: {
     hex: '#9c8878',
-    description: { en: 'A soft grey-brown that sits between beige and mocha.', ur: 'نرم سرمئی بھورا، بیج اور کافی کے درمیان۔' },
+    description: {
+      en: 'A soft grey-brown that sits between beige and mocha.',
+      ur: 'نرم سرمئی بھورا، بیج اور کافی کے درمیان۔',
+    },
   },
   rust: {
     hex: '#a55f2c',
-    description: { en: 'A warm burnt orange with a brown depth.', ur: 'گرم زنگی نارنجی، بھوری گہرائی کے ساتھ۔' },
+    description: {
+      en: 'A warm burnt orange with a brown depth.',
+      ur: 'گرم زنگی نارنجی، بھوری گہرائی کے ساتھ۔',
+    },
   },
   navy: {
     hex: '#22304d',
-    description: { en: 'A deep blue, dark enough to pass for black at night.', ur: 'گہرا نیلا، رات میں تقریباً کالا لگتا ہے۔' },
+    description: {
+      en: 'A deep blue, dark enough to pass for black at night.',
+      ur: 'گہرا نیلا، رات میں تقریباً کالا لگتا ہے۔',
+    },
   },
 };
 
@@ -285,7 +313,8 @@ function stockTable(): Map<string, number> {
       piece.sizes.forEach((size, sizeIndex) => {
         // One piece of some SETs is gone entirely — the case §16 cares about.
         const pieceGone =
-          !record.isInStock || (record.type === 'SET' && productIndex % 9 === 4 && pieceIndex === 1);
+          !record.isInStock ||
+          (record.type === 'SET' && productIndex % 9 === 4 && pieceIndex === 1);
         // A scattered but fixed pattern, so a screenshot and a bug report agree.
         const soldOut = (productIndex + sizeIndex * 3 + pieceIndex) % 7 === 2;
         const low = (productIndex + sizeIndex) % 5 === 1;
@@ -506,7 +535,12 @@ export function productAvailabilityFor(
   // The backend's verdict across the whole product, stated rather than derived
   // by whoever renders it. §16: a SET is unbuyable when ONE piece is gone.
   const anyPieceGone = pieces.some((piece) => piece.status === 'SOLD_OUT');
-  const status = !record.isInStock || anyPieceGone ? 'SOLD_OUT' : record.id.endsWith('3') ? 'LOW_STOCK' : 'IN_STOCK';
+  const status =
+    !record.isInStock || anyPieceGone
+      ? 'SOLD_OUT'
+      : record.id.endsWith('3')
+        ? 'LOW_STOCK'
+        : 'IN_STOCK';
 
   return { productId: record.id, status, pieces };
 }

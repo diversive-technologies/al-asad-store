@@ -104,7 +104,11 @@ describe('unifiedSizeOf', () => {
   });
 
   it('reports nothing once one piece is overridden', () => {
-    const mixed = setPieceSize(applyUnifiedSize(SET, initialSelection(SET), MEDIUM), 'trouser' as PieceId, SMALL);
+    const mixed = setPieceSize(
+      applyUnifiedSize(SET, initialSelection(SET), MEDIUM),
+      'trouser' as PieceId,
+      SMALL,
+    );
     expect(unifiedSizeOf(SET, mixed)).toBeNull();
   });
 
@@ -137,7 +141,10 @@ describe('isSelectionComplete', () => {
   it('needs the one choice for a SIMPLE product', () => {
     expect(isSelectionComplete(SIMPLE, initialSelection(SIMPLE))).toBe(false);
     expect(
-      isSelectionComplete(SIMPLE, setPieceSize(initialSelection(SIMPLE), 'shirt' as PieceId, SMALL)),
+      isSelectionComplete(
+        SIMPLE,
+        setPieceSize(initialSelection(SIMPLE), 'shirt' as PieceId, SMALL),
+      ),
     ).toBe(true);
   });
 });

@@ -105,28 +105,28 @@ export async function CatalogueScreen({
             </p>
 
             <div className="listing-controls">
-            {/*
-             * The ONLY copy of the panel now. It used to be rendered twice —
-             * once for a permanent desktop rail and once here — and dropping
-             * the rail dropped the duplicate with it.
-             */}
-            <FilterDrawer messages={messages} activeCount={activeFilterCount}>
-              <FilterPanel
-                query={query}
-                facets={results.facets}
-                basePath={basePath}
-                locale={locale}
-                messages={messages}
-                hideHeading
-              />
-            </FilterDrawer>
+              {/*
+               * The ONLY copy of the panel now. It used to be rendered twice —
+               * once for a permanent desktop rail and once here — and dropping
+               * the rail dropped the duplicate with it.
+               */}
+              <FilterDrawer messages={messages} activeCount={activeFilterCount}>
+                <FilterPanel
+                  query={query}
+                  facets={results.facets}
+                  basePath={basePath}
+                  locale={locale}
+                  messages={messages}
+                  hideHeading
+                />
+              </FilterDrawer>
 
-            {/* Filter · layout · sort, in that order, because the layout control
+              {/* Filter · layout · sort, in that order, because the layout control
                 is a view preference and sits between what is shown and how it
                 is ordered. Hidden from `md` up — see the component. */}
-            <GridColumnsControl messages={messages} />
+              <GridColumnsControl messages={messages} />
 
-            <SortControl query={query} basePath={basePath} messages={messages} />
+              <SortControl query={query} basePath={basePath} messages={messages} />
             </div>
           </header>
 

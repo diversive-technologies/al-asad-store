@@ -139,7 +139,10 @@ export function authenticateByCode(mobile: string, code: string): AuthOutcome {
 
   const issued = CODES.get(identifier);
   const isUsable =
-    issued !== undefined && !issued.isSpent && issued.expiresAt > now && issued.code === code.trim();
+    issued !== undefined &&
+    !issued.isSpent &&
+    issued.expiresAt > now &&
+    issued.code === code.trim();
 
   if (!isUsable) {
     recordFailure(identifier, now);
@@ -160,15 +163,14 @@ export function authenticateByCode(mobile: string, code: string): AuthOutcome {
    */
   return {
     kind: 'AUTHENTICATED',
-    session: account === undefined
-      ? { displayName: 'Customer', email: '', mobile: identifier }
-      : sessionFor(account),
+    session:
+      account === undefined
+        ? { displayName: 'Customer', email: '', mobile: identifier }
+        : sessionFor(account),
   };
 }
 
-export type RegisterOutcome =
-  | { kind: 'REGISTERED'; session: SessionPayload }
-  | { kind: 'TAKEN' };
+export type RegisterOutcome = { kind: 'REGISTERED'; session: SessionPayload } | { kind: 'TAKEN' };
 
 /** Create an account. Not in §11's exposed list, but §11 owns accounts. */
 export function register(input: {
