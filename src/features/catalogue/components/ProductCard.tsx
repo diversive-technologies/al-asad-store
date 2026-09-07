@@ -65,7 +65,7 @@ export function ProductCard({
 
   return (
     <article
-      className="group relative flex flex-col"
+      className="product-card group relative flex flex-col"
       onMouseEnter={() => {
         setIsRevealed(true);
       }}
@@ -174,14 +174,14 @@ export function ProductCard({
 
       {/* The persistent strip: the two facts a grid is scanned for. */}
       <div className="mt-3 flex flex-col gap-1 text-start">
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="card-line flex items-baseline justify-between gap-3">
           <h3 className="text-fg truncate text-sm font-medium">{product.name}</h3>
           <bdi className="text-fg shrink-0 text-sm font-medium">
             {formatMoneyMinor(product.pricing.currentMinor, locale)}
           </bdi>
         </div>
 
-        <div className="text-fg-muted flex items-baseline justify-between gap-3 text-xs">
+        <div className="card-line text-fg-muted flex items-baseline justify-between gap-3 text-xs">
           {/* I18N-06: independent nouns as separate nodes, not one string. */}
           <p className="truncate">
             <span>{product.fabricName}</span>

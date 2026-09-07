@@ -54,8 +54,44 @@ Last updated: 2026-09-07. Last commit: `01e09cb` (tree dirty — see below).
   The card's `<Link>` is an OVERLAY rather than a wrapper, because a `<button>`
   inside an `<a>` is invalid HTML whose clicks navigate before their own handler
   runs. Every control sits above it on its own z-index.
-- **Grid** — vertical stagger via the `staggered-grid` utility in `globals.css`,
-  scaling 2 / 3 / 4 / 5 / 6 columns from mobile to 2560px.
+- **Grid** — uniform rows via the `product-grid` utility, scaling
+  **2 / 3 / 4 / 6** columns from mobile to 2560px. The vertical stagger is gone
+  by operator decision; §28.1's one line asking for a "repeating asymmetric
+  grid" is knowingly not met.
+
+  **5 columns went with it, and that is the load-bearing part.** Every column
+  count must divide `DEFAULT_PAGE_SIZE` exactly, or a page ends on a part-filled
+  row while its next products sit on page 2 — a hole in the grid with stock
+  behind it. 24 / 5 = 4.8, so from 1920px every page showed four tiles in its
+  last row. 24 divides by 1, 2, 3, 4 and 6. `GRID_COLUMN_COUNTS` in
+  `features/catalogue/lib/grid-columns.ts` is the authoritative list and
+  `grid-columns.test.ts` asserts the division, so a count that does not divide
+  fails the suite instead of appearing as a gap on one monitor width.
+
+  Measured after: 1280 → 4 columns at 206px, 1920 → 4 at 366px, 2560 → 6 at
+  343px, every row full at all three.
+- **Small screens choose their own density.** Below 48rem a `radiogroup` beside
+  Filters offers 1, 2 or 3 columns, on the pattern the operator pointed at on
+  Monark. Desktop is deliberately NOT offered the choice: there is one right
+  answer at each width and the breakpoints give it.
+
+  The preference is a **cookie**, not localStorage, for the reason the theme is:
+  the server can read a cookie, so the first paint is already correct — verified
+  by fetching the page's own HTML and finding `data-grid-columns="3"` in the
+  server's markup. localStorage would have rendered the default grid and
+  relaid every tile once an effect ran. `GridColumnsScope` is a client wrapper
+  around SERVER-rendered children, so the filter panel, the grid and every card
+  inside it ship no extra JavaScript.
+
+  The CSS override is bounded to `max-width: 47.9375rem`, so a cookie set on a
+  phone cannot follow the customer to a desktop and overrule the breakpoints —
+  checked with a `3` cookie at 1280px, which still renders 4 columns.
+- **A narrow card stacks its name over its price**, via a CONTAINER query on the
+  card rather than a media query — what decides it is the card's width, and the
+  same card appears in the grid, the search panel and a rail at different widths
+  for one viewport. At 3-up on a 375px screen a tile is 104px and the name was
+  truncating to "Pl…"; stacked it gets the whole tile. It improves the 2-up
+  default too: "Plain Waistcoat Suit" used to truncate and now fits.
 - **Filter panel** — all six filters of section 28.1 with contextual facet
   counts, removable chips, Clear all and instant apply. Every control is a
   `<Link>`, so the panel is a Server Component shipping no JavaScript and every
@@ -561,6 +597,15 @@ out, and `/order/AA100001` still renders on a fresh load.
 - **`react-hooks/refs` flags a ref read by a callback composed during render.**
   `form.handleSubmit(onSubmit)` in JSX counts, even though the callback only
   runs on submit. Compose it inside the event handler instead.
+- **A page size that does not divide by the column count leaves a hole.** It is
+  silent — nothing throws, and it only shows on the monitor widths where that
+  column count applies, which is why 24-over-5 columns survived at 1920px for so
+  long. Any new breakpoint has to divide `DEFAULT_PAGE_SIZE`.
+- **`align-items: flex-start` defeats `truncate`.** A flex-start child is sized
+  to its content, so a heading kept its full intrinsic width, overflowed its
+  tile and never showed an ellipsis — the ellipsis needs a box NARROWER than the
+  text to appear in. `stretch` is what makes a stacked flex child fill and
+  therefore truncate.
 - **`inset-block-start-0` and `inset-inline-end-0` are NOT Tailwind utilities.**
   They are CSS property names; Tailwind's logical inset utilities are `start-*`
   and `end-*`, with `top-*`/`bottom-*` for the block axis (which does not flip in

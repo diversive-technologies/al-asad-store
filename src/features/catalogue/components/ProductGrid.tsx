@@ -11,22 +11,23 @@ export interface ProductGridProps {
 }
 
 /**
- * Section 28.1's "repeating asymmetric grid", as a vertical stagger.
+ * Section 28.1's listing grid. Every tile is the same size and the same 4:5
+ * portrait crop, in uniform rows.
  *
- * Every tile is the same size and the same 4:5 portrait crop; the rhythm comes
- * from alternate columns being dropped, not from some products being larger.
+ * §28.1 asks for a "repeating asymmetric grid" and this is deliberately not
+ * one: the operator asked for the simple layout instead, and the stagger it
+ * replaced had a cost beyond taste. A dropped alternate column makes the row
+ * boundary ambiguous, so a part-filled last row reads as a broken layout rather
+ * than as the end of a page — and that is exactly the state the page size is
+ * now chosen to avoid.
  *
- * That distinction matters commercially. A mosaic decides, by grid position,
- * which products get a big tile — and the customer has just told us their
- * priority by choosing a sort. Giving product three a quarter of the space of
- * product one contradicts the order they asked for. Here nothing is demoted, and
- * a filtered result can never produce a page of all-large or all-small tiles.
+ * Nothing here decides tile size by grid position, which is the property worth
+ * keeping from the asymmetric version: the customer has just told us their
+ * priority by choosing a sort, and giving product three a quarter of the space
+ * of product one would contradict the order they asked for.
  *
- * It also cannot leave a hole: a short final row is simply a short row, with no
- * two-row frame to fill.
- *
- * The offsets themselves live in the `staggered-grid` utility, where the column
- * arithmetic can be expressed once per breakpoint (SSOT-01, STY-02).
+ * The column counts live in the `product-grid` utility, where they can be
+ * expressed once per breakpoint (SSOT-01, STY-02).
  */
 
 /** PERF-07: roughly the first two rows at the widest breakpoint. */
@@ -34,7 +35,7 @@ const ABOVE_THE_FOLD = 8;
 
 export function ProductGrid({ entries, locale, messages }: ProductGridProps) {
   return (
-    <ul className="staggered-grid pb-stagger">
+    <ul className="product-grid">
       {entries.map((entry, index) => (
         // CMP-10: a stable, domain-derived key.
         <li key={entry.product.id}>

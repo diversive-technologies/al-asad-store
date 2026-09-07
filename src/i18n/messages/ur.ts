@@ -258,6 +258,8 @@ export const ur: Messages = {
     noResultsHeading: 'ان فلٹرز سے کچھ نہیں ملا',
     noResultsBody: 'کوئی فلٹر ہٹا کر دیکھیں، یا پورا مجموعہ دیکھیں۔',
     clearFilters: 'تمام فلٹر ہٹائیں',
+    layoutLabel: 'گرڈ ترتیب',
+    layoutOption: 'ہر قطار میں {count} دکھائیں',
     browseAll: 'سب کچھ دیکھیں',
     previousPage: 'پچھلا صفحہ',
     nextPage: 'اگلا صفحہ',

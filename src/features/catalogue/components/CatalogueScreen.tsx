@@ -6,6 +6,7 @@ import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 import { formatPlural } from '@/lib/utils/format';
 
+import { getMobileColumns } from '../lib/grid-columns.server';
 import { mergeAvailability } from '../lib/product-card';
 import { hasActiveFilters, listActiveFilters } from '../lib/search-params';
 import type { ProductAvailability } from '../schemas/availability.schema';
@@ -13,6 +14,8 @@ import type { CatalogueQuery, ResultPage } from '../schemas/search.schema';
 import { FilterChips } from './FilterChips';
 import { FilterDrawer } from './FilterDrawer';
 import { FilterPanel } from './FilterPanel';
+import { GridColumnsControl } from './GridColumnsControl';
+import { GridColumnsScope } from './GridColumnsScope';
 import { Pagination } from './Pagination';
 import { ProductGrid } from './ProductGrid';
 import { SortControl } from './SortControl';
@@ -34,7 +37,7 @@ export interface CatalogueScreenProps {
  * listing is that query with an empty term. Two screens would mean two grids,
  * two paginations and two ways for them to disagree, so there is one.
  */
-export function CatalogueScreen({
+export async function CatalogueScreen({
   query,
   results,
   availabilities,
@@ -50,6 +53,14 @@ export function CatalogueScreen({
    * the chips can never disagree about how many filters are on (PD-01).
    */
   const activeFilterCount = listActiveFilters(query, results.facets).length;
+
+  /*
+   * Read here rather than in each route, because both `/catalogue` and
+   * `/search` render this shell and the preference belongs to the grid, not to
+   * the address. Reading it on the server is what keeps the first paint correct
+   * — see `grid-columns.server.ts`.
+   */
+  const mobileColumns = await getMobileColumns();
 
   return (
     <div className="page-shell py-10">
@@ -74,7 +85,7 @@ export function CatalogueScreen({
         </p>
       </header>
 
-      <div className="listing-layout">
+      <GridColumnsScope initialColumns={mobileColumns}>
         <FilterPanel
           query={query}
           facets={results.facets}
@@ -104,6 +115,11 @@ export function CatalogueScreen({
                 hideHeading
               />
             </FilterDrawer>
+
+            {/* Filter · layout · sort, in that order, because the layout control
+                is a view preference and sits between what is shown and how it
+                is ordered. Hidden from `md` up — see the component. */}
+            <GridColumnsControl messages={messages} />
 
             <SortControl query={query} basePath={basePath} messages={messages} />
           </div>
@@ -138,7 +154,7 @@ export function CatalogueScreen({
             </>
           )}
         </main>
-      </div>
+      </GridColumnsScope>
     </div>
   );
 }

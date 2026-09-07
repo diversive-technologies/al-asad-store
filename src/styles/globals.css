@@ -71,7 +71,6 @@
   /* How far the ambient glow reaches below the film before it is fully faded. */
   --spacing-ambient-spill: 7.5rem;
   /* How far alternate columns of the listing grid drop. */
-  --spacing-stagger: 3rem;
   --spacing-filter-rail: 16rem;
   --spacing-search-closed: 2.25rem;
   --spacing-search-open: 24rem;
@@ -286,81 +285,98 @@ body:has([data-hero]) header[data-scrolled='false']::before {
  * which columns count as "alternate" changes with the column count.
  */
 /* Reserves the overhang left by the dropped column at the end of the grid. */
-@utility pb-stagger {
-  padding-block-end: var(--spacing-stagger);
-}
-
-@utility staggered-grid {
+/*
+ * The product grid: one tile size, one crop, uniform rows.
+ *
+ * It replaced a vertical stagger, and the reason is arithmetic rather than
+ * taste. Every column count here must divide `DEFAULT_PAGE_SIZE` exactly, or a
+ * page ends on a part-filled row while its next products sit on page 2 — a hole
+ * in the grid with stock behind it. 24 divides by 1, 2, 3, 4 and 6, which is
+ * why 5 is missing: it used to appear at 120rem and left four tiles in the last
+ * row of every page.
+ *
+ * `GRID_COLUMN_COUNTS` in `features/catalogue/lib/grid-columns.ts` is the
+ * authoritative list and a test asserts the division. A media query cannot be
+ * driven from TypeScript, so these counts MIRROR it — change one, change both.
+ */
+@utility product-grid {
   display: grid;
   align-items: start;
   gap: 1rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 
-  & > *:nth-child(2n) {
-    margin-block-start: var(--spacing-stagger);
-  }
-
   @media (min-width: 48rem) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.25rem;
-
-    /*
-     * `:nth-child(n)` rather than `*`, and the difference is not cosmetic: the
-     * reset has to match the specificity of the offset rules it undoes. A bare
-     * `& > *` is (0,1,0) while `& > *:nth-child(2n)` is (0,2,0), so the narrower
-     * breakpoint's offsets survived into the wider ones and the columns dropped
-     * in the wrong pattern. Media queries add no specificity — only source order
-     * breaks the tie, and only at equal specificity.
-     */
-    & > *:nth-child(n) {
-      margin-block-start: 0;
-    }
-    & > *:nth-child(3n + 2) {
-      margin-block-start: var(--spacing-stagger);
-    }
   }
 
   /*
-   * 80rem rather than 64rem, because from 64rem up the filter rail takes a fixed
-   * 16rem out of the row: four columns at 1024px left 142px tiles.
-   *
-   * An EVEN column count always staggers on `2n` — positions 2, 4, 6 … land in
-   * columns 2, 4, 6 … and then repeat in step. Only an odd count needs the
-   * column arithmetic spelled out, which is why 3 and 5 are the verbose ones.
+   * 80rem rather than 64rem, because from 64rem up the filter rail takes a
+   * fixed 16rem out of the row: four columns at 1024px left 142px tiles.
    */
   @media (min-width: 80rem) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1.5rem;
-
-    & > *:nth-child(n) {
-      margin-block-start: 0;
-    }
-    & > *:nth-child(2n) {
-      margin-block-start: var(--spacing-stagger);
-    }
-  }
-
-  @media (min-width: 120rem) {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-
-    & > *:nth-child(n) {
-      margin-block-start: 0;
-    }
-    & > *:nth-child(5n + 2),
-    & > *:nth-child(5n + 4) {
-      margin-block-start: var(--spacing-stagger);
-    }
   }
 
   @media (min-width: 140rem) {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
 
-    & > *:nth-child(n) {
-      margin-block-start: 0;
-    }
-    & > *:nth-child(2n) {
-      margin-block-start: var(--spacing-stagger);
-    }
+@utility product-card {
+  container-type: inline-size;
+}
+
+/*
+ * A narrow card stacks its name over its price instead of setting them on one
+ * line.
+ *
+ * At three columns on a 375px screen a tile is ~104px wide. The price is
+ * `shrink-0`, so on a shared line the name was left about 40px and truncated to
+ * "Pl…" — a product card that does not say which product. Stacked, the name
+ * gets the whole tile.
+ *
+ * A CONTAINER query rather than a media query, deliberately: what decides this
+ * is how wide the card is, not how wide the screen is. The card appears in the
+ * grid, in the search panel and in a rail, and each gives it a different width
+ * at the same viewport — so the card has to answer for itself.
+ */
+@container (max-width: 11rem) {
+  .card-line {
+    flex-direction: column;
+    /*
+     * `stretch`, not `flex-start`. A flex-start child is sized to its content,
+     * so the name kept its full intrinsic width, overflowed the tile and its
+     * `truncate` never engaged — the ellipsis needs a box narrower than the
+     * text to appear in.
+     */
+    align-items: stretch;
+    gap: 0;
+  }
+}
+
+/*
+ * The reader's small-screen column choice, from the `grid-columns` cookie.
+ *
+ * Unlayered ON PURPOSE, and at the top level rather than inside the utility:
+ * `@utility` output lands in `@layer utilities`, and an unlayered rule beats a
+ * layered one whatever the specificity. Moving these inside `product-grid`
+ * would make them lose to it.
+ *
+ * Bounded to small screens, because that is the only place the control is
+ * offered — above 48rem the width decides and a stale cookie must not override
+ * the breakpoints.
+ */
+@media (max-width: 47.9375rem) {
+  [data-grid-columns='1'] .product-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  [data-grid-columns='3'] .product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Three tiles on a 375px screen: the gap has to give back its share. */
+    gap: 0.5rem;
   }
 }
 

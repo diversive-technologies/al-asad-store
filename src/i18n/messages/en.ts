@@ -281,6 +281,9 @@ export const en = {
     previousPage: 'Previous page',
     nextPage: 'Next page',
     paginationLabel: 'Pagination',
+    /* The small-screen layout switcher. `{count}` is the column count. */
+    layoutLabel: 'Grid layout',
+    layoutOption: 'Show {count} per row',
     goToPage: { one: 'Go to page {count}', other: 'Go to page {count}' },
     quickAdd: 'Quick add',
     quickAddPending: 'Quick add arrives with the bag',
