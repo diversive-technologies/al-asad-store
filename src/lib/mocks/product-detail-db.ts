@@ -1,6 +1,11 @@
 import type { Locale } from '@/i18n/locales';
 
-import { CATALOGUE, photoUrl, vocabularyLabel, type CatalogueRecord } from './catalogue-db';
+import {
+  CATALOGUE,
+  frameUrls,
+  vocabularyLabel,
+  type CatalogueRecord,
+} from './catalogue-db';
 
 /**
  * D1 — the product-page fixture, derived from the SAME `CATALOGUE` records the
@@ -399,18 +404,28 @@ export function toProductDetail(record: CatalogueRecord, locale: Locale): Produc
         : `${vocabularyLabel(locale, record.colour)} ${vocabularyLabel(locale, record.fabric)} میں ${vocabularyLabel(locale, record.garment)}، روزمرہ پہننے کے لیے۔`,
     type: record.type,
     /*
-     * ONE shot, because one shot is what exists. The gallery was cycling four
-     * placeholder swatches to look like a real set of views; with the client's
-     * own photography there is a single frame per garment, and inventing extra
-     * angles by repeating other products' pictures would be a lie told by the
-     * fixture. A11Y-04: the alt text is authored, not generated.
+     * EVERY frame the garment has, which is the same set the catalogue card
+     * cycles — `frameUrls` is the one place that knows how many there are, so
+     * the card and the product page cannot disagree (PD-01).
+     *
+     * This used to be a single shot, and the comment explaining why outlived
+     * the fact: when the client's photography arrived there genuinely was one
+     * frame per garment, and repeating another product's picture to pad a
+     * gallery would have been a lie told by the fixture. Since then each
+     * garment has four further views cropped from its own collage, so the
+     * gallery showing one of five was simply hiding the other four.
+     *
+     * A11Y-04: the first frame names the garment; the rest are further views of
+     * something the page already names, so an empty alt is correct rather than
+     * lazy — and it is what `ProductGallery` expects.
      */
-    media: [
-      {
-        url: photoUrl(record.photo.file),
-        alt: `${vocabularyLabel(locale, record.colour)} ${vocabularyLabel(locale, record.garment)}`,
-      },
-    ],
+    media: frameUrls(record.photo).map((url, position) => ({
+      url,
+      alt:
+        position === 0
+          ? `${vocabularyLabel(locale, record.colour)} ${vocabularyLabel(locale, record.garment)}`
+          : '',
+    })),
     pieces,
     pricing: { currentMinor: record.currentMinor, originalMinor: record.originalMinor },
     isUnstitched,

@@ -1,6 +1,27 @@
 import type { NextConfig } from 'next';
 
 /**
+ * Hosts allowed to request Next's own dev resources (`/_next/*`).
+ *
+ * Next blocks these cross-origin by default, which is why the store opened on a
+ * phone over the LAN but nothing interactive worked: the HTML and the images
+ * came back, every JavaScript chunk was refused, and a page with no client
+ * JavaScript still navigates — `<Link>` degrades to a plain `<a>` — while search,
+ * the bag panel and checkout, which need it, silently do nothing.
+ *
+ * It is read from the environment rather than written here because a LAN
+ * address is MACHINE-LOCAL: it belongs to whoever is testing, it changes when
+ * the router reissues the lease, and SEC-10 keeps internal hostnames out of
+ * committed code. `.env.local` is gitignored; `.env.example` documents it.
+ *
+ * This is a development-only control. It has no effect on a production build.
+ */
+const devAllowedOrigins = (process.env.DEV_ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
+
+/**
  * NEXT-09: remote image hosts are declared here as `remotePatterns` when the
  * CDN origin is known. `images.domains` is deprecated and PROHIBITED.
  */
@@ -33,6 +54,8 @@ const nextConfig: NextConfig = {
    * output format has to be stated here or it falls back to WebP only.
    */
   images: { formats: ['image/avif', 'image/webp'] },
+  // Omitted entirely when unset, so the default (block everything) still holds.
+  ...(devAllowedOrigins.length > 0 ? { allowedDevOrigins: devAllowedOrigins } : {}),
   serverExternalPackages: ['msw', '@mswjs/interceptors'],
 };
 

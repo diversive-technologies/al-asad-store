@@ -623,6 +623,44 @@ body:has([data-hero]) header[data-scrolled='false']::before {
 }
 
 /*
+ * On a touch device the arrows are not drawn at all — the swipe replaces them.
+ *
+ * They were briefly made permanently visible here, because a phone has no hover
+ * and a control revealed by hover is a control that does not exist there. Two
+ * circles pinned over every photograph in the grid is a worse answer than the
+ * gesture people already have for pictures, so `ProductCardFrames` listens for
+ * a swipe and these go away.
+ *
+ * `pointer-events: none` is the load-bearing half. An element at `opacity: 0`
+ * still takes taps, so without it each card kept two invisible 28px hit zones
+ * on the edges of its photograph, stepping the frame when someone meant to open
+ * the product.
+ *
+ * `:focus-visible` brings them back with their pointer events, so a tablet with
+ * a keyboard attached can still reach them — hiding them with `display: none`
+ * would have taken them out of the tab order entirely.
+ *
+ * `(hover: none)` asks the right question: can the PRIMARY input hover? A
+ * laptop with a touchscreen still reports `hover: hover` and keeps the arrows.
+ *
+ * Unlayered and at the top level ON PURPOSE. `@utility` output lands in
+ * `@layer utilities`, and so does Tailwind's `opacity-0` on the element — two
+ * rules of equal specificity in the same layer, where source order decides and
+ * is not ours to control. An unlayered rule beats a layered one outright.
+ */
+@media (hover: none) {
+  .card-frame-control {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .card-frame-control:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/*
  * The size tray, over the foot of the image. It rises rather than appearing, so
  * the eye follows it up from the bag button that opened it.
  */

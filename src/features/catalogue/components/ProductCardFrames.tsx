@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import Image from 'next/image';
 
@@ -17,6 +17,8 @@ export interface ProductCardFramesProps {
   messages: Messages;
   hasPriorityImage: boolean;
   sizes: string;
+  /** The card's link overlay. See the note in `ProductCard` for why it lives here. */
+  children?: ReactNode;
 }
 
 /**
@@ -27,6 +29,16 @@ export interface ProductCardFramesProps {
  * settled on one image long enough to take it in.
  */
 const ADVANCE_MS = 2500;
+
+/**
+ * How far a finger must travel across the card before it counts as a swipe.
+ *
+ * 40px, which is far enough that a tap with a little wobble in it still opens
+ * the product — the whole image is a link, so every accidental swipe is a
+ * navigation the customer did not ask for, and every missed one is a frame they
+ * did not get. The threshold is the only thing separating the two.
+ */
+const SWIPE_MIN_PX = 40;
 
 /**
  * The card's photography: a stack of frames, advanced by hover and by two
@@ -48,6 +60,7 @@ export function ProductCardFrames({
   messages,
   hasPriorityImage,
   sizes,
+  children,
 }: ProductCardFramesProps) {
   const t = messages.catalogue;
   const [index, setIndex] = useState(0);
@@ -102,8 +115,75 @@ export function ProductCardFrames({
     setIndex((current) => (current + delta + images.length) % images.length);
   }
 
+  /*
+   * The swipe.
+   *
+   * Touch is where this matters: the arrows are revealed by hover, and a phone
+   * has none, so on a small screen a swipe is the ONLY way to reach the other
+   * four frames. It is also the gesture people already have for photographs, so
+   * it needs no affordance drawn on top of the picture.
+   *
+   * Deliberately no `touchmove` handler and nothing prevented: the page must
+   * still scroll vertically under the finger, and the browser only knows to do
+   * that if it is left alone. The gesture is judged once, at the end.
+   */
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  /*
+   * Set by a completed swipe and read by the click that the browser fires
+   * afterwards. Without it a swipe would ALSO follow the card's link — the
+   * whole image is an anchor, and a drag that ends on it still produces a click
+   * in some browsers.
+   */
+  const didSwipe = useRef(false);
+
   return (
-    <div className="rounded-card bg-surface-muted relative aspect-[4/5] w-full overflow-hidden">
+    <div
+      className="rounded-card bg-surface-muted relative aspect-[4/5] w-full overflow-hidden"
+      onTouchStart={(event) => {
+        const touch = event.touches[0];
+        if (touch === undefined) return;
+
+        touchStart.current = { x: touch.clientX, y: touch.clientY };
+        didSwipe.current = false;
+      }}
+      onTouchEnd={(event) => {
+        const start = touchStart.current;
+        touchStart.current = null;
+
+        const touch = event.changedTouches[0];
+        if (start === undefined || start === null || touch === undefined) return;
+        if (!hasMultiple) return;
+
+        const dx = touch.clientX - start.x;
+        const dy = touch.clientY - start.y;
+
+        if (Math.abs(dx) < SWIPE_MIN_PX) return;
+        // Mostly vertical means the reader is scrolling the page, not the card.
+        if (Math.abs(dx) <= Math.abs(dy)) return;
+
+        didSwipe.current = true;
+
+        /*
+         * I18N-05 — the gesture mirrors under RTL. Dragging content towards the
+         * reading-end edge means "forwards" in both directions, which is what
+         * every native photo viewer does. Read from the document at event time
+         * rather than from a prop, so there is nothing to get out of step and
+         * no hydration-time guess about direction.
+         */
+        const isRtl = event.currentTarget.ownerDocument.documentElement.dir === 'rtl';
+        const isForward = isRtl ? dx > 0 : dx < 0;
+
+        step(isForward ? 1 : -1);
+      }}
+      onClickCapture={(event) => {
+        if (!didSwipe.current) return;
+
+        // Captured on the way DOWN, so the anchor never sees it.
+        event.preventDefault();
+        event.stopPropagation();
+        didSwipe.current = false;
+      }}
+    >
       {/*
        * The sold-out dimming belongs HERE, on a wrapper, not on each frame.
        *
@@ -139,6 +219,8 @@ export function ProductCardFrames({
         ))}
       </div>
 
+      {children}
+
       {!hasMultiple ? null : (
         <>
           {/*
@@ -146,6 +228,11 @@ export function ProductCardFrames({
            * revealed on hover and focus rather than always drawn, so a grid is
            * not a wall of arrows — but `focus-visible` brings them back for
            * anyone tabbing through.
+           *
+           * On touch they are not drawn at all and the swipe replaces them; see
+           * the `(hover: none)` rule in globals.css, which also takes their
+           * pointer events away so an invisible arrow cannot eat a tap meant
+           * for the product.
            */}
           <button
             type="button"

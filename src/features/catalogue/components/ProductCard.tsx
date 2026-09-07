@@ -102,23 +102,29 @@ export function ProductCard({
           messages={messages}
           hasPriorityImage={hasPriorityImage}
           sizes={sizes}
-        />
-
-        {/*
-         * The link is an OVERLAY rather than a wrapper.
-         *
-         * A card carries real controls now — two arrows, a heart, a quick add —
-         * and a `<button>` inside an `<a>` is invalid HTML whose clicks navigate
-         * before their own handler runs. Covering the image with the anchor
-         * instead keeps the whole tile clickable while leaving every control a
-         * sibling that sits above it.
-         */}
-        <Link
-          href={ROUTES.catalogue.detail(product.slug)}
-          className="rounded-card focus-visible:ring-brand-500 absolute inset-0 z-[1] focus-visible:ring-2 focus-visible:outline-none"
         >
-          <span className="sr-only">{product.name}</span>
-        </Link>
+          {/*
+           * The link is an OVERLAY rather than a wrapper.
+           *
+           * A card carries real controls now — two arrows, a heart, a quick add
+           * — and a `<button>` inside an `<a>` is invalid HTML whose clicks
+           * navigate before their own handler runs. Covering the image with the
+           * anchor instead keeps the whole tile clickable while leaving every
+           * control a sibling that sits above it.
+           *
+           * It is passed INTO the frames rather than rendered beside them
+           * because the frames listen for a swipe, and a touch that lands on
+           * this anchor only bubbles to the anchor's own ancestors. As a
+           * sibling the overlay swallowed every gesture before the carousel
+           * could see it; as a child, the gesture reaches it.
+           */}
+          <Link
+            href={ROUTES.catalogue.detail(product.slug)}
+            className="rounded-card focus-visible:ring-brand-500 absolute inset-0 z-[1] focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <span className="sr-only">{product.name}</span>
+          </Link>
+        </ProductCardFrames>
 
         {badges.length > 0 ? (
           // I18N-04: `start-3` is logical — badges hug the reading-start corner.

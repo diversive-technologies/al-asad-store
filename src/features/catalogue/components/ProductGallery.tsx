@@ -62,11 +62,25 @@ export function ProductGallery({ media, productName, messages }: ProductGalleryP
         />
       </div>
 
+      {/*
+       * ONE line that scrolls, rather than wrapping onto a second row.
+       *
+       * Wrapping made the gallery's height depend on how many shots a garment
+       * happens to have, so the buy box moved down the page from one product
+       * to the next. A scrolling strip is a fixed height whatever the count,
+       * and the overflow is the affordance: a half-visible thumbnail at the
+       * edge says there are more without needing a control to say it.
+       *
+       * `overflow-x`, not a logical property — the inline axis IS the
+       * horizontal one in both locales here, and the scroller starts at the
+       * reading edge under `dir="rtl"` on its own. The thin themed scrollbar
+       * comes from the global rule that already covers nested scrollers.
+       */}
       {media.length < 2 ? null : (
-        <ul aria-label={t.galleryLabel} className="flex flex-wrap gap-2">
+        <ul aria-label={t.galleryLabel} className="flex gap-2 overflow-x-auto pb-1">
           {media.map((item, index) => (
             // CMP-10: the asset URL is the stable key, not the array index.
-            <li key={item.url}>
+            <li key={item.url} className="shrink-0">
               <button
                 type="button"
                 onClick={() => {

@@ -51,6 +51,28 @@ Last updated: 2026-09-07. Last commit: `01e09cb` (tree dirty — see below).
     someone who steered to a frame is looking at that frame. Leaving the card
     clears the pin and returns to the first image.
 
+    On TOUCH there are no arrows at all — the card is SWIPED. A phone has no
+    hover, so an arrow revealed by hover is an arrow that does not exist there;
+    drawing them permanently instead put two circles over every photograph in
+    the grid, which is a worse answer than the gesture people already have for
+    pictures. `(hover: none)` hides them AND takes their pointer events, because
+    an element at `opacity: 0` still eats taps — without that each card kept two
+    invisible 28px hit zones on the edges of its own photograph. `:focus-visible`
+    restores both, so a tablet with a keyboard can still reach them.
+
+    The swipe judges the gesture ONCE, at `touchend`: 40px minimum, and rejected
+    outright if the vertical movement is larger, so scrolling the page past a
+    card never turns a frame. Nothing is prevented during the move, which is
+    what leaves the page free to scroll under the finger. It mirrors under RTL,
+    read from the document at event time rather than from a prop. A completed
+    swipe sets a latch that `onClickCapture` spends: the whole image is an
+    anchor, and without it every swipe would also open the product.
+
+    This is why the link overlay is now a CHILD of `ProductCardFrames` rather
+    than its sibling — a touch that lands on the anchor bubbles only to the
+    anchor's own ancestors, so as a sibling the overlay swallowed every gesture
+    before the carousel could see it.
+
   The card's `<Link>` is an OVERLAY rather than a wrapper, because a `<button>`
   inside an `<a>` is invalid HTML whose clicks navigate before their own handler
   runs. Every control sits above it on its own z-index.
@@ -441,6 +463,17 @@ What that forced, beyond dropping the files in:
   two instances never disagree about colour, because both read it from the photo.
 - **`hoverImageUrl` is null everywhere.** One shot per garment is what exists,
   and pointing the hover at a different garment is worse than no hover.
+- The product page's gallery is ONE LINE that scrolls, not a wrapping strip.
+  Wrapping made its height depend on how many shots a garment happened to have,
+  so the buy box moved down the page from one product to the next; a scroller is
+  a fixed 91px whatever the count, and a half-visible thumbnail at the edge is
+  its own affordance. The thin themed scrollbar comes from the global rule that
+  already covers nested scrollers.
+- The PRODUCT PAGE now shows all five frames too. Its mock was still returning
+  one, with a comment explaining that one shot was all that existed — true when
+  it was written, and outlived by the generated frames. Both surfaces read
+  `frameUrls` now, so the card and the gallery cannot disagree about how many
+  pictures a garment has.
 - The sold-out overlay named "Dupatta", a piece no menswear set has. Now Shalwar,
   the one piece both SET garments share.
 
@@ -498,6 +531,16 @@ out, and `/order/AA100001` still renders on a fresh load.
   the skill is silently dropped — no error, it simply never appears. This was
   hiding `nextjs-guidelines` itself, meaning the BINDING rulebook was not
   auto-triggering. Keep every `description:` under ~500 characters.
+- **Next BLOCKS its own dev resources cross-origin**, so opening the store on a
+  phone over the LAN gives a page that renders and navigates but does nothing
+  interactive: every `/_next/*` chunk is refused, and with no client JavaScript
+  a `<Link>` still works as a plain `<a>` while search, the bag panel and
+  checkout silently do not. The tell is `Blocked cross-origin request to
+  Next.js dev resource` in the server log, which is a warning rather than an
+  error and is easy to scroll past. Fixed by `allowedDevOrigins`, fed from
+  `DEV_ALLOWED_ORIGINS` in `.env.local` — a LAN address is machine-local, it
+  changes with the DHCP lease, and SEC-10 keeps it out of committed config.
+  Development only; it has no effect on a production build.
 - **MSW dies on hot reload** unless it is a module-scoped singleton in `node.ts`
   with `ensureMockServer()` called from the root layout per request. A
   `globalThis` cache made it worse, not better.
@@ -597,6 +640,28 @@ out, and `/order/AA100001` still renders on a fresh load.
 - **`react-hooks/refs` flags a ref read by a callback composed during render.**
   `form.handleSubmit(onSubmit)` in JSX counts, even though the callback only
   runs on submit. Compose it inside the event handler instead.
+- **A sibling overlay swallows gestures; a child overlay does not.** Touch
+  events bubble to the target's OWN ancestors, so the card's absolutely
+  positioned `<Link>` — a sibling of the image stack — received every swipe and
+  passed it to the wrapper, never to the carousel. Making the anchor a child of
+  the element that listens fixed it without changing a pixel.
+- **A swipe still fires a click.** A drag that ends on an anchor produces a
+  click in some browsers, so a gesture-driven carousel inside a link needs a
+  latch set at `touchend` and spent in `onClickCapture` — captured on the way
+  down, so the anchor never sees the event.
+- **A JSX comment cannot open a ternary branch.** `cond ? null : ( {/* … */}
+  <ul/> )` parses as an object literal and fails with "')' expected" pointing at
+  the wrong line. Put the comment above the conditional.
+- **A control revealed on hover does not exist on a phone.** `group-hover` is
+  invisible to touch, so the card's frame arrows were unreachable there. Test
+  with `@media (hover: none)` — it asks whether the PRIMARY input can hover, so
+  a touchscreen laptop correctly keeps the reveal.
+- **A comment that explains an absence goes stale silently.** The product mock
+  said "ONE shot, because one shot is what exists" and stayed correct for
+  exactly as long as that was true; four generated frames per garment landed
+  later and nothing pointed back at it, so the gallery quietly showed one of
+  five. An explanation of why something is missing needs re-reading when the
+  thing arrives.
 - **A page size that does not divide by the column count leaves a hole.** It is
   silent — nothing throws, and it only shows on the monitor widths where that
   column count applies, which is why 24-over-5 columns survived at 1920px for so
