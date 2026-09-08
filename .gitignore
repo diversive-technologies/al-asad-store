@@ -69,3 +69,6 @@ yarn-error.log*
 # extensions — un-ignore those files by name (`!.vscode/extensions.json`) rather
 # than dropping this rule, or the personal colours come back with them.
 .vscode/
+
+# Vercel CLI project linkage (project id, pulled env). Machine-local.
+.vercel
