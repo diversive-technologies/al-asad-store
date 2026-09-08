@@ -2,6 +2,8 @@
 
 import { useState, type ReactNode } from 'react';
 
+import { usePathname } from 'next/navigation';
+
 import { SlideOver } from '@/components/ui/dialog';
 import type { Messages } from '@/i18n/messages/en';
 import { SlidersHorizontal } from '@/lib/vendor/icons';
@@ -43,6 +45,28 @@ export interface FilterDrawerProps {
 export function FilterDrawer({ messages, activeCount, children }: FilterDrawerProps) {
   const t = messages.catalogue;
   const [isOpen, setIsOpen] = useState(false);
+
+  /*
+   * A change of PAGE closes the drawer; a change of filter does not.
+   *
+   * Both go through the router, so the distinction has to be drawn somewhere,
+   * and the pathname is where it lives: every control in the panel edits the
+   * query string of the page it is already on, while leaving for a product or
+   * the bag changes the path. That is exactly the behaviour wanted — filter
+   * after filter without the drawer shutting, but never a drawer left hanging
+   * over a page the reader has moved to.
+   *
+   * Adjusted during render rather than in an effect, the same way the bag
+   * provider does it: an effect would paint the stale open drawer once before
+   * closing it, and would trip `react-hooks/set-state-in-effect`.
+   */
+  const pathname = usePathname();
+  const [lastPathname, setLastPathname] = useState(pathname);
+
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    setIsOpen(false);
+  }
 
   return (
     <>

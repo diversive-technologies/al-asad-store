@@ -109,9 +109,38 @@ export const catalogueQuerySchema = z.object({
 export type CatalogueQuery = z.infer<typeof catalogueQuerySchema>;
 
 /** Section 15 `suggest(partial)` — type-ahead, budgeted under 100ms by 30.1. */
+/**
+ * One way to narrow the CURRENT search, offered inside the search panel.
+ *
+ * It is `facetEntrySchema` plus the facet it belongs to, rather than a parallel
+ * shape (PD-01): a refinement IS a facet value, and its `label` arrives already
+ * localised for the same reason — fabric and colour are closed vocabularies
+ * owned by Catalogue, so the frontend must never derive a label from a value.
+ *
+ * The COUNT is the load-bearing field, and it is why this comes from the
+ * backend rather than being assembled here. The panel shows four products out
+ * of however many matched; counting fabrics from those four would produce
+ * numbers that are simply wrong. Only the service that ran the query knows how
+ * many `boski` results the term actually has (DATA-13).
+ */
+export const searchRefinementSchema = facetEntrySchema.extend({
+  key: z.enum(FACET_KEYS),
+});
+
+export type SearchRefinement = z.infer<typeof searchRefinementSchema>;
+
 export const suggestionsSchema = z.object({
   terms: z.array(z.string().min(1)),
   products: z.array(productCardSchema),
+  /**
+   * Ways to narrow what was typed, ranked by the backend.
+   *
+   * Empty is a real answer and the common one: there is nothing to narrow
+   * before a term is typed, and a degraded index has no counts to offer — the
+   * same condition `facets: null` represents for the listing. The panel simply
+   * does not render the section.
+   */
+  refinements: z.array(searchRefinementSchema),
 });
 
 export type Suggestions = z.infer<typeof suggestionsSchema>;

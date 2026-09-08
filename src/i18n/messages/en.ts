@@ -346,6 +346,7 @@ export const en = {
   search: {
     /* §28.1's full-width search panel. */
     overlayPlaceholder: 'What are you looking for today?',
+    refinementsHeading: 'Narrow by',
     trendingHeading: 'Trending searches',
     suggestionsHeading: 'Suggestions',
     bestSellersHeading: 'Best sellers',

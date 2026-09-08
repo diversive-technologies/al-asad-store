@@ -164,6 +164,97 @@ describe('suggest and code lookup', () => {
     expect(result.terms.length).toBeGreaterThan(0);
   });
 
+  /*
+   * The search panel's mini filter. These pin the two rules that make a
+   * refinement worth offering at all — both fail silently if broken, because a
+   * wrong count still renders as a perfectly ordinary chip.
+   */
+  it('counts refinements over every match, not over the four shown products', () => {
+    const result = suggestCatalogue(new URL('http://mock/s?q=waistcoat'));
+
+    expect(result.products).toHaveLength(4);
+    expect(result.refinements.length).toBeGreaterThan(0);
+
+    /*
+     * One facet's values partition the matches, so their counts SUM to the size
+     * of the whole match set. That total exceeding the four products on screen
+     * is the property worth pinning: it can only hold if the counting happened
+     * over everything the term matched, which is the one thing the panel itself
+     * could never work out.
+     */
+    const perFacet = new Map<string, number>();
+    for (const entry of result.refinements) {
+      perFacet.set(entry.key, (perFacet.get(entry.key) ?? 0) + entry.count);
+    }
+
+    expect(Math.max(...perFacet.values())).toBeGreaterThan(result.products.length);
+  });
+
+  it('withholds a value shared by every match, which would narrow nothing', () => {
+    const result = suggestCatalogue(new URL('http://mock/s?q=waistcoat'));
+    const matched = CATALOGUE.filter((record) =>
+      record.garment.toLowerCase().includes('waistcoat'),
+    ).length;
+
+    for (const entry of result.refinements) {
+      expect(entry.count).toBeLessThan(matched);
+    }
+  });
+
+  it('narrows the panel itself when a refinement is applied', () => {
+    /*
+     * The behaviour the search panel is built on: choosing a refinement re-asks
+     * this same function with the facet attached, and fewer products come back.
+     * If filters were ignored here the chips would look like they worked while
+     * the four products underneath never changed.
+     */
+    const before = suggestCatalogue(new URL('http://mock/s?q=waistcoat'));
+    expect(before.products).toHaveLength(4);
+
+    // One that genuinely cuts below the four the panel shows, so the narrowing
+    // is VISIBLE rather than merely happening behind a full row of cards.
+    const narrow = before.refinements.find(
+      (entry) => entry.key === 'colour' && entry.count < before.products.length,
+    );
+
+    expect(narrow).toBeDefined();
+    if (narrow === undefined) return;
+
+    const after = suggestCatalogue(new URL(`http://mock/s?q=waistcoat&colour=${narrow.value}`));
+
+    expect(after.products).toHaveLength(narrow.count);
+    expect(after.products.length).toBeLessThan(before.products.length);
+  });
+
+  it('keeps offering the other values in a facet already chosen', () => {
+    /*
+     * Contextual counting, §15: each facet is counted with every OTHER filter
+     * applied but not its own. Without it, choosing Boski would leave Boski as
+     * the only fabric on offer — and the control that got the reader there
+     * could never take them back.
+     */
+    const result = suggestCatalogue(new URL('http://mock/s?q=waistcoat&fabric=boski'));
+    const fabrics = result.refinements.filter((entry) => entry.key === 'fabric');
+
+    expect(fabrics.length).toBeGreaterThan(0);
+    expect(fabrics.every((entry) => entry.value !== 'boski')).toBe(true);
+  });
+
+  it('offers nothing to narrow before a term is typed', () => {
+    // Trending terms are the whole answer there; a refinement needs a search.
+    expect(suggestCatalogue(new URL('http://mock/s?q=')).refinements).toEqual([]);
+  });
+
+  it('names the facet each refinement belongs to, so a link can be built', () => {
+    const result = suggestCatalogue(new URL('http://mock/s?q=boski'));
+
+    for (const entry of result.refinements) {
+      expect(['fabric', 'colour', 'garmentType', 'pieceCount']).toContain(entry.key);
+      expect(entry.value.length).toBeGreaterThan(0);
+      expect(entry.label.length).toBeGreaterThan(0);
+    }
+  });
+
   it('finds a product by its code, case-insensitively', () => {
     const [first] = CATALOGUE;
     expect(first).toBeDefined();

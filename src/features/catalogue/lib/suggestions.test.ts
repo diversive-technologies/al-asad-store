@@ -25,7 +25,7 @@ function productFixture(id: string, name: string): ProductCard {
   };
 }
 
-const EMPTY: Suggestions = { terms: [], products: [] };
+const EMPTY: Suggestions = { terms: [], products: [], refinements: [] };
 
 describe('toSuggestionOptions', () => {
   it('returns nothing for an empty payload', () => {

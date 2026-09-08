@@ -1,4 +1,4 @@
-import { suggest } from '@/features/catalogue';
+import { parseCatalogueQuery, suggest } from '@/features/catalogue';
 import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
@@ -28,14 +28,23 @@ export async function GET(request: Request): Promise<Response> {
   await ensureMockServer();
 
   const url = new URL(request.url);
-  // SEC-02: query parameters are untrusted input, validated rather than cast.
-  const term = (url.searchParams.get('q') ?? '').trim();
   const requestedLocale = url.searchParams.get('locale');
   const locale = isLocale(requestedLocale) ? requestedLocale : DEFAULT_LOCALE;
 
+  /*
+   * SEC-02 — query parameters are untrusted input. `parseCatalogueQuery` is the
+   * same total, never-throwing parser the listing routes use, so a hand-edited
+   * address produces a valid query rather than an error, and the panel and the
+   * results page cannot disagree about what a parameter means (PD-01).
+   *
+   * The whole query travels, not just the term: the panel filters in place, so
+   * narrowing it to "Boski" has to reach the backend as a filter.
+   */
+  const query = parseCatalogueQuery(Object.fromEntries(url.searchParams.entries()));
+
   // ERR-02 / DATA-03a: a Route Handler consumes the Result as a value. `unwrap`
   // belongs only inside a queryFn.
-  const result = await suggest(term, locale);
+  const result = await suggest(query, locale);
 
   if (!result.ok) {
     logApiError('api:suggest', result.error); // ERR-10, logged once at the boundary

@@ -4,7 +4,8 @@ import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
 import type { Result } from '@/lib/result';
 
-import { suggestionsSchema, type Suggestions } from '../schemas/search.schema';
+import { toSearchParams } from '../lib/search-params';
+import { suggestionsSchema, type CatalogueQuery, type Suggestions } from '../schemas/search.schema';
 
 /**
  * DATA-04 — section 15 `suggest(partial)`.
@@ -13,8 +14,20 @@ import { suggestionsSchema, type Suggestions } from '../schemas/search.schema';
  * because `apiRequest` is `server-only`. Section 30.1 budgets this path at under
  * 100ms, so it is deliberately the leanest read in the feature.
  */
-export function suggest(term: string, locale: Locale): Promise<Result<Suggestions, ApiError>> {
-  const trimmed = term.trim();
+export function suggest(
+  query: CatalogueQuery,
+  locale: Locale,
+): Promise<Result<Suggestions, ApiError>> {
+  /*
+   * The WHOLE query, not just the term.
+   *
+   * The search panel filters in place: choosing "Boski" narrows the products
+   * inside it rather than navigating away, so the next request has to carry the
+   * facets as well as the words. `toSearchParams` is the same canonical
+   * serialiser the address bar uses, so a panel narrowed to boski and the
+   * results page for that filter ask the backend the identical question.
+   */
+  const params = Object.fromEntries(toSearchParams(query).entries());
 
   /*
    * An empty term is FORWARDED, and used to be short-circuited here.
@@ -29,7 +42,7 @@ export function suggest(term: string, locale: Locale): Promise<Result<Suggestion
   return apiRequest({
     path: ENDPOINTS.catalogue.suggest,
     schema: suggestionsSchema,
-    searchParams: { q: trimmed, locale },
+    searchParams: { ...params, locale },
     /*
      * DATA-09: uncached here on purpose. Suggestions are keystroke-scoped and
      * short-lived; the caching that matters for them is TanStack Query on the

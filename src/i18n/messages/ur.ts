@@ -324,6 +324,7 @@ export const ur: Messages = {
   },
   search: {
     overlayPlaceholder: 'آج آپ کیا تلاش کر رہے ہیں؟',
+    refinementsHeading: 'محدود کریں',
     trendingHeading: 'مقبول تلاشیں',
     suggestionsHeading: 'تجاویز',
     bestSellersHeading: 'مقبول ترین',

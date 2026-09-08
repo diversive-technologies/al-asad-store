@@ -36,7 +36,17 @@ export interface SuggestionOption {
 /** Nothing is active until the reader arrows into the list. */
 export const NO_ACTIVE_OPTION = -1;
 
-export function toSuggestionOptions(suggestions: Suggestions): readonly SuggestionOption[] {
+/**
+ * Only the two arrays it actually reads, rather than the whole payload.
+ *
+ * `Suggestions` also carries `refinements`, which are a different kind of row
+ * entirely — they narrow a search rather than being one — and are rendered by
+ * their own component. Asking for the whole type here would make every caller
+ * and every test supply a field this function ignores.
+ */
+export function toSuggestionOptions(
+  suggestions: Pick<Suggestions, 'terms' | 'products'>,
+): readonly SuggestionOption[] {
   const terms = suggestions.terms.map((term): SuggestionOption => ({
     // Prefixed so a term and a product that happen to share text cannot
     // collide on `key` or on `aria-activedescendant` (CMP-10).

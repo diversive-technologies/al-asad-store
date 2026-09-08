@@ -2,7 +2,8 @@ import { ROUTES } from '@/config/routes';
 import type { Locale } from '@/i18n/locales';
 import { err, ok, type Result } from '@/lib/result';
 
-import { suggestionsSchema, type Suggestions } from '../schemas/search.schema';
+import { toSearchParams } from '../lib/search-params';
+import { suggestionsSchema, type CatalogueQuery, type Suggestions } from '../schemas/search.schema';
 
 /**
  * The browser side of the type-ahead: reads this application's own BFF route,
@@ -27,12 +28,18 @@ export type SuggestionsError =
   { kind: 'UNAVAILABLE' } | { kind: 'CONTRACT_VIOLATION'; issues: string };
 
 export async function fetchSuggestions(
-  term: string,
+  query: CatalogueQuery,
   locale: Locale,
   signal?: AbortSignal,
 ): Promise<Result<Suggestions, SuggestionsError>> {
+  /*
+   * The whole query travels, because the panel narrows in place: picking
+   * "Boski" has to come back with fewer products, not send the reader to
+   * another page. `toSearchParams` is the canonical serialiser the address bar
+   * uses, so the panel asks the same question the results page would.
+   */
   const url = new URL(ROUTES.api.suggest, window.location.origin);
-  url.searchParams.set('q', term);
+  for (const [key, value] of toSearchParams(query).entries()) url.searchParams.set(key, value);
   url.searchParams.set('locale', locale);
 
   /*
