@@ -51,6 +51,14 @@ export const ROUTES = {
     checkoutQuote: '/api/checkout/quote',
     /** §7.2 — the one write that turns a bag into an order. */
     checkoutPlace: '/api/checkout/place',
+    /**
+     * §28.3 — reading one order back.
+     *
+     * The confirmation page reads through here rather than during its own
+     * server render, because under D1 the order lives in mock state that only
+     * the Route Handler process has written to.
+     */
+    checkoutOrder: (orderNumber: string) => `/api/checkout/order/${orderNumber}`,
   },
   bag: '/bag',
   /** §28.3's saved items. Offered only to a signed-in customer — see the page. */

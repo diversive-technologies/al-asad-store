@@ -1,8 +1,6 @@
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { fetchOrder } from '@/features/checkout';
-import { OrderConfirmation } from '@/features/checkout/contract';
+import { OrderScreen } from '@/features/checkout/contract';
 import { getLocale, getMessages } from '@/i18n';
 
 interface OrderPageProps {
@@ -19,19 +17,20 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * §28.3 — the order number is the address, so this page can be bookmarked,
  * shared with the shop over the phone, and returned to later.
+ *
+ * STRUCT-02: the route composes and does not decide. The read itself moved into
+ * `OrderScreen`, which runs in the browser — under D1 the order lives in mock
+ * state written by a Route Handler, and on a serverless deployment a server
+ * render is a different process that has never seen it. Reading it here made
+ * every placed order answer 404 in production and none of them locally.
  */
 export default async function OrderPage({ params }: OrderPageProps) {
-  const { orderNumber } = await params;
-
   // PERF-02: independent reads run in parallel, never as a waterfall.
-  const [order, locale, messages] = await Promise.all([
-    fetchOrder(orderNumber),
+  const [{ orderNumber }, locale, messages] = await Promise.all([
+    params,
     getLocale(),
     getMessages(),
   ]);
 
-  // A number that names no order is a 404, which is what it genuinely is.
-  if (!order.ok) notFound();
-
-  return <OrderConfirmation order={order.value} locale={locale} messages={messages} />;
+  return <OrderScreen orderNumber={orderNumber} locale={locale} messages={messages} />;
 }

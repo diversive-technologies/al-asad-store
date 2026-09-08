@@ -25,3 +25,7 @@ export {
 
 export { CheckoutScreen, type CheckoutScreenProps } from './components/CheckoutScreen';
 export { OrderConfirmation, type OrderConfirmationProps } from './components/OrderConfirmation';
+export { OrderScreen, type OrderScreenProps } from './components/OrderScreen';
+
+/* The browser half of §28.3's read. `api/checkout-server.ts` is `server-only`. */
+export { fetchOrderByNumber } from './api/checkout-browser';

@@ -64,5 +64,14 @@ export const queryKeys = {
     all: ['checkout'] as const,
     quote: (deliveryOptionId: string, isGift: boolean) =>
       [...queryKeys.checkout.all, 'quote', deliveryOptionId, isGift] as const,
+    /**
+     * §28.3 — one placed order, keyed by the number that addresses it.
+     *
+     * Not keyed by locale, unlike the catalogue's reads: an order is a record
+     * of what was bought at the price it was bought for, and its own fields do
+     * not change language. What the page puts AROUND them is translated, and
+     * that comes from `Messages` rather than from this cache.
+     */
+    order: (orderNumber: string) => [...queryKeys.checkout.all, 'order', orderNumber] as const,
   },
 } as const;
