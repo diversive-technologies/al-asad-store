@@ -7,7 +7,8 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-07. Last commit: `01e09cb` (tree dirty — see below).
+Last updated: 2026-09-08. Last commit: `cfd876f` (D6 append-only).
+Tree still carries the search work in flight — see the end of this file.
 
 ---
 
@@ -21,6 +22,7 @@ Last updated: 2026-09-07. Last commit: `01e09cb` (tree dirty — see below).
 | M4 | Bag & reservation | **Core done.** Reservations, panel, quantity, remove, promo code. |
 | M5 | Checkout | **Core done.** Quote, single-page checkout, §7.2 placement, confirmation. |
 | M6 | Real auth & account | **Auth screens built** against §11's shape; account area still deferred. |
+| USP1 | Try-On (§24) | **Interface complete, provider unconnected** — which is exactly §28.5. See below. |
 
 ## M2 — what is built
 
@@ -507,6 +509,184 @@ mobile plus a sign-out button; signed out, the same icon links to sign-in.
   `grid-columns.server.ts`; a Client Component importing it fails the build
   outright. This was found by the wishlist page 500ing, not by reading.
 
+## Try-On (USP 1) — what is built
+
+Architecture §24, and §28.5 already said where it stops: "the `TryOnProvider`
+port, the upload flow, guidance screens, white-balance correction, deletion
+guarantees and the unavailable state are all built in Release 1. The adapter to
+the external service is connected when that service is ready." All of that is
+built, and the adapter is written too — it simply has no credential.
+
+**The provider sits behind the MOCK, not in the BFF, and that is the load-bearing
+decision.** §24 puts the port inside the Java module. Calling an image model from
+a Next Route Handler would look equivalent and would not be: it would put the
+storefront on the provider's critical path, give the browser a credential-bearing
+surface the real architecture does not have, and teach the interface a shape Java
+will never serve — the trap D1 names. So the seam is `lib/mocks/try-on-provider.ts`,
+where module 14 will sit. When Java takes over, that file and `try-on-db.ts` are
+deleted together and nothing above them changes: not the contract, not the BFF,
+not one line of interface.
+
+```
+TryOnPanel → POST /api/try-on → generateTryOn() → apiRequest → [MSW = module 14]
+                                                                 ├ white balance
+                                                                 └ TryOnProvider ← the seam
+```
+
+- **It shows appearance, never fit — the operator's rule.** A generated image
+  cannot know whether this customer takes a small or a large, so rendering a
+  garment as tight or loose would invent a fact and be read as a sizing promise.
+  This is why §24's signature takes no size, why nothing upstream sends one, why
+  the model is instructed not to exaggerate drape, and why `fitNotice` sits
+  ABOVE the button and again beside the result rather than in small print. Fit
+  questions belong to the size guide and the Fabric Calculator.
+- **No `colour_id` is sent, and that is not an omission.** §6.2 holds colour as
+  three DISPLAY fields on the piece — `displayName`, `description`, `hex` — with
+  no identifier. There is no colour id in the projection to send, so the product
+  determines its own colourway and the backend resolves it (DATA-13). The day the
+  catalogue grows selectable colourways, the field joins the schema.
+- **The unavailable state is reached honestly, not simulated.** No API key means
+  `isConfigured()` is false, `isAvailable()` answers false, and the product page
+  renders NO try-on button. That is the repository's default and the state §28.5
+  describes. Verified in the running store: 0 try-on buttons, Add to Bag present,
+  page intact — ADR 12 and §30.2 holding in the interface, not just on paper.
+- **Absence IS the unavailable state.** A button that opens a panel to announce
+  the feature is off is a control that cannot do its job. The panel's three
+  unavailable sentences — disabled, failed, timed out — exist for the real race:
+  the offer caches for 60s, so a provider that drops after it was read leaves a
+  live button that must fail in words rather than spin forever.
+- **White balance is real, and it earns its place in THIS market.** Grey-world
+  via `sharp`: channel means are equalised, undoing the cast of the light the
+  photo was taken under. Ethnic apparel is bought on colour and most photographs
+  are taken under warm tungsten or green fluorescent light, so an uncorrected
+  photo drags the garment's rendered colour toward the room — turning a bottle
+  green waistcoat olive and making the try-on lie about the one attribute the
+  customer opened it to check. A test asserts channel spread > 30 before and < 2
+  after. `rotate()` applies EXIF orientation, or every phone portrait arrives
+  sideways.
+- **Deletion is guaranteed by never writing.** The photograph is a local
+  `Uint8Array` for one function call, referenced by nothing that outlives it: no
+  disk, no cache, no module map, no log line. There is no delete step because
+  there is no stored copy — the strongest form of the guarantee and the only one
+  a reader can verify by looking. §24 permits "ephemeral session records only",
+  and `TryOnSession` has no field capable of holding an image; a test compares
+  its COMPLETE key set, so an edit that starts keeping "just the result, for
+  debugging" fails the suite rather than shipping.
+- **The limits come from the backend.** `isAvailable()` carries `maxPhotoBytes`
+  and `acceptedFormats` alongside the boolean — a deliberate widening of §24's
+  bare signature, because a client that hard-coded a ceiling would hold a second
+  copy of a backend rule (DATA-13). The browser checks them as an AFFORDANCE
+  (saving a doomed 20MB upload on a mobile connection) and the module checks
+  them again as the ENFORCEMENT point (SEC-03).
+- **AVIF is deliberately not offered** even though the whole catalogue is stored
+  in it: the provider does not accept AVIF, so offering it would take a photo the
+  module could then never use. The garment shot is converted AVIF→JPEG before it
+  is sent, which is required rather than tidy.
+- **Seventh BFF**, `app/api/try-on`. It proxies and nothing else, never logs the
+  body, and is the first route to carry a SEC-08 origin check — see the note
+  under uncommitted work about the six that do not.
+
+### The interface, after the operator saw it
+
+Three things changed once it was on screen, and all three were the operator's
+call rather than a refinement of mine.
+
+- **The entry is ALWAYS drawn.** It used to hide itself whenever the backend
+  reported no provider, on the reasoning that a control which cannot work should
+  not be offered. That is right for an ordinary feature and wrong for a headline
+  one: a version of the page with no trace of the try-on cannot be shown,
+  demonstrated or reviewed, and "0 try-on buttons" was reported as a success when
+  it was the thing making the USP invisible.
+- **A centred `Dialog`, not the edge drawer.** `components/ui/dialog/Dialog.tsx`,
+  sharing its `<dialog>` lifecycle with `SlideOver` through `use-native-dialog.ts`
+  rather than copying it (PD-01). A drawer suits a list you scan down; one task
+  with one thing to look at belongs in the middle of the screen.
+- **A real waiting state**, `TryOnLoading.tsx` plus four keyframe animations in
+  `globals.css`: the photograph developing from grey to colour, a light sweeping
+  down it, an indeterminate bar, and three captions crossfading on a 6s cycle.
+  The captions are sequenced by three offset `animation-delay` values and nothing
+  else — no timer, no interval, no phase state — and they are `aria-hidden`,
+  because pushing three rotating strings through a live region would interrupt a
+  screen-reader user every two seconds for the length of the wait.
+
+  Verified by driving the timeline by hand, the pane's clock being frozen:
+  "Reading your photo" at 600ms, "Matching the colour" at 2600ms, "Placing the
+  piece" at 4600ms, with the bar travelling and the photo's grayscale moving
+  0.40 → 0.70 → 0.40 across the same samples.
+
+**The SAMPLE result is a placeholder and is labelled as one in three places.**
+With no provider connected, `generateTryOn` answers with the garment's own
+catalogue photograph after a 2.6s pretend delay. It shows the model the piece
+was shot on, NOT the customer, so it is a stand-in for a demonstrable interface
+rather than a generated image.
+
+Three things stop it quietly becoming the real thing. The session records it as
+`SAMPLE` rather than `READY`, so the module's own history never claims a
+generation happened. The policy is PASSED IN (`sampleWhenUnconfigured`) rather
+than read inside the module, which is what keeps both branches testable in one
+process — an env read inside would only ever be one value per run, and §28.5's
+honest unavailable path is the one that must not rot. And the enforcement still
+runs first, so the sample is not a way round the size and format checks.
+
+`tryOnOffer()` takes the same policy, because the two answers have to agree: a
+panel told the feature was off which then produced an image is a worse state
+than either alone. `TRY_ON_SAMPLE_RESULT=disabled` turns it off without a
+provider; a configured provider ignores it entirely.
+
+### What is left
+
+**A real generation.** Everything was exercised live with a placeholder key —
+guidance, picker, client rejection of AVIF, preview, white-balance correction on
+a real 268KB photo, the garment conversion, a genuine HTTPS call to the provider,
+its refusal, and the failure copy — but a successful image needs a real
+`TRY_ON_PROVIDER_API_KEY` in `.env.local`. Adding one is the whole switch-on:
+no code change, no release. Generations are metered and billed.
+
+The prompt itself is unproven against real output and should be expected to need
+tuning once someone can see results.
+
+## D6 append-only — what changed in the tree
+
+Operator decision, applied across the mock layer and the API surface. CLAUDE.md
+carries the rule; this is where it landed.
+
+- **No `DELETE` anywhere.** `http.delete` and `method: 'DELETE'` return zero
+  matches in `src/` and `app/`. The two that existed became POSTs to `/removal`
+  sub-resources: `ENDPOINTS.bag.lineRemoval`, `ENDPOINTS.bag.codeRemoval`, and
+  the BFF equivalents at `app/api/bag/lines/[lineId]/removal` and
+  `app/api/bag/code/removal`.
+- **`bag-reservations.ts` is now a ledger.** Every row carries
+  `ACTIVE | RELEASED | EXPIRED | ALLOCATED` plus `settledAt`; `release`,
+  `releaseCart` and `allocate` settle rows instead of splicing them, and
+  `sweepExpired` MOVES non-active rows into an `ARCHIVE` array rather than
+  dropping them — which is what keeps the hot table small AND keeps the history.
+- **`isActive` is the load-bearing function.** It checks status AND expiry.
+  Deletion used to do half of that implicitly, and getting it wrong UNDERSELLS
+  silently rather than overselling.
+- **`reserve` only refreshes an ACTIVE row.** A settled one is history: re-adding
+  a line the customer removed starts a NEW hold rather than resurrecting the
+  released one, so the removal survives.
+- **`bag-db.ts`** marks lines removed (`CUSTOMER` or `EXPIRED`) and keeps a
+  `CodeEvent[]` per cart, so applying a second code lifts the first rather than
+  overwriting it. `summaryFor` returns the ACTIVE projection, so the customer
+  sees exactly what they saw before.
+- **`discardCart` became `convertCart(cartId, orderNumber)`.** A converted cart
+  still exists but stops answering as a bag — `summaryFor` returns null, the
+  handler answers 404, and the BFF already renders that as an empty bag. Zero
+  interface change.
+- **Four tests pin the guarantee** in `bag-db.test.ts` (`D6 provenance`): a
+  removed line stays on file with its reason, its reservations read `RELEASED`
+  while the stock is genuinely free again, superseded codes are both kept, and a
+  settled reservation is archived rather than deleted.
+
+Verified: **typecheck, lint and 198 tests pass**, and the bag was **exercised by
+hand in the running store** — adding a three-piece SET and then removing the line
+empties the bag and frees the size again on the product page, which is the whole
+`POST /api/bag/lines/{lineId}/removal` path across the real HTTP boundary. That
+is the part the tests cannot reach, since they stop at the mock layer.
+
+The production build has still NOT been run against this change.
+
 ## Deliberate gaps — do not "fix" these
 
 - **Product imagery is now the client's own.** Fourteen photographs in
@@ -626,7 +806,25 @@ the size guide, in both locales.
   `brand-banner-rust.jpeg` have a phone number burned into them, so neither is
   usable as-is.
 
-## Uncommitted work — M4
+## How Try-On was verified (historical — committed as `1a1eeba`)
+
+Try-On as described above. This section was headed "uncommitted" and outlived
+the fact, exactly as the M4 heading below it did before — a reminder that a
+heading describing a STATE goes stale the moment the state changes, and that
+nothing points back at it.
+
+Verified at the time: **typecheck, lint, 182 tests and the production build all
+pass**, with `/api/try-on` registered in the build output. The suite has since
+grown to **198** with the D6 provenance tests and the try-on additions.
+
+**SEC-08 gap, stated rather than bundled.** `/api/try-on` verifies the request
+origin via `lib/utils/request.ts`. The six BFF routes that predate it — bag,
+bag lines, bag code, both checkout routes, products — do NOT, and several of
+them genuinely mutate state. That is a pre-existing gap; BOT-04 says adjacent
+cleanup is offered separately rather than smuggled into an unrelated change, so
+it is offered here and not done. The helper is already shared and named.
+
+## How M4 was verified (historical — committed)
 
 The bag and its reservations, as described above.
 
@@ -669,12 +867,35 @@ out, and `/order/AA100001` still renders on a fresh load.
 - **MSW dies on hot reload** unless it is a module-scoped singleton in `node.ts`
   with `ensureMockServer()` called from the root layout per request. A
   `globalThis` cache made it worse, not better.
-- **Do not run `npm run build` while `npm run dev` is up.** They share `.next`,
-  so the build writes into the directory the dev server watches, the dev server
-  re-evaluates modules, and MSW's interception does not survive it. Every
-  outbound call then escapes to `JAVA_API_BASE_URL` and gets `ECONNREFUSED`
-  — the whole store appears broken and only a dev-server restart fixes it.
-  Stop the server, build, start it again.
+- **"We could not reach the store" on every page means MSW stopped
+  intercepting. Restart the dev server; do NOT delete `.next`.**
+
+  The symptom is total: every outbound call escapes to `JAVA_API_BASE_URL`,
+  gets `ECONNREFUSED`, and every page that reads data renders `ErrorState`.
+  Two probes tell it apart from anything else in seconds — `/api/quick-add?slug=x`
+  answers **502** rather than the 404 a live mock gives, and `/api/suggest`
+  answers `{"terms":[],"products":[]}`.
+
+  **Observed cause, September 2026: accumulated hot reloads, with no build
+  involved.** The dev server had been up for ~25 minutes across edits to
+  several feature files and MSW's interception simply died. `next dev` alone,
+  started fresh, fixed it.
+
+  **What this note used to say, and why it was wrong.** It claimed dev and build
+  "share `.next`" and that running `npm run build` against a live dev server was
+  the cause. At **Next 16.3.4 that is not the layout**: a dev-only run leaves
+  `.next` containing exactly one directory, `.next/dev`, and a production build
+  writes to `.next/build`. Verified by observation. Whether a *concurrent* build
+  still disturbs dev at this version is UNTESTED — checking it means running a
+  build against a live server — so keep them apart out of caution, but do not
+  reach for `rm -rf .next` on that theory.
+
+  **Deleting `.next` is expensive and almost never the fix.** It is 280MB. A
+  cold rebuild re-parses every source file through Turbopack, re-downloads and
+  re-subsets both Google fonts (10 `.woff2` files — Noto Nastaliq Urdu is
+  large), rescans the tree for Tailwind, and re-optimises the AVIF photography
+  on demand. Next 16 compiles routes on first REQUEST, so the cost lands on the
+  first few page loads rather than on startup, which makes it read as a hang.
 - **`ECONNREFUSED` can surface as `CONTRACT_VIOLATION`, not `NETWORK`.** An
   UNCACHED read (`/api/bag`) reports the transport failure honestly, but a
   CACHED one (`searchProducts`, which carries `next.revalidate`) came back
@@ -911,6 +1132,45 @@ out, and `/order/AA100001` still renders on a fresh load.
 - **A two-panel composite defeats `sharp.strategy.attention`:** it straddled the
   seam and produced a crop that was half one panel. Extract the panel first, then
   resize.
+- **`server-only` makes a module untestable under Vitest, and the fix ships with
+  the package.** Its default export throws so a Client Component importing a
+  server module fails the BUILD; Vitest is neither a bundler nor a browser, so it
+  resolves that throwing entry and every module transitively reaching
+  `env.server.ts` dies at import with "This module cannot be imported from a
+  Client Component". The package already ships `empty.js` for the case where the
+  guard has nothing to protect, selected by the `react-server` export condition
+  that Vitest does not set. Alias it in `vitest.config.ts` — pointing at the
+  package's own shim rather than a stub of ours keeps the decision visible.
+- **`env.server.ts` is a boot invariant, and a test process is a boot.** It
+  throws on an invalid environment (ERR-06), so the Vitest config must supply the
+  minimum for the schema to parse. Those are not fixtures and nothing asserts
+  against them; the try-on provider key is deliberately absent so the suite
+  exercises the unconfigured path.
+- **A test behind a short-circuit asserts nothing.** Two enforcement tests read
+  `expect(outcome.status).not.toBe('READY')` and passed on the PROVIDER_DISABLED
+  answer that came first — they would have passed with the enforcement deleted.
+  Checking the REQUEST before checking feature availability is both better
+  behaviour ("that is a PDF" beats "unavailable") and what made them assert
+  something. If a test cannot fail, it is documentation with a green tick.
+- **Check port 3000, not just the preview harness, before `next build`.** The
+  harness reported no preview server and there was still a `next dev` on 3000
+  from earlier in the day, started outside the session — so the documented
+  build-breaks-dev collision happened anyway. `Get-NetTCPConnection -LocalPort
+  3000` is the check the existing note was missing.
+- **`sharp` takes per-channel gains in `linear([r,g,b])`** — verified on 0.35.4,
+  which is what makes grey-world white balance about six lines. Flatten alpha
+  first, or the array length will not match the channel count. It is present
+  transitively via Next but is now DECLARED in `devDependencies` (BASE-01),
+  following msw's precedent: dev-only, server-only, never bundled.
+- **Gemini's image API does not accept AVIF.** Supported types are PNG, JPEG,
+  WebP, HEIC and HEIF. A catalogue stored in AVIF has to convert before it can
+  send, and the offer must not advertise a format the provider will refuse.
+- **A route `page.tsx` has an 80-line HARD ceiling (MOD-03).** Adding a parallel
+  read and a slot pushed the product route to 94. The fix was to move the "is
+  this offer usable" judgement into a Server Component in the feature — which
+  STRUCT-02 wanted anyway, since routes compose rather than decide — and then to
+  tighten comment blocks. Worth knowing before adding anything else to that file:
+  it now sits at 79.
 - **The Read tool does not render AVIF.** To look at converted output, composite
   a contact sheet as JPEG and read that instead — one image, one look.
 
