@@ -56,3 +56,16 @@ yarn-error.log*
 # The CROPS they produce are committed under public/products/; these are only
 # needed to re-cut them differently. Kept on disk, out of history by size.
 /assets/photography/collages/
+
+# The editor's own window, not the project's.
+#
+# `.vscode/settings.json` here holds `workbench.colorCustomizations` — one
+# developer's title bar colour, which every other checkout would be handed and
+# none of them wants. It was tracked, so it showed as a modified file in every
+# status and diff for the life of the repository.
+#
+# Ignoring the DIRECTORY is the right call while its only contents are personal.
+# If the team later wants shared editor settings — format-on-save, recommended
+# extensions — un-ignore those files by name (`!.vscode/extensions.json`) rather
+# than dropping this rule, or the personal colours come back with them.
+.vscode/
