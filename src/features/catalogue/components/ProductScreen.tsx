@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import Link from 'next/link';
 
 import { ROUTES } from '@/config/routes';
@@ -16,6 +18,18 @@ export interface ProductScreenProps {
   availability: ProductDetailAvailability | null;
   locale: Locale;
   messages: Messages;
+  /**
+   * Architecture §24's try-on entry, or nothing.
+   *
+   * A SLOT rather than an import, because MOD-01 does not let one feature reach
+   * into another: the route composes the two. It is the same arrangement the
+   * header uses for the search field, and for the same reason.
+   *
+   * Null when the backend reports no provider — the feature is then absent
+   * rather than present-and-broken, which is what ADR 12 asks for. Nothing on
+   * this page depends on it either way.
+   */
+  tryOn?: ReactNode;
 }
 
 /**
@@ -30,7 +44,13 @@ export interface ProductScreenProps {
  * The copy, the pricing, the pieces and the fabric notes are all server-rendered
  * and crawlable (§30.5).
  */
-export function ProductScreen({ product, availability, locale, messages }: ProductScreenProps) {
+export function ProductScreen({
+  product,
+  availability,
+  locale,
+  messages,
+  tryOn = null,
+}: ProductScreenProps) {
   const t = messages.product;
   const tc = messages.catalogue;
 
@@ -78,6 +98,8 @@ export function ProductScreen({ product, availability, locale, messages }: Produ
             locale={locale}
             messages={messages}
           />
+
+          {tryOn}
 
           <dl className="border-border text-fg-muted flex flex-col gap-2 border-t pt-4 text-sm">
             <div className="flex flex-wrap gap-2">

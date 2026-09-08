@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils/cn';
 import { X } from '@/lib/vendor/icons';
+
+import { useNativeDialog } from './use-native-dialog';
 
 export interface SlideOverProps {
   isOpen: boolean;
@@ -55,47 +57,8 @@ export function SlideOver({
   children,
   footer,
 }: SlideOverProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const closingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /*
-   * STATE-04 — the external system is the dialog element's own open/closed
-   * state, which lives in the DOM rather than in React. `showModal()` is not
-   * something JSX can express, so this effect is the synchronisation point.
-   */
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-
-    if (isOpen) {
-      if (closingTimer.current !== null) clearTimeout(closingTimer.current);
-      dialog.removeAttribute('data-closing');
-      if (!dialog.open) dialog.showModal();
-      return;
-    }
-
-    if (!dialog.open) return;
-
-    /*
-     * The exit, and the reason it needs a timer.
-     *
-     * `close()` removes the element from the top layer immediately, so a panel
-     * that simply closed would vanish rather than leave. The attribute drives
-     * the outgoing transition; the element is closed once it has played.
-     */
-    dialog.setAttribute('data-closing', 'true');
-    closingTimer.current = setTimeout(() => {
-      dialog.removeAttribute('data-closing');
-      dialog.close();
-    }, EXIT_MS);
-  }, [isOpen]);
-
-  useEffect(
-    () => () => {
-      if (closingTimer.current !== null) clearTimeout(closingTimer.current);
-    },
-    [],
-  );
+  // PD-01: the lifecycle is shared with `Dialog` rather than kept in two places.
+  const dialogRef = useNativeDialog(isOpen, EXIT_MS);
 
   return (
     <dialog

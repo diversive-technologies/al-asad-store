@@ -369,6 +369,57 @@ export const en = {
     switchToDark: 'Switch to dark mode',
     switchToLight: 'Switch to light mode',
   },
+  /**
+   * Architecture §24 Try-On.
+   *
+   * `fitNotice` is the load-bearing string in this block and it is not a
+   * disclaimer bolted on at the end. A generated image cannot know whether this
+   * customer takes a small or a large, so it must not be read as a fit preview —
+   * which is why nothing in the request carries a size, and why this sentence
+   * appears beside the result rather than in small print under it.
+   */
+  tryOn: {
+    launch: 'Try it on',
+    launchHint: 'See this piece on a photo of you',
+    title: 'Try it on',
+    close: 'Close try-on',
+    intro: 'Upload a photo and see how this piece and its colour look on you.',
+    fitNotice:
+      'This shows colour and appearance only. It cannot tell you how a size will fit — the size guide is for that.',
+    guidanceHeading: 'For the best result',
+    guidanceFraming: 'Stand facing the camera, head to knee in the frame.',
+    guidanceLight: 'Use a plain wall and even, natural light.',
+    guidanceClothes: 'Wear close-fitting clothes so your outline reads clearly.',
+    guidanceAlone: 'Just you in the photo.',
+    privacyHeading: 'What happens to your photo',
+    privacyNote:
+      'Your photo is used to make this one image and is never stored. It is discarded as soon as the image comes back — and if anything fails.',
+    choosePhoto: 'Choose a photo',
+    changePhoto: 'Choose a different photo',
+    chosenAlt: 'The photo you chose',
+    generate: 'Try it on',
+    generating: 'Creating your image',
+    generatingNote: 'This can take up to half a minute.',
+    /*
+     * The three captions of the waiting state, crossfading in this order. They
+     * describe what the module genuinely does — correct the photograph's
+     * colour, read the garment, compose the two — rather than inventing
+     * progress it cannot measure.
+     */
+    phaseReading: 'Reading your photo',
+    phaseColour: 'Matching the colour',
+    phasePlacing: 'Placing the piece',
+    resultHeading: 'You in this piece',
+    resultAlt: 'A generated image of you wearing {product}',
+    startAgain: 'Try another photo',
+    unavailableDisabled:
+      'Try-on is not switched on yet. Everything else on this page works as usual.',
+    unavailableFailed: 'We could not create the image this time. Please try again.',
+    unavailableTimeout: 'That took longer than expected. Please try again.',
+    photoTooLarge: 'That photo is too large. Please choose one under {limit} MB.',
+    photoWrongFormat: 'That file is not a photo we can use. Please choose a JPEG, PNG or WebP.',
+    photoEmpty: 'Please choose a photo first.',
+  },
   errors: {
     network: 'We could not reach the store. Please try again.',
     unexpected: 'Something went wrong. Please try again.',

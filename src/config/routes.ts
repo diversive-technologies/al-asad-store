@@ -28,6 +28,8 @@ export const ROUTES = {
   api: {
     suggest: '/api/suggest',
     fabricCalculator: '/api/fabric-calculator',
+    /** Section 24. Multipart in, one JSON image out — see app/api/try-on. */
+    tryOn: '/api/try-on',
     /** §28.2's quick add: the sizes a card may offer, read on demand. */
     quickAdd: '/api/quick-add',
     /**

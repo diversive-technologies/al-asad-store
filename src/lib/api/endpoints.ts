@@ -61,6 +61,22 @@ export const ENDPOINTS = {
     evaluate: '/api/v1/fabric-calculator/evaluate',
   },
   /**
+   * Section 24 Try-On.
+   *
+   * Two operations, and the split is the point. `offer` is `isAvailable()` and
+   * costs nothing — it asks the module whether a provider is configured and
+   * never touches the provider itself. `generate` is the one that leaves the
+   * building, and it is the only call in this registry budgeted in tens of
+   * seconds rather than hundreds of milliseconds.
+   *
+   * Neither is on the purchase path (ADR 12): the product page renders and Add
+   * to Bag works with both of these failing.
+   */
+  tryOn: {
+    offer: '/api/v1/try-on/offer',
+    generate: '/api/v1/try-on/generations',
+  },
+  /**
    * Section 16 `CartService`. The cart is addressed by an id the backend issues
    * and the BFF keeps in an httpOnly cookie — never a path the browser composes.
    */

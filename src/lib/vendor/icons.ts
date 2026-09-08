@@ -8,6 +8,7 @@
  * must not mirror.
  */
 export {
+  Camera,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -23,6 +24,7 @@ export {
   Moon,
   Plus,
   Search,
+  Sparkles,
   SlidersHorizontal,
   Square,
   ShoppingBag,

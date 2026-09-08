@@ -15,6 +15,16 @@ interface RequestOptions<TSchema extends z.ZodType> {
   searchParams?: Record<string, string | number | boolean | undefined>;
   headers?: Record<string, string>;
   signal?: AbortSignal;
+  /**
+   * Overrides `JAVA_API_TIMEOUT_MS` for one call.
+   *
+   * The global budget is sized for reads that answer in hundreds of
+   * milliseconds, and a handful of operations legitimately do not — architecture
+   * 24's try-on is given 30 seconds by configuration register 23. Raising the
+   * global value to fit the slowest call would let a hung product read sit for
+   * half a minute, so the exception is stated per call instead.
+   */
+  timeoutMs?: number;
   /** DATA-09: caching intent is mandatory. Use `{ revalidate: 0 }` for fully dynamic reads. */
   next: { revalidate?: number; tags?: string[] };
 }
@@ -44,7 +54,21 @@ export async function apiRequest<TSchema extends z.ZodType>(
 ): Promise<Result<z.infer<TSchema>, ApiError>> {
   const { path, schema, method = 'GET', body, searchParams, headers, signal, next } = options;
 
-  const timeout = AbortSignal.timeout(serverEnv.JAVA_API_TIMEOUT_MS);
+  const timeout = AbortSignal.timeout(options.timeoutMs ?? serverEnv.JAVA_API_TIMEOUT_MS);
+
+  /*
+   * Binary bodies travel as FormData, and both branches below are required.
+   *
+   * `JSON.stringify` on a FormData yields "{}" — it would send an empty object
+   * with a straight face rather than fail. And the Content-Type must be OMITTED
+   * rather than written: multipart's header carries a boundary token generated
+   * with the body, so any hand-written value is wrong and the request arrives
+   * unparseable at the far end.
+   */
+  const isMultipart = body instanceof FormData;
+
+  const encodedBody: BodyInit | undefined =
+    body === undefined ? undefined : isMultipart ? body : JSON.stringify(body);
 
   /*
    * TS-01 `exactOptionalPropertyTypes` forbids assigning `undefined` to an
@@ -54,13 +78,13 @@ export async function apiRequest<TSchema extends z.ZodType>(
   const init: RequestInit & { next: RequestOptions<TSchema>['next'] } = {
     method,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
       Accept: 'application/json',
       ...headers,
     },
     signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     next,
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    ...(encodedBody === undefined ? {} : { body: encodedBody }),
   };
 
   // ERR-05(1): fetch signals transport failure only by rejecting. The rejection

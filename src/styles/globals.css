@@ -831,6 +831,8 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   padding: 1.5rem;
   max-block-size: calc(100dvh - 5rem);
   overflow-y: auto;
+  /* Reaching the end of this list must not hand the scroll to the page behind. */
+  overscroll-behavior: contain;
 
   @media (min-width: 48rem) {
     grid-template-columns: 12rem minmax(0, 1fr);
@@ -1691,6 +1693,27 @@ html::-webkit-scrollbar {
 }
 
 /*
+ * The page does not scroll while a modal is open.
+ *
+ * `showModal()` makes the rest of the document INERT — unclickable, out of the
+ * tab order, hidden from a screen reader — but it does not stop the wheel. So
+ * scrolling over the search sheet's backdrop, or past the end of its own list,
+ * moved the catalogue underneath it: the reader loses their place in a page
+ * they are not even looking at.
+ *
+ * `:has()` rather than a class toggled from JavaScript, so this holds for every
+ * modal the store has — the search sheet, the bag, the filter drawer — and for
+ * any it grows later, with nothing to remember to wire up.
+ *
+ * The usual objection to locking the root, that removing the scrollbar shifts
+ * the page sideways, does not apply here: the rule above already hides it, so
+ * there is no gutter to reclaim and nothing moves.
+ */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+/*
  * WebKit draws its own clear button inside `type="search"` as soon as the field
  * has content. It is unlabelled, unthemed — it renders blue, ignoring the
  * palette — and it duplicates a control both search fields already provide. One
@@ -1705,4 +1728,331 @@ input[type='search']::-webkit-search-decoration {
 :focus-visible {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
+}
+
+/*
+ * The CENTRED modal of `Dialog`, sibling to `slide-over` above.
+ *
+ * Same undoing of the element's defaults — `<dialog>` arrives sized to its
+ * content with a border — but here the centring is KEPT rather than reversed,
+ * because that is the whole difference between the two shapes.
+ *
+ * Sized to sit comfortably on a phone and stay compact on a desktop: a single
+ * task with one thing to look at should not stretch to the width of a monitor.
+ */
+@utility modal-dialog {
+  max-inline-size: min(28rem, calc(100vw - 2rem));
+  max-block-size: min(44rem, calc(100dvh - 2rem));
+  inline-size: 100%;
+  /*
+   * Centring, stated rather than inherited. A `<dialog>` is centred by the UA
+   * stylesheet's `margin: auto`, and Tailwind's preflight resets margin on
+   * every element — so without this the dialog renders in the top-left corner,
+   * which looks like a broken layout rather than a missing rule. `slide-over`
+   * sets its own margins for the same reason.
+   */
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+
+  &::backdrop {
+    background-color: color-mix(in oklab, black 55%, transparent);
+    opacity: 0;
+    transition: opacity 180ms ease;
+  }
+
+  &[open]::backdrop {
+    opacity: 1;
+  }
+
+  &[data-closing]::backdrop {
+    opacity: 0;
+  }
+
+  & > .modal-dialog-card {
+    display: flex;
+    flex-direction: column;
+    max-block-size: min(44rem, calc(100dvh - 2rem));
+    border-radius: var(--radius-card);
+    background-color: var(--color-surface);
+    box-shadow: 0 1.5rem 3.5rem color-mix(in oklab, black 32%, transparent);
+    overflow: hidden;
+
+    /*
+     * ENTRY AND EXIT.
+     *
+     * On the CARD rather than on the dialog element, because the element itself
+     * carries the backdrop and animating both together makes the scrim move with
+     * the panel. The card rises 0.5rem and settles from 0.97.
+     */
+    opacity: 0;
+    translate: 0 0.5rem;
+    scale: 0.97;
+    transition:
+      opacity 180ms ease,
+      translate 180ms cubic-bezier(0.32, 0.72, 0, 1),
+      scale 180ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  &[open] > .modal-dialog-card {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+
+  &[data-closing] > .modal-dialog-card {
+    opacity: 0;
+    translate: 0 0.5rem;
+    scale: 0.97;
+  }
+
+  /* A11Y-10: the fade stays — something appearing from nothing is harder to
+     follow than something that arrives — and only the travel goes. */
+  @media (prefers-reduced-motion: reduce) {
+    & > .modal-dialog-card {
+      translate: 0 0;
+      scale: 1;
+      transition: opacity 180ms ease;
+    }
+
+    &[data-closing] > .modal-dialog-card {
+      translate: 0 0;
+      scale: 1;
+    }
+  }
+}
+
+/*
+ * The arriving state. Unlayered and at the top level ON PURPOSE: `@utility`
+ * output lands in `@layer utilities`, and a starting state that lost to it
+ * would leave the dialog snapping open — a transition cannot run on the first
+ * frame an element is rendered, and this is what supplies the missing previous
+ * value.
+ */
+@starting-style {
+  .modal-dialog[open] > .modal-dialog-card {
+    opacity: 0;
+    translate: 0 0.5rem;
+    scale: 0.97;
+  }
+
+  .modal-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @starting-style {
+    .modal-dialog[open] > .modal-dialog-card {
+      translate: 0 0;
+      scale: 1;
+    }
+  }
+}
+
+/*
+ * The try-on's working state: a light sweeps down the customer's own photograph
+ * while the image is generated.
+ *
+ * Deliberately not a spinner. The wait is up to thirty seconds — long enough
+ * that a spinner reads as a hang — and showing the photo being worked on says
+ * what is happening AND keeps the thing the customer just chose on screen, so
+ * the dialog does not blank out and come back.
+ */
+@utility try-on-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface-muted);
+}
+
+@utility try-on-sweep {
+  position: absolute;
+  inset-inline: 0;
+  block-size: 45%;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklab, var(--color-brand-500) 34%, transparent),
+    transparent
+  );
+  animation: try-on-sweep 1.9s ease-in-out infinite;
+}
+
+@keyframes try-on-sweep {
+  0% {
+    inset-block-start: -45%;
+  }
+
+  100% {
+    inset-block-start: 100%;
+  }
+}
+
+/*
+ * A11Y-10 — a repeating sweep is exactly the kind of motion that causes trouble,
+ * so it stops entirely and the panel holds a steady tint instead. The status
+ * text beside it is what actually reports progress, and it is unaffected.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .try-on-sweep {
+    animation: none;
+    inset-block-start: 0;
+    block-size: 100%;
+    background: color-mix(in oklab, var(--color-brand-500) 12%, transparent);
+  }
+}
+
+/*
+ * THE TRY-ON WAITING STATE.
+ *
+ * Four keyframe animations that run together and say different things, because
+ * a single spinner cannot carry a thirty-second wait: the customer needs to see
+ * that something is happening, that it is happening to THEIR photograph, and
+ * roughly what stage it has reached.
+ *
+ *   try-on-develop   the photograph resolving from grey to colour
+ *   try-on-sweep     a light passing down over it
+ *   try-on-progress  an indeterminate bar, because the duration is unknowable
+ *   try-on-phase     three captions crossfading in sequence
+ *
+ * All four are CSS. Nothing here needs JavaScript, nothing hydrates, and the
+ * whole waiting state costs the bundle nothing.
+ */
+
+/*
+ * The photograph "develops" — desaturated and dim, resolving to full colour and
+ * back. It reads as the image being worked on, and it is a deliberate reference
+ * to what the module is actually doing to it at that moment: correcting its
+ * colour.
+ */
+@utility try-on-develop {
+  animation: try-on-develop 2.6s ease-in-out infinite;
+}
+
+@keyframes try-on-develop {
+  0%,
+  100% {
+    filter: grayscale(0.7) brightness(0.7) contrast(1.06);
+  }
+
+  50% {
+    filter: grayscale(0) brightness(1) contrast(1);
+  }
+}
+
+/*
+ * An INDETERMINATE bar, and indeterminate is the honest shape. The module
+ * cannot report progress — it is waiting on one external call that either
+ * answers or does not — so a bar that filled to 90% and stopped would be
+ * inventing information, and everyone has learned to distrust that bar.
+ */
+@utility try-on-progress {
+  position: relative;
+  block-size: 0.1875rem;
+  border-radius: 9999px;
+  background-color: color-mix(in oklab, var(--color-fg) 12%, transparent);
+  overflow: hidden;
+}
+
+@utility try-on-progress-bar {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 40%;
+  border-radius: 9999px;
+  background-color: var(--color-brand-500);
+  animation: try-on-progress 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/*
+ * Travels on `inset-inline-start`, not `translate`, so it runs from the reading
+ * start to the reading end and mirrors itself under RTL with no second rule
+ * (I18N-04).
+ */
+@keyframes try-on-progress {
+  0% {
+    inset-inline-start: -40%;
+  }
+
+  100% {
+    inset-inline-start: 100%;
+  }
+}
+
+/*
+ * The three captions occupy ONE grid cell and crossfade, so the block never
+ * changes height and nothing below it moves while the text changes. Each runs
+ * the same 6s cycle offset by two seconds, which is what sequences them without
+ * a timer, a state machine or a single line of JavaScript.
+ */
+@utility try-on-phases {
+  display: grid;
+}
+
+@utility try-on-phase {
+  grid-area: 1 / 1;
+  opacity: 0;
+  animation: try-on-phase 6s ease-in-out infinite;
+}
+
+@utility try-on-phase-2 {
+  animation-delay: 2s;
+}
+
+@utility try-on-phase-3 {
+  animation-delay: 4s;
+}
+
+@keyframes try-on-phase {
+  0% {
+    opacity: 0;
+    translate: 0 0.35rem;
+  }
+
+  3%,
+  30% {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  33%,
+  100% {
+    opacity: 0;
+    translate: 0 -0.35rem;
+  }
+}
+
+/*
+ * A11Y-10. Everything here loops indefinitely, which is the category of motion
+ * most likely to cause harm, so all four stop rather than merely slow down.
+ *
+ * What replaces them has to still say "working": the photograph holds a steady
+ * dimmed state, the bar holds a filled track, and the FIRST caption is pinned
+ * visible — without that last rule all three captions would sit at opacity 0
+ * and the waiting state would have no words at all.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .try-on-develop {
+    animation: none;
+    filter: grayscale(0.35) brightness(0.85);
+  }
+
+  .try-on-progress-bar {
+    animation: none;
+    inset-inline: 0;
+    inline-size: 100%;
+    opacity: 0.5;
+  }
+
+  .try-on-phase {
+    animation: none;
+    opacity: 0;
+  }
+
+  .try-on-phase:first-child {
+    opacity: 1;
+  }
 }
