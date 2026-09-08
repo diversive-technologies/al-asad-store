@@ -92,16 +92,22 @@ export function updateQuantity(
   });
 }
 
-/** §16 `removeItem(cart, line)` — the hold is released by the backend at once. */
+/**
+ * §16 `removeItem(cart, line)` — the hold is released by the backend at once.
+ *
+ * D6: a POST that RECORDS the removal, not a DELETE. The line stops being in
+ * the bag and stays on file with the reason it left.
+ */
 export function removeItem(
   cartId: CartId,
   lineId: CartLineId,
   locale: Locale,
 ): Promise<Result<AddToBagResult, ApiError>> {
   return apiRequest({
-    path: ENDPOINTS.bag.line(cartId, lineId),
+    path: ENDPOINTS.bag.lineRemoval(cartId, lineId),
     schema: addToBagResultSchema,
-    method: 'DELETE',
+    method: 'POST',
+    body: {},
     searchParams: { locale },
     next: { revalidate: 0 },
   });
@@ -123,15 +129,21 @@ export function applyCode(
   });
 }
 
-/** Lifting a code again is its own call, not `applyCode('')`. */
+/**
+ * Lifting a code again is its own call, not `applyCode('')`.
+ *
+ * D6: recorded as lifted rather than erased, so the bag's history shows which
+ * codes were tried and in what order.
+ */
 export function removeCode(
   cartId: CartId,
   locale: Locale,
 ): Promise<Result<ApplyCodeResult, ApiError>> {
   return apiRequest({
-    path: ENDPOINTS.bag.code(cartId),
+    path: ENDPOINTS.bag.codeRemoval(cartId),
     schema: applyCodeResultSchema,
-    method: 'DELETE',
+    method: 'POST',
+    body: {},
     searchParams: { locale },
     next: { revalidate: 0 },
   });

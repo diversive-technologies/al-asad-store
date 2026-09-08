@@ -1,6 +1,6 @@
 import type { Locale } from '@/i18n/locales';
 
-import { discardCart, summaryFor, type BagSummaryPayload } from './bag-db';
+import { convertCart, summaryFor, type BagSummaryPayload } from './bag-db';
 import { allocate, expiryFor } from './bag-reservations';
 
 /**
@@ -352,7 +352,9 @@ export function placeOrder(cartId: string, input: PlaceInput, locale: Locale): P
    * already on the order — this mock has no gateway to call and no SMS to send,
    * and pretending otherwise would invent a failure mode that does not exist.
    */
-  discardCart(cartId);
+  // D6 — the cart is CONVERTED, not discarded: an order can be traced back to
+  // the bag that produced it, including the lines removed before checkout.
+  convertCart(cartId, orderNumber);
 
   return { kind: 'PLACED', order };
 }

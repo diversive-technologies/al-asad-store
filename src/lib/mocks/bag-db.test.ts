@@ -3,13 +3,20 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   addItem,
   applyCode,
+  cartHistory,
+  removeCode,
   removeLine,
   resetCarts,
   summaryFor,
   updateQuantity,
   createCart,
 } from './bag-db';
-import { reservedQuantity, resetReservations, sweepExpired } from './bag-reservations';
+import {
+  reservationLedger,
+  reservedQuantity,
+  resetReservations,
+  sweepExpired,
+} from './bag-reservations';
 import { CATALOGUE } from './catalogue-db';
 import { onHandFor, toProductDetail } from './product-detail-db';
 
@@ -245,6 +252,73 @@ describe('§7.3 expiry', () => {
     // Nothing has expired, so the sweep removes nothing and changes nothing.
     expect(sweepExpired()).toBe(0);
     expect(reservedQuantity(at(selections, 0).pieceId, at(selections, 0).sizeId)).toBe(1);
+  });
+});
+
+describe('D6 provenance — nothing is destroyed', () => {
+  it('keeps a removed line on file, with the reason it left', () => {
+    const { productId, selections } = candidate('SIMPLE');
+    const cart = createCart();
+
+    addItem(cart, productId, selections, 1, 'en');
+    const lineId = summaryFor(cart, 'en')?.lines[0]?.id ?? '';
+    removeLine(cart, lineId, 'en');
+
+    // Gone from the bag the customer sees...
+    expect(summaryFor(cart, 'en')?.lines).toHaveLength(0);
+
+    // ...and still on file, saying who removed it rather than merely that it ended.
+    const history = cartHistory(cart);
+    expect(history?.lines).toHaveLength(1);
+    expect(history?.lines[0]?.removalReason).toBe('CUSTOMER');
+  });
+
+  it('keeps the reservation a removed line held, marked RELEASED', () => {
+    const { productId, selections } = candidate('SET');
+    const cart = createCart();
+
+    addItem(cart, productId, selections, 1, 'en');
+    const lineId = summaryFor(cart, 'en')?.lines[0]?.id ?? '';
+    removeLine(cart, lineId, 'en');
+
+    const ledger = reservationLedger(cart);
+    expect(ledger).toHaveLength(selections.length);
+    expect(ledger.every((row) => row.status === 'RELEASED')).toBe(true);
+
+    // The stock is genuinely free again — provenance is not a leak.
+    for (const selection of selections) {
+      expect(reservedQuantity(selection.pieceId, selection.sizeId)).toBe(0);
+    }
+  });
+
+  it('records both codes when one supersedes another', () => {
+    const { productId, selections } = candidate('SIMPLE');
+    const cart = createCart();
+    addItem(cart, productId, selections, 1, 'en');
+
+    applyCode(cart, 'EID10', 'en');
+    applyCode(cart, 'WELCOME500', 'en');
+    removeCode(cart, 'en');
+
+    const codes = cartHistory(cart)?.codes ?? [];
+    expect(codes.map((entry) => entry.code)).toEqual(['EID10', 'WELCOME500']);
+    // Both lifted, so nothing is in force and the bag carries no code.
+    expect(codes.every((entry) => entry.liftedAt !== null)).toBe(true);
+    expect(summaryFor(cart, 'en')?.pricing.appliedCode).toBeNull();
+  });
+
+  it('archives a settled reservation instead of deleting it', () => {
+    const { productId, selections } = candidate('SIMPLE');
+    const cart = createCart();
+
+    addItem(cart, productId, selections, 1, 'en');
+    const lineId = summaryFor(cart, 'en')?.lines[0]?.id ?? '';
+    removeLine(cart, lineId, 'en');
+
+    // The sweep moves it OUT of the hot table — which is what keeps an
+    // availability read cheap — and the row is still readable afterwards.
+    expect(sweepExpired()).toBe(selections.length);
+    expect(reservationLedger(cart)).toHaveLength(selections.length);
   });
 });
 

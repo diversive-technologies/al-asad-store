@@ -146,6 +146,50 @@ retailer wants all of it. A furniture retailer is a different product, not a
 customisation, and pretending otherwise would drive an abstraction with one real
 user. Do not generalise the domain layer in the name of this decision.
 
+**D6 — Nothing is ever deleted. No DELETE API, anywhere.**
+
+The store keeps complete provenance: nothing it has held, priced, shown or sold
+is destroyed. Anything that stops being current changes STATUS, and once it can
+no longer affect a live read it moves to cold storage. "Removed from the
+website" and "gone" are different things, and the second never happens.
+
+**The verb follows the policy rather than decorating it.** `DELETE` on a resource
+promises the resource is gone afterwards, and that promise would be false here.
+Removals are a POST to a `/removal` sub-resource, which says what actually
+occurs: a removal is RECORDED. Two paths carry that today — `bag.lineRemoval`
+and `bag.codeRemoval` — and any future one takes the same shape.
+
+Where this bites, beyond the two verbs:
+
+| Thing | Was | Is |
+| --- | --- | --- |
+| Cart line | spliced out | marked, with `CUSTOMER` or `EXPIRED` as the reason |
+| Promotional code | overwritten | the previous one is LIFTED; every code tried is kept |
+| Reservation (§7.1/§7.2 step 4) | `DELETE the row` | `ACTIVE` → `RELEASED` / `EXPIRED` / `ALLOCATED` |
+| Cart at placement (§7.2) | discarded | `CONVERTED`, carrying its order number |
+| §7.3 sweep | deletes expired rows | ARCHIVES anything no longer `ACTIVE` |
+
+**The one that will bite silently.** Availability must filter on status AND
+expiry, not on existence — deletion used to do half that job implicitly:
+
+```
+available := on_hand − allocated − SUM(qty WHERE status='ACTIVE' AND expires_at > now())
+```
+
+Forget the status half and released holds keep counting against stock. That does
+not oversell; it UNDERSELLS, silently — sizes read sold out with goods on the
+shelf, and nothing throws.
+
+**Three carve-outs, and they are about not RETAINING rather than about
+deleting.** D6 does not override any of them: customer photographs (§24, §30.4 —
+never written to storage, backup or log at any point), payment credentials
+(never stored, and archiving a PAN to satisfy provenance is a PCI problem, not a
+record), and superseded credential material (record the event, never the old
+hash or token — retaining dead secrets is a liability).
+
+This is consistent with §30.4's existing "audit log append-only" rather than a
+departure from it.
+
 ## Build sequence — super-modules
 
 Delivery is by page-level vertical slice. These consume the 17 architecture

@@ -25,6 +25,16 @@ coverage/
 # project configuration and IS committed.
 .claude/settings.local.json
 
+# Operator working documents — planning notes, specifications drafted for a
+# reader outside the repository, anything written to think with rather than to
+# build against. Deliberately NOT history: they go stale the moment the code
+# moves, and a stale document in a repository is believed.
+#
+# The binding documents stay committed: CLAUDE.md, GIT.md, PROGRESS.md and
+# docs/system-architecture.md. If something in here becomes binding, move it to
+# .claude/docs/ and it is committed again.
+.claude/working-docs/
+
 # Editors
 .idea/
 *.swp

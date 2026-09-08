@@ -337,7 +337,12 @@ export const handlers = [
     return HttpResponse.json({ kind: 'ADDED', summary: result.summary });
   }),
 
-  http.delete(`*${ENDPOINTS.bag.line(':cartId', ':lineId')}`, ({ params, request }) => {
+  /*
+   * D6 — a POST that RECORDS the removal, where this was a DELETE on the line.
+   * The line stops being in the bag, its hold is released immediately (§16),
+   * and the row stays on file with the reason it left.
+   */
+  http.post(`*${ENDPOINTS.bag.lineRemoval(':cartId', ':lineId')}`, ({ params, request }) => {
     const result = removeLine(String(params.cartId), String(params.lineId), localeOf(request));
     if (result.kind !== 'ADDED') return new HttpResponse(null, { status: 404 });
     return HttpResponse.json({ kind: 'ADDED', summary: result.summary });
@@ -363,7 +368,8 @@ export const handlers = [
     return HttpResponse.json({ kind: 'APPLIED', summary: result.summary });
   }),
 
-  http.delete(`*${ENDPOINTS.bag.code(':cartId')}`, ({ params, request }) => {
+  /* D6 — lifting the code is recorded, never erased. See the note above. */
+  http.post(`*${ENDPOINTS.bag.codeRemoval(':cartId')}`, ({ params, request }) => {
     const result = removeCode(String(params.cartId), localeOf(request));
     if (result.kind === 'REJECTED') return new HttpResponse(null, { status: 404 });
     return HttpResponse.json({ kind: 'APPLIED', summary: result.summary });

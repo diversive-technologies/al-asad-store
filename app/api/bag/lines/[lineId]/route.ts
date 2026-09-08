@@ -1,4 +1,4 @@
-import { readCartId, removeItem, updateQuantity } from '@/features/bag';
+import { readCartId, updateQuantity } from '@/features/bag';
 import { updateQuantityRequestSchema } from '@/features/bag/contract';
 import { getLocale } from '@/i18n';
 import type { CartLineId } from '@/lib/domain/ids';
@@ -6,11 +6,14 @@ import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 
 /**
- * §16 `updateQuantity(cart, line, qty)` and `removeItem(cart, line)`.
+ * §16 `updateQuantity(cart, line, qty)`.
  *
- * Both are writes against a line the caller must already hold, so neither
- * creates a cart: without the cookie there is no bag to edit and the answer is
- * 404 rather than a silently created empty one.
+ * A write against a line the caller must already hold, so it does not create a
+ * cart: without the cookie there is no bag to edit and the answer is 404 rather
+ * than a silently created empty one.
+ *
+ * D6 — removal used to be a DELETE here and is now its own route, at
+ * `./removal`. No path in this application destroys anything.
  */
 export const dynamic = 'force-dynamic';
 
@@ -50,22 +53,5 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
 
   // Raising a quantity runs the same §7.1 transaction as adding, so the union
   // can still come back `UNAVAILABLE` and the panel says which piece ran out.
-  return Response.json(result.value, { headers: NO_STORE });
-}
-
-export async function DELETE(_request: Request, context: RouteContext): Promise<Response> {
-  await ensureMockServer();
-
-  const cartId = await readCartId();
-  if (cartId === null) return new Response(null, { status: 404 });
-
-  const { lineId } = await context.params;
-  const result = await removeItem(cartId, lineId as CartLineId, await getLocale());
-
-  if (!result.ok) {
-    logApiError('api:bag:delete', result.error);
-    return new Response(null, { status: 502 });
-  }
-
   return Response.json(result.value, { headers: NO_STORE });
 }

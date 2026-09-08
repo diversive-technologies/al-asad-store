@@ -39,10 +39,14 @@ export const ROUTES = {
     products: '/api/products',
     /** §16 — GET the summary, POST to add a line. */
     bag: '/api/bag',
-    /** PATCH the quantity, DELETE the line. */
+    /** PATCH the quantity. D6: removal is its own path, never a DELETE. */
     bagLine: (lineId: string) => `/api/bag/lines/${lineId}`,
-    /** POST to apply a promotional code, DELETE to lift it. */
+    /** D6 — POST records that the line was removed; nothing is destroyed. */
+    bagLineRemoval: (lineId: string) => `/api/bag/lines/${lineId}/removal`,
+    /** POST to apply a promotional code. */
     bagCode: '/api/bag/code',
+    /** D6 — POST records that the code was lifted. */
+    bagCodeRemoval: '/api/bag/code/removal',
     /** §17 — the quote refreshes as the customer picks delivery and gifting. */
     checkoutQuote: '/api/checkout/quote',
     /** §7.2 — the one write that turns a bag into an order. */

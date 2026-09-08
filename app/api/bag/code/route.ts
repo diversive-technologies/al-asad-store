@@ -1,11 +1,11 @@
-import { applyCode, readCartId, removeCode } from '@/features/bag';
+import { applyCode, readCartId } from '@/features/bag';
 import { applyCodeRequestSchema } from '@/features/bag/contract';
 import { getLocale } from '@/i18n';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 
 /**
- * §16 `applyCode(cart, code)`, and DELETE to lift it again.
+ * §16 `applyCode(cart, code)`. D6 — lifting it is its own route, at `./removal`.
  *
  * DATA-13: whether a code exists, what it is worth and why it was refused are
  * all Pricing's answers. This route forwards a string and renders back whatever
@@ -38,21 +38,5 @@ export async function POST(request: Request): Promise<Response> {
 
   // A refused code is a 200 carrying `REJECTED`, for the same reason
   // `Unavailable` is: it is an answer, not a failed request.
-  return Response.json(result.value, { headers: NO_STORE });
-}
-
-export async function DELETE(): Promise<Response> {
-  await ensureMockServer();
-
-  const cartId = await readCartId();
-  if (cartId === null) return new Response(null, { status: 404 });
-
-  const result = await removeCode(cartId, await getLocale());
-
-  if (!result.ok) {
-    logApiError('api:bag:code:delete', result.error);
-    return new Response(null, { status: 502 });
-  }
-
   return Response.json(result.value, { headers: NO_STORE });
 }

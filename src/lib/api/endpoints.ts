@@ -4,6 +4,24 @@
  * the two never overlap.
  *
  * Entries are added as modules need them; speculative paths are not declared.
+ *
+ * ## D6 — no endpoint in this registry uses DELETE, and none ever will
+ *
+ * The store keeps complete provenance: nothing it has held, priced, shown or
+ * sold is destroyed. Anything that stops being current changes STATUS and, once
+ * it can no longer affect a live read, moves to cold storage — so "removed from
+ * the website" and "gone" are different things, and the second never happens.
+ *
+ * The verb follows the policy rather than decorating it. `DELETE` on a resource
+ * is a promise that the resource is gone afterwards, and that promise would be
+ * false here; a POST to a `/removal` sub-resource says what actually occurs,
+ * which is that a removal is RECORDED. Two paths carry that today —
+ * `bag.lineRemoval` and `bag.codeRemoval` — and any future one takes the same
+ * shape.
+ *
+ * The exceptions are narrow and are about NOT retaining rather than deleting:
+ * customer photographs (§24, §30.4) are never written down in the first place,
+ * and credential material is never archived. Neither is a deletion path.
  */
 export const ENDPOINTS = {
   content: {
@@ -85,10 +103,22 @@ export const ENDPOINTS = {
     summary: '/api/v1/carts',
     /** `addItem(cart, product_id, {piece_id -> size}, qty)`. */
     items: (cartId: string) => `/api/v1/carts/${cartId}/items`,
-    /** `updateQuantity(cart, line, qty)` and `removeItem(cart, line)`. */
+    /** `updateQuantity(cart, line, qty)` — PATCH. */
     line: (cartId: string, lineId: string) => `/api/v1/carts/${cartId}/items/${lineId}`,
-    /** `applyCode(cart, code)`, and DELETE to lift it again. */
+    /**
+     * D6 — `removeItem(cart, line)`, as a POST that RECORDS a removal.
+     *
+     * This was `DELETE` on the line itself, and the change is the policy rather
+     * than a rename: no endpoint in this registry destroys anything. Removing a
+     * line appends a removal to the cart's history and releases the hold; the
+     * line stays on file with the reason it left.
+     */
+    lineRemoval: (cartId: string, lineId: string) =>
+      `/api/v1/carts/${cartId}/items/${lineId}/removal`,
+    /** `applyCode(cart, code)` — POST. */
     code: (cartId: string) => `/api/v1/carts/${cartId}/code`,
+    /** D6 — lifting a code is recorded, not erased. See `lineRemoval`. */
+    codeRemoval: (cartId: string) => `/api/v1/carts/${cartId}/code/removal`,
     /** `summary(cart)` for an existing cart. */
     cart: (cartId: string) => `/api/v1/carts/${cartId}`,
   },

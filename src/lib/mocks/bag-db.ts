@@ -17,6 +17,13 @@ import { toProductDetail } from './product-detail-db';
  * free-delivery threshold, the delivery charge and the promotional codes are
  * all commercial settings the operator changes in an admin panel, and a copy on
  * the other side of the wire would drift the first time they did.
+ *
+ * ## D6 — nothing here is ever destroyed
+ *
+ * A line the customer removes, a code they lift and a cart that becomes an
+ * order all stay on file with a status. `summaryFor` returns the ACTIVE
+ * projection over that history, so what the customer sees is unchanged while
+ * the store keeps a complete record of what was in the bag and what left it.
  */
 
 /** Pricing settings the operator owns. Minor units throughout (DATA-11). */
@@ -48,15 +55,48 @@ const REJECTION: Record<Locale, string> = {
   ur: 'یہ کوڈ درست نہیں ہے۔',
 };
 
+/**
+ * D6 — why a line left the bag.
+ *
+ * `CUSTOMER` and `EXPIRED` are different facts and the difference is worth
+ * keeping: one is someone changing their mind, the other is the store taking
+ * the item back because a hold ran out. §26's reporting can tell them apart.
+ */
+type LineRemovalReason = 'CUSTOMER' | 'EXPIRED';
+
 interface CartLineRecord {
   id: string;
   productId: string;
   selections: readonly { pieceId: string; sizeId: string }[];
   quantity: number;
+  /** D6 — null while the line is in the bag; set once, never unset. */
+  removedAt: number | null;
+  removalReason: LineRemovalReason | null;
 }
 
-const CARTS = new Map<string, CartLineRecord[]>();
-const CART_CODES = new Map<string, string>();
+/**
+ * D6 — a cart is never deleted. Placing its order CONVERTS it, which is better
+ * provenance than discarding it: an order can be traced back to the bag that
+ * produced it, including the lines that were removed before checkout.
+ */
+type CartStatus = 'ACTIVE' | 'CONVERTED';
+
+interface CartRecord {
+  lines: CartLineRecord[];
+  status: CartStatus;
+  /** The order this cart became, once it became one. */
+  orderNumber: string | null;
+}
+
+/** D6 — every code ever applied, in order. The last un-lifted one is in force. */
+interface CodeEvent {
+  code: string;
+  appliedAt: number;
+  liftedAt: number | null;
+}
+
+const CARTS = new Map<string, CartRecord>();
+const CART_CODES = new Map<string, CodeEvent[]>();
 
 let nextId = 0;
 
@@ -68,18 +108,29 @@ function mockId(group: string): string {
 
 export function createCart(): string {
   const id = mockId('0001');
-  CARTS.set(id, []);
+  CARTS.set(id, { lines: [], status: 'ACTIVE', orderNumber: null });
   return id;
 }
 
 export function cartExists(cartId: string): boolean {
-  return CARTS.has(cartId);
+  return CARTS.get(cartId)?.status === 'ACTIVE';
 }
 
-export function discardCart(cartId: string): void {
+/**
+ * §7.2 — the cart becomes the order. D6: marked, not deleted.
+ *
+ * Its holds are released rather than dropped, and the cart stops answering as a
+ * bag: `summaryFor` returns null for a converted cart, which the handler turns
+ * into the same 404 a missing cart gives, so the customer's bag reads empty
+ * exactly as it did before this policy.
+ */
+export function convertCart(cartId: string, orderNumber: string): void {
+  const cart = CARTS.get(cartId);
+  if (cart === undefined) return;
+
   releaseCart(cartId);
-  CARTS.delete(cartId);
-  CART_CODES.delete(cartId);
+  cart.status = 'CONVERTED';
+  cart.orderNumber = orderNumber;
 }
 
 /**
@@ -100,6 +151,21 @@ function sameSelections(
   return left.every((selection) =>
     right.some((other) => other.pieceId === selection.pieceId && other.sizeId === selection.sizeId),
   );
+}
+
+/** The lines still in the bag. D6: a projection, not the whole record. */
+function activeLines(cart: CartRecord): CartLineRecord[] {
+  return cart.lines.filter((line) => line.removedAt === null);
+}
+
+/** The code currently in force, if any. D6: the last un-lifted event. */
+function activeCode(cartId: string): string | undefined {
+  const events = CART_CODES.get(cartId) ?? [];
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event !== undefined && event.liftedAt === null) return event.code;
+  }
+  return undefined;
 }
 
 export interface BagLinePayload {
@@ -166,7 +232,7 @@ function toLinePayload(line: CartLineRecord, locale: Locale): BagLinePayload | n
 function priceCart(cartId: string, lines: BagLinePayload[], locale: Locale) {
   const subtotalMinor = lines.reduce((total, line) => total + line.lineTotalMinor, 0);
 
-  const code = CART_CODES.get(cartId);
+  const code = activeCode(cartId);
   const promo = code === undefined ? undefined : PROMO_CODES[code];
 
   const discountMinor =
@@ -203,18 +269,28 @@ function priceCart(cartId: string, lines: BagLinePayload[], locale: Locale) {
 
 /** §16 `summary(cart) -> {lines[], pricing, freeDeliveryProgress}`. */
 export function summaryFor(cartId: string, locale: Locale): BagSummaryPayload | null {
-  const stored = CARTS.get(cartId);
-  if (stored === undefined) return null;
+  const cart = CARTS.get(cartId);
+  // D6: a converted cart still exists, but it is no longer anybody's bag.
+  if (cart === undefined || cart.status !== 'ACTIVE') return null;
 
-  const lines = stored.flatMap((line) => toLinePayload(line, locale) ?? []);
+  const lines: BagLinePayload[] = [];
 
-  // Lines whose holds lapsed are dropped above; drop the records too, so the
-  // cart does not keep re-deriving a line the customer can no longer see.
-  if (lines.length !== stored.length) {
-    CARTS.set(
-      cartId,
-      stored.filter((line) => lines.some((payload) => payload.id === line.id)),
-    );
+  for (const line of activeLines(cart)) {
+    const payload = toLinePayload(line, locale);
+
+    if (payload === null) {
+      /*
+       * D6 — the hold lapsed, so the line leaves the bag. It is MARKED rather
+       * than spliced, and the reason is recorded: this is the one removal the
+       * customer did not ask for, and telling it apart from one they did is
+       * exactly what the policy is for.
+       */
+      line.removedAt = Date.now();
+      line.removalReason = 'EXPIRED';
+      continue;
+    }
+
+    lines.push(payload);
   }
 
   return {
@@ -259,9 +335,11 @@ export function addItem(
   quantity: number,
   locale: Locale,
 ): CartWriteResult {
-  const stored = CARTS.get(cartId);
+  const cart = CARTS.get(cartId);
   const record = CATALOGUE.find((entry) => entry.id === productId);
-  if (stored === undefined || record === undefined) return { kind: 'NOT_FOUND' };
+  if (cart === undefined || cart.status !== 'ACTIVE' || record === undefined) {
+    return { kind: 'NOT_FOUND' };
+  }
 
   // §16 invariant: a line cannot exist without a size for EVERY piece. Only the
   // backend knows how many pieces the product has, so only the backend can
@@ -272,7 +350,12 @@ export function addItem(
   );
   if (!covered || selections.length !== detail.pieces.length) return { kind: 'NOT_FOUND' };
 
-  const existing = stored.find(
+  /*
+   * D6 — only an ACTIVE line is merged into. Re-adding something the customer
+   * removed starts a NEW line, so the removal stays in the record rather than
+   * being undone.
+   */
+  const existing = activeLines(cart).find(
     (line) => line.productId === productId && sameSelections(line.selections, selections),
   );
 
@@ -281,6 +364,8 @@ export function addItem(
     productId,
     selections: [...selections],
     quantity: 0,
+    removedAt: null,
+    removalReason: null,
   };
 
   const wanted = line.quantity + quantity;
@@ -293,7 +378,7 @@ export function addItem(
   // §16: "Reservation and cart line are created in the same transaction." The
   // line is only recorded once the hold exists.
   line.quantity = wanted;
-  if (existing === undefined) stored.push(line);
+  if (existing === undefined) cart.lines.push(line);
 
   const summary = summaryFor(cartId, locale);
   return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
@@ -306,9 +391,11 @@ export function updateQuantity(
   quantity: number,
   locale: Locale,
 ): CartWriteResult {
-  const stored = CARTS.get(cartId);
-  const line = stored?.find((entry) => entry.id === lineId);
-  if (stored === undefined || line === undefined) return { kind: 'NOT_FOUND' };
+  const cart = CARTS.get(cartId);
+  if (cart === undefined || cart.status !== 'ACTIVE') return { kind: 'NOT_FOUND' };
+
+  const line = activeLines(cart).find((entry) => entry.id === lineId);
+  if (line === undefined) return { kind: 'NOT_FOUND' };
 
   const outcome = reserve(cartId, line.id, toKeys({ ...line, quantity }));
   if (outcome.kind === 'UNAVAILABLE') {
@@ -321,45 +408,105 @@ export function updateQuantity(
   return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
 }
 
-/** §16 `removeItem(cart, line)` — releases the hold immediately. */
+/**
+ * §16 `removeItem(cart, line)` — releases the hold immediately.
+ *
+ * D6: the line is marked removed, not spliced out. The hold is released on the
+ * same call, so stock frees up exactly as before; what changes is that the bag
+ * still knows the line was there.
+ */
 export function removeLine(cartId: string, lineId: string, locale: Locale): CartWriteResult {
-  const stored = CARTS.get(cartId);
-  if (stored === undefined) return { kind: 'NOT_FOUND' };
+  const cart = CARTS.get(cartId);
+  if (cart === undefined || cart.status !== 'ACTIVE') return { kind: 'NOT_FOUND' };
 
-  release(lineId);
-  CARTS.set(
-    cartId,
-    stored.filter((line) => line.id !== lineId),
-  );
+  const line = activeLines(cart).find((entry) => entry.id === lineId);
+  if (line !== undefined) {
+    release(lineId);
+    line.removedAt = Date.now();
+    line.removalReason = 'CUSTOMER';
+  }
 
   const summary = summaryFor(cartId, locale);
   return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
 }
 
 export type CodeResult =
-  { kind: 'APPLIED'; summary: BagSummaryPayload } | { kind: 'REJECTED'; reason: string };
+  | { kind: 'APPLIED'; summary: BagSummaryPayload }
+  | { kind: 'REJECTED'; reason: string };
 
 /** §16 `applyCode(cart, code)`. Validity is Pricing's answer, never the UI's. */
 export function applyCode(cartId: string, code: string, locale: Locale): CodeResult {
   const normalised = code.trim().toUpperCase();
+  const cart = CARTS.get(cartId);
 
-  if (!CARTS.has(cartId) || PROMO_CODES[normalised] === undefined) {
+  if (cart === undefined || cart.status !== 'ACTIVE' || PROMO_CODES[normalised] === undefined) {
     return { kind: 'REJECTED', reason: REJECTION[locale] };
   }
 
-  CART_CODES.set(cartId, normalised);
+  const now = Date.now();
+  const events = CART_CODES.get(cartId) ?? [];
+
+  /*
+   * D6 — applying a second code lifts the first rather than overwriting it, so
+   * the bag's record shows both and the order in which they were tried.
+   */
+  for (const event of events) {
+    if (event.liftedAt === null) event.liftedAt = now;
+  }
+
+  events.push({ code: normalised, appliedAt: now, liftedAt: null });
+  CART_CODES.set(cartId, events);
+
   const summary = summaryFor(cartId, locale);
   return summary === null
     ? { kind: 'REJECTED', reason: REJECTION[locale] }
     : { kind: 'APPLIED', summary };
 }
 
+/** Lifting a code. D6: recorded as lifted, never erased. */
 export function removeCode(cartId: string, locale: Locale): CodeResult {
-  CART_CODES.delete(cartId);
+  const now = Date.now();
+  for (const event of CART_CODES.get(cartId) ?? []) {
+    if (event.liftedAt === null) event.liftedAt = now;
+  }
+
   const summary = summaryFor(cartId, locale);
   return summary === null
     ? { kind: 'REJECTED', reason: REJECTION[locale] }
     : { kind: 'APPLIED', summary };
+}
+
+/**
+ * D6 — the full history of a cart, including what left it.
+ *
+ * The projection `summaryFor` returns is what the customer sees; this is what
+ * the store keeps. Read by the tests that pin the guarantee.
+ */
+export function cartHistory(cartId: string): {
+  status: CartStatus;
+  orderNumber: string | null;
+  lines: readonly {
+    id: string;
+    productId: string;
+    quantity: number;
+    removalReason: LineRemovalReason | null;
+  }[];
+  codes: readonly { code: string; liftedAt: number | null }[];
+} | null {
+  const cart = CARTS.get(cartId);
+  if (cart === undefined) return null;
+
+  return {
+    status: cart.status,
+    orderNumber: cart.orderNumber,
+    lines: cart.lines.map(({ id, productId, quantity, removalReason }) => ({
+      id,
+      productId,
+      quantity,
+      removalReason,
+    })),
+    codes: (CART_CODES.get(cartId) ?? []).map(({ code, liftedAt }) => ({ code, liftedAt })),
+  };
 }
 
 /** Test seam. */

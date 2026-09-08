@@ -82,9 +82,17 @@ export function updateLineQuantity(
   });
 }
 
-/** §16 `removeItem` — always succeeds, and releases the hold at once. */
+/**
+ * §16 `removeItem` — always succeeds, and releases the hold at once.
+ *
+ * D6: a POST that records the removal. Nothing in this application issues a
+ * DELETE, because nothing in this system is destroyed.
+ */
 export function removeBagLine(lineId: CartLineId): Promise<Result<AddToBagResult, BagError>> {
-  return send(ROUTES.api.bagLine(lineId), addToBagResultSchema, { method: 'DELETE' });
+  return send(ROUTES.api.bagLineRemoval(lineId), addToBagResultSchema, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
 
 /** §16 `applyCode`. A refused code resolves to `REJECTED`, carrying the reason. */
@@ -95,6 +103,10 @@ export function applyBagCode(code: string): Promise<Result<ApplyCodeResult, BagE
   });
 }
 
+/** D6 — lifting a code is recorded, not erased. See `removeBagLine`. */
 export function removeBagCode(): Promise<Result<ApplyCodeResult, BagError>> {
-  return send(ROUTES.api.bagCode, applyCodeResultSchema, { method: 'DELETE' });
+  return send(ROUTES.api.bagCodeRemoval, applyCodeResultSchema, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
