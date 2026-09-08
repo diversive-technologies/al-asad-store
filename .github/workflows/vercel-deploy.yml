@@ -1,0 +1,87 @@
+name: Deploy to Vercel
+
+# Vercel's own Git integration cannot watch this repository: it is owned by
+# diversive-technologies while the Vercel project lives in khizar-iqbal's
+# personal account, and a host cannot natively subscribe to a repo it has no
+# access to. The deploy therefore runs here, authenticated by a long-lived
+# VERCEL_TOKEN held in this repository's Actions secrets.
+#
+# Consequence worth knowing before a 3 a.m. debugging session: that token is a
+# CREDENTIAL WITH AN EXPIRY, not part of the code. When it lapses the run fails
+# with "The token provided via --token argument is not valid", which reads like
+# a build break and is not one. Rotating it is the repository owner's action.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deploy target
+        type: choice
+        options: [preview, production]
+        default: preview
+
+concurrency:
+  # Production deploys queue rather than cancel, so main never lands a build
+  # that was killed halfway. Pull request previews are superseded freely.
+  group: vercel-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The repository's own gates, run before anything reaches Vercel. A deploy
+  # that skipped these would be a downgrade from what the project already
+  # enforces locally.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          # Single source of truth: .nvmrc, matching the Vercel project's Node
+          # version so the gates run on what production actually runs.
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Resolve target (push to main = production, pull request = preview)
+        id: cfg
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event.inputs.target }}" = "production" ]; then
+            echo "flag=--prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          fi
+      #
+      # The build runs ON VERCEL, not on this runner, and that is deliberate.
+      #
+      # The obvious alternative — `vercel pull` then `vercel build --prebuilt`,
+      # which is what the sibling diversive-website workflow does — CANNOT work
+      # for this project. `vercel pull` returns every environment value as an
+      # empty string here, so the runner would build with no configuration at
+      # all: `src/config/env.client.ts` validates NEXT_PUBLIC_APP_URL at module
+      # load and throws, and the build dies collecting page data with
+      # "Invalid client environment". Verified by running it.
+      #
+      # Deploying from source instead lets Vercel inject the real Production or
+      # Preview values at build time, which is how the first successful deploy
+      # of this project was made. It also removes an entire class of drift:
+      # there is exactly one place environment values come from.
+      #
+      - name: Deploy to Vercel
+        run: vercel deploy ${{ steps.cfg.outputs.flag }} --yes --token=${{ secrets.VERCEL_TOKEN }}
