@@ -27,6 +27,87 @@ entry names no hash — it does not have one until it is committed.
 
 ### _(this commit)_ — 2026-09-08
 
+**Backfill the three entries this file had started missing.**
+
+The maintenance rule above — write the entry, then commit — lapsed twice in a
+row, and nothing caught it because nothing can: a convention enforced only by
+memory is a convention with no test behind it. `8ab5bec` and `197b297` went in
+without entries, and `e5d0456` never had its own `_(this commit)_` replaced with
+the hash it earned. All three are below.
+
+Worth stating plainly, since it is the second time this file has recorded a
+lesson about itself: if these entries keep being written after the fact, the
+honest move is to drop the "written before" rule rather than keep breaking it.
+
+---
+
+### `197b297` — 2026-09-08
+
+**Fix the order confirmation 404 by reading the order through a BFF instead of
+the server render.**
+
+Every order placed on the Vercel deployment ended on "This page could not be
+found" — under a tab still titled _Order confirmed_ — while the identical flow
+worked locally on every machine it was tried on.
+
+- **Root cause: mock state is per-process, and serverless does not share one.**
+  Under D1 the "backend" is MSW answering from `Map`s in the Node heap.
+  `POST /api/checkout/place` wrote the order to `ORDERS`; `/order/[orderNumber]`
+  read it back **during its own server render**, which on Vercel is a different
+  function with a different heap that had never been written to. Locally a single
+  long-lived `next dev` process hides the whole problem.
+- **The rest of the store was never affected, and that is the clue.** Everything
+  else that touches mutable state reaches it through a Route Handler — `/bag`
+  renders a Client Component that fetches `/api/bag`. The order page was the one
+  place a Server Component read state a Route Handler had written. So the rule is
+  now explicit: **mutable state under D1 is reached from Route Handlers only.**
+- **A second, independent defect made it undiagnosable.** `if (!order.ok)
+  notFound()` collapsed a ten-member `ApiError` union into one 404, so `NETWORK`,
+  `TIMEOUT`, `CONTRACT_VIOLATION` and `SERVER` all rendered as "no such order".
+  §10 `ERR-02` shows the correct `switch` verbatim; this was a rule not followed,
+  not a gap in the rulebook. A customer holding a receipt was told their order
+  did not exist, and the real failure was invisible to anyone looking for it.
+- **Absence now lives in the success channel** as `ok(null)`, the shape
+  `fetchProduct` already used, so "no such order" and "could not reach the store"
+  can never be confused again.
+- `classifyOrderResponse` gives that one rule a name and a test. The test was
+  proved to fail: reinstating the original defect produced six failures.
+- The segment had **no `loading.tsx` and no `error.tsx`** at all — an `ERR-09`
+  violation that predates this change. Both added.
+- **Verified against the live deployment before the fix** by placing a real
+  order: `/order/AA100001` 404'd on reload, deterministically, while `/api/bag`
+  showed the cart correctly converted — the write had succeeded in one process
+  and the read failed in another.
+
+**A second bug of the same origin is NOT fixed here**, and should not be
+forgotten: the product page reads availability during its server render, so a
+size held in someone's bag still reads as available on the deployment. Six units
+of M were reserved through `/api/bag` while the server HTML kept offering M. It
+undersells and oversells silently, and fixing it means moving that read
+client-side — a first-paint tradeoff that is the operator's call.
+
+**A trap worth keeping:** the preview pane starves **React's scheduler**, not
+just CSS animation. The fixed page sat on "Loading…" through nineteen seconds of
+waiting with the query already settled, and committed the instant a screenshot
+forced a paint. The existing note covers `requestAnimationFrame` and
+`setTimeout`; this extends it to React state updates. Also: read `textContent`
+rather than `innerText` there, since `innerText` needs a layout the pane defers.
+
+---
+
+### `8ab5bec` — 2026-09-08
+
+**Stop tracking `.vscode` and ignore it.**
+
+Its only content was one developer's window colours, which every other checkout
+was being handed and shown as a permanent diff. `git rm --cached` leaves the file
+on disk untouched. The `.gitignore` entry carries a note that specific files can
+be un-ignored by name if shared editor settings are ever actually wanted.
+
+---
+
+### `e5d0456` — 2026-09-08
+
 **Add this changelog.**
 
 Every commit to date, with the reasoning and the traps behind each. Written
