@@ -422,26 +422,34 @@ export const en = {
     photoEmpty: 'Please choose a photo first.',
   },
   /**
-   * §34 Made-to-Measure. The instructions are the feature: a customer who does
-   * not know where the tape goes cannot complete this form, and §34.6 keeps the
-   * wording beside the field rather than only on the figure, because the figure
-   * is an enhancement and not everyone can see it.
+   * §34 Made-to-Measure. The customer measures a GARMENT they already own, so
+   * every instruction says what to do with a piece of cloth on a table — not
+   * what to do with their own body. §34.6 keeps the wording beside the field as
+   * well as on the drawing, because the drawing is an enhancement and not
+   * everyone can see it.
    */
   madeToMeasure: {
     pageTitle: 'Stitched to your size',
     pageLead:
-      'Tell us your measurements once. Every piece you order after that is cut for you, by our tailors, to exactly those numbers.',
+      'Measure a kameez you already own, and we will cut your next one to match. It is easier than measuring yourself, and it copies a fit you have already approved.',
     figureHint:
-      'Choose a measurement below, or tap a point on the figure, and we will show you where the tape goes.',
-    dragHint: 'Drag to turn',
-    readout: '{value} {unit}',
-    girthHint: 'Wrap the tape all the way around, and keep it level.',
-    lengthHint: 'Measure in a straight line, without pulling the tape tight.',
+      'Choose a measurement below, or tap a mark on the drawing, and we will show you where the tape goes.',
+    garmentLabel: 'Garment',
+    garments: {
+      KAMEEZ: 'Kameez',
+      SHALWAR: 'Shalwar',
+      WAISTCOAT: 'Waistcoat',
+    },
+    ringHint: 'Measure straight across the garment laid flat. We double it.',
+    spanHint: 'Measure in a straight line, without pulling the tape tight.',
     unitLabel: 'Measure in',
     unitInches: 'Inches',
     unitCentimetres: 'Centimetres',
     unitShortInches: 'in',
     unitShortCentimetres: 'cm',
+    dragHint: 'Tap a mark',
+    readout: '{value} {unit}',
+    readoutRing: '{across} across → {around} around',
     progress: '{done} of {total} measured',
     errorSummaryTitle: 'Check these measurements',
     outOfRange: 'Enter a value between {min} and {max}.',
@@ -449,66 +457,62 @@ export const en = {
       'Cloth is cut to these numbers, so a stitched order cannot be returned or exchanged. We will show you every measurement again before you pay.',
     saveCta: 'Save my measurements',
     savedNotice: 'Measurements saved. You can use them on anything we stitch.',
-    regions: {
-      NECK: 'Neck and shoulders',
-      TORSO: 'Body',
-      ARM: 'Sleeve',
-      LEG: 'Shalwar',
-    },
     points: {
-      neck: {
-        label: 'Neck',
-        instruction: 'Around the base of the neck, where a collar sits. Leave a finger under the tape.',
-      },
-      shoulder: {
+      kameezShoulder: {
         label: 'Shoulder',
-        instruction: 'Across the back, from the tip of one shoulder to the tip of the other.',
+        instruction:
+          'Lay the kameez flat, face up. Measure across the back, from one shoulder seam to the other.',
       },
-      chest: {
+      kameezChest: {
         label: 'Chest',
         instruction:
-          'Around the fullest part of the chest, under the arms. Keep the tape level and breathe normally.',
-      },
-      waist: {
-        label: 'Waist',
-        instruction: 'Around the narrowest part of the waist, above the navel. Do not pull it in.',
-      },
-      hip: {
-        label: 'Hip',
-        instruction: 'Around the fullest part of the seat, standing with your feet together.',
+          'Measure straight across the chest, an inch below the armhole, with the kameez flat.',
       },
       kameezLength: {
         label: 'Kameez length',
-        instruction: 'From the shoulder seam straight down to where you want the kameez to end.',
+        instruction: 'From the highest point of the shoulder, straight down to the hem.',
       },
-      sleeveLength: {
+      kameezSleeve: {
         label: 'Sleeve length',
         instruction:
-          'From the shoulder tip, down the outside of a slightly bent arm, to the wrist bone.',
+          'From the shoulder seam, along the top of the sleeve, to the outer edge of the cuff.',
       },
-      armhole: {
-        label: 'Armhole',
-        instruction: 'Around the top of the arm where it meets the shoulder, passing under the armpit.',
-      },
-      sleeveOpening: {
+      kameezCuff: {
         label: 'Cuff',
-        instruction: 'Around the wrist, plus the room you like at the cuff.',
+        instruction: 'Measure across the cuff opening with it fastened.',
+      },
+      kameezBottom: {
+        label: 'Bottom',
+        instruction: 'Measure across the hem at its widest, with the kameez lying flat.',
       },
       shalwarWaist: {
-        label: 'Shalwar waist',
-        instruction: 'Around the waist where the shalwar is tied, not where a belt would sit.',
+        label: 'Waist',
+        instruction: 'Measure across the waistband without stretching it, with the shalwar flat.',
       },
       shalwarLength: {
         label: 'Shalwar length',
-        instruction: 'From the waist tie straight down the side to the ankle bone.',
+        instruction: 'From the top of the waistband, straight down to the hem.',
       },
-      thigh: {
+      shalwarThigh: {
         label: 'Thigh',
-        instruction: 'Around the fullest part of one thigh, standing straight.',
+        instruction: 'Measure across one leg at its widest, just below the crotch seam.',
       },
-      paincha: {
+      shalwarPaincha: {
         label: 'Paincha',
-        instruction: 'Around the ankle opening — the width you want the shalwar to finish at.',
+        instruction: 'Measure across the opening at the ankle.',
+      },
+      waistcoatShoulder: {
+        label: 'Shoulder',
+        instruction: 'Across the back, from one shoulder seam to the other.',
+      },
+      waistcoatChest: {
+        label: 'Chest',
+        instruction:
+          'Measure across the chest just below the armholes, with the waistcoat fastened and flat.',
+      },
+      waistcoatLength: {
+        label: 'Waistcoat length',
+        instruction: 'From the highest point of the shoulder, straight down to the hem.',
       },
     },
   },

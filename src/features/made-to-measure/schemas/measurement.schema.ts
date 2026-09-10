@@ -1,28 +1,23 @@
 import { z } from 'zod';
 
-import { MEASUREMENT_POINTS, type MeasurementPoint } from '../lib/measurement-points';
+import { enteredFromStored, MEASUREMENTS, type Measurement } from '../lib/garments';
 import { fromMm, type Unit } from '../lib/units';
 
 /**
- * FORM-01 — one schema for the form, and it is derived from the measurement set
- * rather than written out beside it. A hand-listed schema would be a second copy
- * of the point list (PD-01) and would drift the first time a point is added.
+ * FORM-01 — one schema for the form, derived from the measurement set rather
+ * than written out beside it. A hand-listed schema would be a second copy of the
+ * list (PD-01) and would drift the first time a measurement is added.
  *
- * The bounds are the point's own, converted into whatever unit the customer is
- * currently typing in. §34.7 keeps them server-owned; FORM-03 makes this copy an
- * AFFORDANCE only — the backend checks again and is the authority.
+ * The bounds live on the STORED figure — a chest of 800 to 1500 mm is a
+ * circumference — so they are halved back before they are shown to a field that
+ * asks for the across reading. FORM-03 makes this copy an AFFORDANCE only; the
+ * backend checks again and is the authority (§34.7).
  */
 
-/**
- * A field is entered as text and STAYS text through validation.
- *
- * Parsing to a number in the resolver would make the form's input type and its
- * output type disagree, and the conversion that actually matters is to
- * millimetres at submission (ADR 16) — not to a float halfway through.
- */
-function pointSchema(point: MeasurementPoint, unit: Unit): z.ZodType<string, string> {
-  const min = fromMm(point.minMm, unit);
-  const max = fromMm(point.maxMm, unit);
+/** Every field is entered as text and STAYS text through validation. */
+function fieldSchema(measurement: Measurement, unit: Unit): z.ZodType<string, string> {
+  const min = fromMm(enteredFromStored(measurement, measurement.minMm), unit);
+  const max = fromMm(enteredFromStored(measurement, measurement.maxMm), unit);
 
   return z
     .string()
@@ -36,18 +31,18 @@ function pointSchema(point: MeasurementPoint, unit: Unit): z.ZodType<string, str
 
 export function buildMeasurementSchema(unit: Unit) {
   const shape: Record<string, z.ZodType<string, string>> = {};
-  for (const point of MEASUREMENT_POINTS) {
-    shape[point.id] = pointSchema(point, unit);
+  for (const measurement of MEASUREMENTS) {
+    shape[measurement.id] = fieldSchema(measurement, unit);
   }
   return z.object(shape);
 }
 
 /**
  * The form's own values are strings — an input holds text, and an empty field is
- * `''` rather than `NaN`. The parsed output is the number map above.
+ * `''` rather than `NaN`.
  */
 export type MeasurementEntry = Record<string, string>;
 
 export const EMPTY_ENTRY: MeasurementEntry = Object.fromEntries(
-  MEASUREMENT_POINTS.map((point) => [point.id, '']),
+  MEASUREMENTS.map((measurement) => [measurement.id, '']),
 );

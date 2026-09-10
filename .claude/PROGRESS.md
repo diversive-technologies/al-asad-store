@@ -7,7 +7,8 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-08. Last commit: `cfd876f` (D6 append-only).
+Last updated: 2026-09-10, on branch `flat-model`. Last commit: `62363d3`
+(Made-to-Measure, committed incomplete because the rest forks onto this branch).
 Tree still carries the search work in flight — see the end of this file.
 
 ---
@@ -23,7 +24,7 @@ Tree still carries the search work in flight — see the end of this file.
 | M5 | Checkout | **Core done.** Quote, single-page checkout, §7.2 placement, confirmation. |
 | M6 | Real auth & account | **Auth screens built** against §11's shape; account area still deferred. |
 | USP1 | Try-On (§24) | **Interface complete, provider unconnected** — which is exactly §28.5. See below. |
-| USP2 | Made-to-Measure (§34) | **Measurement atelier built** on a supplied anatomical mesh, with every tape derived from the model's own surface. Posing is inert (no skeleton); entry points and the buy-box fork are not started. |
+| USP2 | Made-to-Measure (§34) | **Measurement atelier rebuilt as GARMENT FLATS** on branch `flat-model` — the 3D figure and `three` are gone. Kameez, shalwar and waistcoat as SVG line art, each measurement marked on the drawing it is taken from. Entry points and the buy-box fork are still not started. |
 
 ## M2 — what is built
 
@@ -690,92 +691,123 @@ The production build has still NOT been run against this change.
 
 ## Made-to-Measure (USP 2) — what is built
 
-Architecture §34, added as Amendment 1. The **measurement atelier** at
-`/stitched`, public and usable without buying anything.
+Architecture §34, amended by §34.6a. The **measurement atelier** at `/stitched`,
+public and usable without buying anything.
 
-**Two rules were lifted by the operator, explicitly, and this is the record of
-it.** `BASE-01` (no runtime dependency without a bundle-cost justification) and
-`PERF-10` (200 kB first-load budget) are both overridden: `three` is a real
-dependency and its core chunk is **~1.5 MB raw**. Two earlier passes — a flat SVG
-figure, then a CSS-3D stack of cross-sections — were both rejected as too dull.
-It is loaded through `next/dynamic` with `ssr: false`, so the weight lands on this
-route and nowhere else, but the route is heavy and that is the deal.
+**The customer measures a GARMENT, not a body**, and that single decision is what
+the whole page is shaped by. §34.8 already made *copy a garment you already own*
+the Release 1 path; the operator confirmed it is the one to build. Somebody
+measuring a kameez they already own needs no second person, no guess at ease, and
+copies a fit they have already approved — so the drawing that helps is a picture
+of the garment, not of a torso.
 
-- **The figure is an operator-supplied mesh**, `public/models/figure.obj` — a
-  bare anatomical male with hands, fingers, feet and real musculature. It is
-  normalised on load to the height the measurements already assume, centred and
-  stood on the ground plane, and wears the same jade material and lighting.
-  The operator has confirmed there is no licensing issue with it.
+**`three` is GONE, and with it the `BASE-01` / `PERF-10` override.** The previous
+pass put a real 3D mesh on this route at ~1.5 MB for `three`'s core chunk alone.
+The operator's reason for removing it is the market: 3D rendering is a hard ask
+on a slow connection, and the store sells no Western clothing, so the variety a
+general 3D figure buys is variety nobody needs. The whole application's client
+JavaScript is now **1.48 MB across 29 chunks**, the largest of them 367 kB — less
+in total than the one chunk that was deleted. `grep` for `THREE` or
+`WebGLRenderer` in the built output returns nothing.
 
-- **MEASUREMENTS ARE NOW TAKEN OFF THE MESH, not off a table.**
-  `lib/mesh-anatomy.ts` reads the loaded model into a world-space point cloud
-  once, and every tape is derived from it:
+- **Three flats, drawn as tailor's patterns** — `lib/garment-drawings.ts`. Kameez
+  (band collar, placket, buttons, tapered sleeves with cuffs, A-line body, side
+  slits), shalwar (wide belt with the cloth gathered onto it, a nala, drape
+  falling through the leg, curved inseams and a hard taper to a cuffed paincha),
+  waistcoat (scooped armholes, deep V, welt pockets, pointed hem). Each is a
+  closed silhouette plus detail strokes in its own viewBox.
 
-  - **A girth is the CONVEX HULL of a cross-section**, which is what a tape does.
-    A tape pulled tight bridges every hollow it crosses — it spans the small of
-    the back rather than dipping into it. A curve that traced the surface
-    faithfully would read low on every measurement, and low is the direction that
-    produces a garment too tight to wear.
-  - **The chest ignores the arms without the mesh being segmented.** Grouping a
-    slice by lateral gaps separates ribcage from limbs, so a chest slice keeps the
-    part straddling the centre line and drops the rest.
-  - **The shoulder lands on the acromion the model actually has**, and its tape
-    walks the REAR arc of the hull between them — it is measured across the back,
-    and a hull offers both arcs with only one of them right.
-  - **An arm is sliced PERPENDICULAR to the limb.** A flat cut through an arm held
-    at fifty degrees returns an ellipse half again too long, and a cuff measured
-    off it is nonsense. The arm's axis is traced from the mesh rather than
-    assumed, because the pose an artist left it in is not knowable in advance.
+  **The shalwar took five passes, and only one of them fixed the real thing.** The
+  one number that was ever wrong is where the CROTCH sits. At 57%, and again at
+  44%, the legs came out shorter than the block above them, which no human is,
+  and it read as clown trousers. Rounder inseams, a drafted waist, a schematic
+  pared back to straight lines — all of it was tried while that number stayed
+  wrong. The draft has it: crotch depth is one third of the hip below the waist,
+  about 13 in on a 40 in shalwar, so the block above is 74 units here against 152
+  of leg — near enough the 1:2 a person actually is.
 
-  `lib/body-profile.ts` and the procedural figure are still built, and now serve
-  as the **placeholder shown while the 2.3 MB model downloads** — every tape falls
-  back to them until the mesh has been read, so the page is never empty or wrong
-  while the download is in flight.
+  **A shalwar is WIDE, and the drawing has to say so.** The pared-back schematic
+  was correct in outline and read as a trouser; the operator's call was to go back
+  to the drafted version. Four things carry the fullness and all four earn their
+  place: a wide belt with the cloth GATHERED onto it, the nala hanging out of the
+  centre front, the drape falling on down the leg, and inseams that CURVE, because
+  the garment holds far more cloth than the leg needs.
 
-- **Posing is inert while this mesh is in.** The OBJ carries no skeleton, so
-  `armLift` — arms up for a chest, T for a sleeve — does nothing. The data and the
-  rig are untouched and a rigged model restores it; nothing was deleted.
+  **The fullness lives in the INNER angle, not in the outer taper.** The outer
+  sides are PERFECTLY VERTICAL — one line from waist to ankle, no taper and no
+  kink at the hip — so the silhouette is a rectangle with a wide curved V cut out
+  of the bottom, and every bit of shaping is on the inside. The paincha is held at
+  28 units whatever the splay does: it is a measurement, not a consequence of the
+  drawing, and widening the ankle to suit a wider stance would be the picture
+  telling a lie about a number the customer types in.
 
-- **THE ARMS ARE ON PIVOTS, and the model takes the pose the measurement needs.**
-  The arm is authored along its OWN length from the shoulder joint rather than by
-  height on the figure, so it can swing: it hangs at rest, lifts to 68° for a
-  chest (the tape has to pass under it — what a tailor asks out loud), and goes to
-  a full T for a sleeve. `armLift` is a column on the measurement, tweened
-  alongside the camera. The arm's tape and marker are CHILDREN of the arm group,
-  so they ride the pose instead of being left in mid-air.
-- **Frosted jade, lit like a product shot**, with `UnrealBloomPass` so the gold
-  tape reads as metal.
-- **The tape is `TubeGeometry` along a curve that rides the body**, drawing itself
-  on over 900ms by advancing `setDrawRange`.
-- **The camera turns to each measurement.** Hand-rolled spherical orbit rather
-  than `OrbitControls`, because the tween and the drag would otherwise fight over
-  the camera. Drag to spin and tilt; a click that did not travel is a raycast
-  against the markers. The **shoulder turns the figure around**, because that
-  measurement is taken across the back.
-- **It follows the page theme.** Light and dark are two different lighting sets,
-  not one set dimmed: on a pale ground the rim light has nothing to separate the
-  figure FROM, bloom washes out instead of glowing, and a translucent body loses
-  its edges — so the material closes up and the key does the work. The theme is
-  read from the resolved page background, because the store has three states
-  (light, dark, follow-the-system) and only the resolved colour knows the answer
-  in all three.
-- **The form does not scold.** Nothing goes red until the customer tries to save.
-- **One list still drives everything.** `lib/measurement-points.ts` holds thirteen
-  points — region, kind, bounds in millimetres, viewing angle, arm lift, and
-  coordinates in one of two spaces. §34 makes the real set CONTENT (ADR 17); this
-  is a fixture standing in for the tailor's card.
+  **The gusset is deliberately not drawn.** It is real construction — a square set
+  on point at the crotch — and it was tried both ways: as a closed diamond it sits
+  in open cloth and reads as an applied patch, and as its two lower seams alone it
+  reads as a chevron pointing at nothing. It is an inside seam on a front view and
+  no measurement is taken from it.
 
-Verified: **typecheck, lint, 207 tests and the production build all pass**, with
-`/stitched` in the build output, and the impeccable detector reports **no findings**.
-Measured in the running store rather than eyeballed: tabbing through four empty
-fields leaves **0** invalid fields and **0** alert nodes; submitting empty gives
-**13** invalid fields, the summary heading and **13** jump links, with focus landing
-on the summary; the chest lifts both arms and wraps the tape reading "40 in"; the
-sleeve goes to a T with the tape along the arm reading "25 in"; and the stage is
-light on a light page and dark on a dark one.
+  **Gathers and drape folds must not start at the same height.** Run together from
+  the band, twelve strokes at four different lengths read as a picket fence rather
+  than as cloth. The gathers are short and even; the folds pick up below them.
 
-`components/ui/field/` — `Field` was promoted out of `features/auth`, because a
-second feature needed it and one feature may not import another (MOD-01).
+- **THE SHAPE OF A MARK IS ITS ARITHMETIC.** This is the load-bearing rule and it
+  survives from the 3D work intact — only now it is drawn rather than modelled.
+  A **RING** is an ellipse: measured ACROSS the flat garment and DOUBLED, because
+  the garment is folded in half on the table. A **SPAN** is an arrow: read
+  straight off the tape. On a flat both would otherwise be a horizontal line
+  across the same cloth, and confusing them is the commonest measuring error
+  there is. The readout shows both figures as they are entered — `21 in across →
+  42 in around` — so nobody types a circumference they guessed at. The record
+  stays the circumference (§34.7), and the field bounds are HALVED back from it
+  before they are shown.
+
+- **A cuff is not horizontal, so nor is the ring on it.** `rotate` on a RING is
+  what keeps the ellipse following the cuff seam instead of crossing it.
+
+- **Marks are real buttons over the drawing** (A11Y-01), positioned by percentage,
+  each with an `sr-only` name; the SVG itself is `aria-hidden`, because it repeats
+  what the fields already say. Clicking a mark focuses its field, focusing a field
+  marks the drawing, and a jump link in the error summary does both **and**
+  switches the garment.
+
+- **A mark sits ON the thing measured, not at the middle of the garment.** A ring
+  is anchored at its outer extremity and a span a third of the way along. The
+  midpoint of a chest or a shoulder is the centre front, which is the busiest line
+  on every one of these drawings — a dot there lands among the placket buttons and
+  is taken for one. `garments.test.ts` asserts a minimum separation between every
+  pair of marks on a garment, so a coordinate edit that puts two 36px hit areas on
+  top of each other fails the suite instead of shipping.
+
+- **The form does not scold.** Nothing goes red until the customer tries to save,
+  and a failed submit focuses the SUMMARY rather than the first bad field — with
+  thirteen required measurements, landing in one empty box says nothing about the
+  other twelve. React Hook Form's `shouldFocusError` had to be turned OFF for
+  that: it focuses the first errored field by default and runs after the effect,
+  so it silently won.
+
+- **One rule for "measured", in one place.** `lib/entries.ts` decides what counts,
+  and the marks, the progress counter and the validation all read it — otherwise a
+  value can light a mark, tick the counter, and then fail on submit.
+
+- **It follows the page theme with no second lighting set.** Line art has no
+  ground of its own: the strokes are `--color-fg` and simply invert. That is the
+  whole of what the 3D version needed two lighting rigs and a bloom pass for.
+
+- **34 tests** across `garments`, `entries` and `units`, covering the doubling,
+  the round-trip, the bounds being stated on the stored figure, every annotation
+  falling inside its own viewBox, the anchor rules, and the mark separation.
+
+Verified: **typecheck, lint, 229 tests and the production build all pass**, with
+`/stitched` in the build output. Measured in the running store rather than
+eyeballed: tabbing through five empty fields leaves **0** invalid fields and **0**
+alert nodes; submitting empty gives **13** invalid fields, the summary heading,
+**13** jump links, and focus on the summary; typing 21 into the kameez chest reads
+`21 in across → 42 in around` and the toggle round-trips it to 56 cm and back;
+clicking the sleeve mark focuses `kameezSleeve`; the thigh jump link switches the
+drawing to the shalwar; and the page renders correctly light, dark, at 1440px and
+at 390px. Urdu was checked at `dir="rtl"` — every string, `13 میں سے 1 ناپ لیے گئے`,
+and the readout as `21 انچ آر پار ← 42 انچ گھیر`.
 
 ## Made-to-Measure — what is left
 
@@ -783,14 +815,17 @@ second feature needed it and one feature may not import another (MOD-01).
 product page, no homepage stage, no bag nudge for unstitched cloth, no card
 badge. The studio exists and nobody can find it.
 
-**The second capture path** — *copy a garment you already own* — which §34.8 makes
-Release 1 scope alongside standard sizing. Same thirteen fields and the same
-validation; what changes is the figure's mode (a flat-laid garment rather than a
-body) and the instruction set. The data model already carries both.
+**The body path**, which §34.8 defers and §34.6a keeps deferred. The same set,
+the same kinds, the same bounds and the same instructions drive it; what differs
+is which picture the tape is laid on and how the instruction is worded.
 
 **Nothing is saved.** Submitting validates and confirms on screen; there is no
 contract, no BFF and no mock behind it, so no profile is written and no stitching
 charge is priced. The measurement set is a fixture, not the tailor's card.
+
+**Thirteen measurements is a fixture, not the tailor's card.** §34 makes the real
+set content (ADR 17). The bounds are plausible rather than authoritative, and
+they are GARMENT figures — a kameez chest carries ease a body chest does not.
 
 ## Deliberate gaps — do not "fix" these
 
@@ -985,6 +1020,20 @@ out, and `/order/AA100001` still renders on a fresh load.
   involved.** The dev server had been up for ~25 minutes across edits to
   several feature files and MSW's interception simply died. `next dev` alone,
   started fresh, fixed it.
+
+  **Second occurrence, and the probes are not as sharp as this note claimed.** A
+  long Made-to-Measure session — roughly an hour of hot reloads across the
+  feature plus SIX `npm run build` runs against the live server — killed it
+  again. The tell was NOT the documented pair: `/api/quick-add?slug=x` answered
+  **404**, the "mock is alive" answer, while `/catalogue` was rendering
+  `ErrorState`. Only `/api/suggest` was degraded. **The reliable probe is to
+  fetch a page's own HTML and count what should be in it** — `<article>` came
+  back 0 on `/catalogue` before the restart and 24 after. Which of the two
+  causes it was is not established: both were present in quantity.
+
+  **Count OCCURRENCES, not lines.** `grep -c '<article'` on server HTML returns
+  1 however many products rendered, because the markup is one long line. Use
+  `grep -o … | wc -l`. This briefly read as a regression that had not happened.
 
   **What this note used to say, and why it was wrong.** It claimed dev and build
   "share `.next`" and that running `npm run build` against a live dev server was
@@ -1391,6 +1440,58 @@ out, and `/order/AA100001` still renders on a fresh load.
   that one probe is inconclusive rather than clean.
 - **The Read tool does not render AVIF.** To look at converted output, composite
   a contact sheet as JPEG and read that instead — one image, one look.
+- **React Hook Form focuses the first bad field, and it beats your effect.**
+  `shouldFocusError` defaults to true and runs AFTER the render that produced the
+  errors, so an effect moving focus to an error summary appears to do nothing —
+  focus is stolen a tick later, with no warning and nothing in the DOM to show
+  it. Turn it off explicitly when a summary owns the landing.
+- **A width read while a transition is mid-flight reports 0, and looks exactly
+  like broken CSS.** The pane's clock is frozen, so a `transition: inline-size`
+  never advances; `getBoundingClientRect().width` came back 0 on a bar whose
+  custom property, matching rule and parent width were all verifiably correct.
+  Read the rect a second time, in a later call, before believing a layout number
+  on anything that transitions.
+- **`computer{action:"zoom"}` does not crop in the Browser pane** — it returns the
+  whole screenshot with a note. To look closely at one element, shrink the
+  VIEWPORT so the screenshot is unscaled, and hide the rest of the page with an
+  injected stylesheet.
+- **Back-searching for a preceding doc comment lands anywhere.**
+  `text.rfind("  /**", 0, start)`, used to widen a replacement to include the
+  comment above a block, matched an unrelated comment in a file whose target had
+  none — and the replacement swallowed the end of the previous block. Anchor on
+  the block's own opening line and nothing else, and assert the match count.
+- **A `<<'EOF'` heredoc into `cat` failed with "unexpected EOF" in this shell**
+  while the identical form into `python -` worked. Do not fight it: write the
+  file with the Write tool and `cat` the pieces together.
+- **The midpoint of a symmetric dimension line is the centre front.** Anchoring a
+  marker at the middle of a shoulder or chest span puts it exactly on the placket,
+  among the buttons, where it reads as one of them. Two such markers a few units
+  apart also overlap into one hit area, so the wrong field opens with nothing on
+  screen to explain why. Anchor a girth ON its ring and a length off its midpoint,
+  and assert a minimum separation in a test — this is invisible in code review and
+  obvious the moment it is drawn.
+- **A garment flat is a pattern, not a picture, and the difference is legible.**
+  Three defects made the first drawings read wrong to anyone who owns the
+  garment: a body narrower than its own shoulders, an armhole that bulged OUTWARD
+  instead of being cut in (which turns a waistcoat into a sleeveless dress), and
+  a collar drawn as two arcs over a dipped neckline, which closes into a lens and
+  reads as a ring resting on the shoulders. Draw the seam a tailor would sew: a
+  band collar opens at the centre front, an armhole bows toward the centre.
+- **Detail is not the enemy; wrong proportion is.** The shalwar's fullness — the
+  gathers, the nala, the drape, the curved inseams — was stripped out on the
+  theory that a measurement diagram should be spare, and the pared-back version
+  read as a trouser. It went back in. A shalwar IS wide and the drawing has to
+  say so; what was actually making the picture wrong the whole time was one
+  number, not the level of detail.
+- **ONE number decides whether a garment reads as a garment: where the crotch
+  sits.** Three rounds of feedback on the shalwar were answered by redrawing the
+  silhouette, the seams and then the whole level of detail, while the crotch sat
+  at 57% and then 48% of the length throughout — which makes the legs shorter
+  than the body above them and reads as clown trousers however good the outline
+  is. It is the exact shape of the 11.3-heads mannequin further up this file:
+  effort went into everything except the proportion that was actually wrong.
+  **When feedback repeats after a fix, the fix addressed the wrong thing — go
+  back and measure the proportions before touching the drawing again.**
 
 ## Commands
 

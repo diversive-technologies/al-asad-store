@@ -1637,22 +1637,58 @@ constraint is recorded here:
 - **Every point carries its own anchor and tape path.** The figure is drawn from
   the measurement set, not hand-authored per garment. Adding a measurement adds a
   row and the diagram gains a point; nothing is edited in the interface.
-- **`kind` is load-bearing and must be honest.** A `GIRTH` wraps the body and a
-  `LENGTH` runs along it. Drawn on a front-facing figure the two are
-  indistinguishable, and confusing them is the single most common measuring
-  error. The interface renders them differently, and it can only do so because
-  the data says which is which.
+- **`kind` is load-bearing and must be honest.** A `GIRTH` wraps and a `LENGTH`
+  runs along. Drawn on a front-facing figure the two are indistinguishable, and
+  confusing them is the single most common measuring error. The interface renders
+  them differently, and it can only do so because the data says which is which.
 - **`region` selects the view.** A fourteen-point figure at phone width cannot
   label every point legibly. The region lets the interface show the relevant part
-  of the body at usable scale.
+  at usable scale.
 - **Instructions are Localisation content (22), keyed by point id**, in both
   languages, and are rendered as text beside the field as well as on the figure.
   The figure is an enhancement; a customer who cannot see it must still be able
   to complete the form (section 30.3).
-- **The figure is a picture of a body and does not mirror under right-to-left
-  layout.** The layout around it mirrors; the anatomy does not. Anchors are
-  therefore stored in the figure's own coordinate space, never as
-  layout-relative offsets.
+- **The figure does not mirror under right-to-left layout.** The layout around it
+  mirrors; the drawing does not — a placket is on the side it is sewn on, and an
+  arm is where the arm is. Anchors are therefore stored in the figure's own
+  coordinate space, never as layout-relative offsets.
+
+### 34.6a The figure is a GARMENT FLAT, not a body
+
+Amended after the interface was built and used. It changes what is drawn, and
+one thing about what is stored; it does not change the contract above.
+
+**The Release 1 path is `GARMENT_COPY` (34.8), so the figure is the thing being
+measured.** The customer is not measuring themselves. They are measuring a kameez
+they already own and already like the fit of, laid flat on a bed — which needs no
+second person, no guessing at ease, and copies a fit its owner has confirmed. A
+picture of a torso answers a question that path does not ask. The figure is
+therefore a tailor's flat of the garment: kameez, shalwar, waistcoat, one drawing
+each, chosen by a tab and switched automatically when the customer moves to a
+field belonging to another piece.
+
+**`kind` is drawn as a SHAPE, and the shape carries arithmetic.** On a flat, a
+`GIRTH` is an ellipse round the garment and a `LENGTH` is an arrow along it. This
+is what makes the two distinguishable on a drawing where both would otherwise be
+a horizontal line across the same cloth. It also settles the doubling: a girth is
+measured ACROSS a garment folded in half, so what the customer enters is HALF of
+what is recorded. The record stays a circumference — a tailor's card holds a
+chest of forty inches, not a twenty-inch half — and both figures are shown as it
+is entered, so nobody guesses at a circumference they cannot lay a tape around.
+
+**The set is per-garment, and that is not a new axis.** `MeasurementSet` is
+already keyed by `garment_style`; the interface simply shows one drawing per
+piece within it rather than one body for the whole set.
+
+**The body figure travels with the body path, and is deferred with it** (34.8).
+Nothing here removes it: the same set, the same `kind`, the same bounds and the
+same instructions drive either drawing. What differs is which picture the tape is
+laid on and how the instruction is worded.
+
+**Bounds are stated on the STORED figure**, which for a girth is the
+circumference. The interface halves them back before showing them, so a customer
+is told the range the field actually accepts. Getting this the wrong way round
+refuses every correct entry on a girth, silently.
 
 ## 34.7 Invariants
 

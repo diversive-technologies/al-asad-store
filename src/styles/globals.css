@@ -2058,24 +2058,24 @@ input[type='search']::-webkit-search-decoration {
 }
 
 /*
- * §34 — the measurement atelier.
+ * §34 — the measurement atelier, drawn FLAT.
  *
- * Every colour here resolves through the semantic tokens, so the set follows the
- * page's theme rather than being a black room in both. An earlier pass pinned it
- * dark on the reasoning that a lit object reads the same either way; that holds
- * for a film behind a scrim, and did not hold here — a customer who has chosen
- * the light store got a black page with no way out of it.
+ * The three-dimensional figure that used to stand here is gone: it cost ~1.5 MB
+ * of `three` on a market where a slow connection is the norm, and it answered a
+ * question the customer does not have. They are not measuring a body. They are
+ * measuring a kameez they already own and already like the fit of, laid face-up
+ * on a bed — so the drawing that helps is the one that looks like the thing in
+ * front of them.
  *
- * The scene's own lighting is switched in `MeasurementStage`, because a rim
- * light has nothing to separate the figure FROM on a pale ground.
+ * Every colour resolves through the semantic tokens, so the set follows the
+ * page's theme. Line art has no ground of its own; on a dark page the strokes
+ * invert with `--color-fg` and nothing else has to change.
  */
 .mm-scene {
   display: flex;
   flex-direction: column;
   min-block-size: calc(100dvh - var(--spacing-header));
   color: var(--color-fg);
-  /* Flat, because the stage paints its own backdrop into the scene — a CSS
-     gradient here would only ever show around the canvas, not through it. */
   background-color: var(--color-surface-muted);
 }
 
@@ -2089,31 +2089,235 @@ input[type='search']::-webkit-search-decoration {
   caret-color: var(--color-accent-500);
 }
 
+/*
+ * The stage is a COLUMN — tabs, drawing, caption — rather than a canvas with
+ * things floating on top of it. The drawing takes whatever height is left over,
+ * which is what lets one rule serve a 260-tall kameez and a 200-tall waistcoat.
+ */
 .mm-scene-stage {
   position: sticky;
   /* `main` already clears the fixed bar, so this is the offset from it. */
   inset-block-start: var(--spacing-header);
   order: 1;
-  block-size: 50dvh;
   align-self: start;
   inline-size: 100%;
-}
-
-.mm-stage-loading {
-  block-size: 100%;
-}
-
-.mm-scene-overlay {
-  position: absolute;
-  inset: 0;
+  block-size: 62dvh;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1.25rem;
-  /* The scene beneath is dragged and clicked; the caption must not intercept. */
+  gap: 0.9rem;
+  min-block-size: 0;
+  padding: 1.1rem var(--spacing-gutter);
+}
+
+.mm-flat-frame {
+  flex: 1 1 auto;
+  /* Without it a flex item refuses to shrink below its content, and the drawing
+     pushes the caption off the bottom of a short viewport. */
+  min-block-size: 0;
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/*
+ * Width comes from the ASPECT RATIO, never from `100%`.
+ *
+ * A height-constrained child of a centred flex column is sized to its content,
+ * so a `w-full` grandchild resolves against nothing and the figure renders two
+ * pixels wide with no error at all. Giving the box a definite height and letting
+ * the ratio transfer it to the width is the fix; `max-inline-size` then clamps a
+ * narrow viewport and the ratio transfers BACK, so the drawing letterboxes
+ * correctly in both directions.
+ */
+.gf-stage {
+  position: relative;
+  aspect-ratio: var(--gf-ratio);
+  block-size: 100%;
+  inline-size: auto;
+  max-inline-size: 100%;
+}
+
+.gf-outline {
+  fill: none;
+  stroke: var(--color-fg);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.88;
+}
+
+/* Seams, plackets, buttons — enough to say which garment this is, quiet enough
+   not to compete with the marks that are the point of the drawing. */
+.gf-detail {
+  fill: none;
+  stroke: var(--color-fg-muted);
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.65;
+}
+
+/*
+ * The SHAPE of a mark carries its arithmetic, so the two must not look alike:
+ * an ellipse goes around the garment and is doubled, an arrow is read straight
+ * off the tape. Dashing only the ellipse is what makes that legible at a glance
+ * — both are otherwise a line across the same drawing.
+ */
+.gf-mark {
+  fill: none;
+  stroke: var(--color-fg-muted);
+  stroke-width: 1;
+  stroke-linecap: round;
+  opacity: 0.32;
+  transition:
+    stroke 220ms ease,
+    stroke-width 220ms ease,
+    opacity 220ms ease;
+}
+
+ellipse.gf-mark {
+  stroke-dasharray: 4 3.5;
+}
+
+.gf-mark--filled {
+  stroke: var(--color-accent-500);
+  opacity: 0.6;
+}
+
+.gf-mark--active {
+  stroke: var(--color-accent-500);
+  stroke-width: 1.9;
+  opacity: 1;
+}
+
+/* A tape being drawn round the garment — the one piece of motion on the page,
+   and it only ever runs on the single mark being measured. */
+ellipse.gf-mark--active {
+  animation: gf-tape 2.6s linear infinite;
+}
+
+@keyframes gf-tape {
+  to {
+    stroke-dashoffset: -15;
+  }
+}
+
+/*
+ * A11Y-01 — the marks are real buttons over the drawing, not clickable paths.
+ * The hit area is 2.25rem, which clears a touch target while the dot it draws
+ * stays small enough that thirteen of them do not read as a rash.
+ */
+.gf-hotspot {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  /* Physical, deliberately: the percentages come from the drawing's own
+     coordinates and the drawing does not mirror under RTL. */
+  left: var(--gf-x);
+  top: var(--gf-y);
+  transform: translate(-50%, -50%);
+}
+
+.gf-hotspot:focus-visible {
+  outline: 2px solid var(--color-accent-400);
+  outline-offset: 2px;
+}
+
+.gf-dot {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-fg-muted);
+  opacity: 0.45;
+  transition:
+    background-color 200ms ease,
+    opacity 200ms ease,
+    scale 200ms ease;
+}
+
+.gf-hotspot:hover .gf-dot {
+  opacity: 1;
+  scale: 1.25;
+}
+
+.gf-dot--filled {
+  background-color: var(--color-accent-500);
+  opacity: 0.9;
+}
+
+.gf-dot--active {
+  background-color: var(--color-accent-500);
+  opacity: 1;
+  scale: 1.3;
+  box-shadow: 0 0 0 0.3rem color-mix(in oklch, var(--color-accent-500) 20%, transparent);
+}
+
+.gf-tag {
+  position: absolute;
+  left: var(--gf-x);
+  top: var(--gf-y);
+  /* Above its own dot, so it never covers the mark it is naming. */
+  transform: translate(-50%, calc(-50% - 1.45rem));
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-500);
+  color: oklch(0.2 0.03 75);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
   pointer-events: none;
+}
+
+.mm-tabs {
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background-color: color-mix(in oklch, var(--color-surface) 70%, transparent);
+}
+
+.mm-tab {
+  padding: 0.3rem 0.9rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+.mm-tab:hover {
+  color: var(--color-fg);
+}
+
+.mm-tab--on {
+  background-color: var(--color-brand-500);
+  color: var(--color-on-brand);
+}
+
+/* The radio inside is `sr-only`, so the ring has to be borrowed onto the label
+   that is actually visible. */
+.mm-tab:has(:focus-visible) {
+  outline: 2px solid var(--color-accent-400);
+  outline-offset: 2px;
+}
+
+.mm-scene-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
 }
 
@@ -2121,10 +2325,9 @@ input[type='search']::-webkit-search-decoration {
  * The caption gets a PLATE, not a wash.
  *
  * A gradient scrim across the bottom of the stage was strong enough to read on a
- * dark set and, on a light one, turned into a near-white sheet that dissolved
- * the figure's legs — while still leaving the muted text under 4.5:1. A small
- * blurred plate carries its own contrast wherever it lands and leaves the rest
- * of the set alone.
+ * dark set and, on a light one, turned into a near-white sheet while still
+ * leaving the muted text under 4.5:1. A small plate carries its own contrast
+ * wherever it lands and leaves the rest of the set alone.
  */
 .mm-scene-caption,
 .mm-scene-idle {
@@ -2132,7 +2335,6 @@ input[type='search']::-webkit-search-decoration {
   border: 1px solid color-mix(in oklch, var(--color-border) 65%, transparent);
   border-radius: var(--radius-card);
   background-color: color-mix(in oklch, var(--color-surface) 82%, transparent);
-  backdrop-filter: blur(12px);
 }
 
 .mm-scene-name {
@@ -2142,7 +2344,7 @@ input[type='search']::-webkit-search-decoration {
 
 .mm-scene-how {
   margin-block-start: 0.25rem;
-  max-inline-size: 28ch;
+  max-inline-size: 36ch;
   font-size: 0.75rem;
   color: var(--color-fg-muted);
   text-wrap: pretty;
@@ -2150,36 +2352,25 @@ input[type='search']::-webkit-search-decoration {
 
 .mm-scene-readout {
   margin-block-start: 0.5rem;
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-size: clamp(1.25rem, 2.6vw, 1.75rem);
   line-height: 1;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   color: var(--color-accent-500);
   font-variant-numeric: tabular-nums;
 }
 
 .mm-scene-idle {
-  max-inline-size: 32ch;
+  max-inline-size: 36ch;
   font-size: 0.8125rem;
   color: var(--color-fg-muted);
   text-wrap: pretty;
-}
-
-.mm-scene-drag {
-  font-size: 0.625rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  /* No opacity multiplier. `--color-fg-muted` is already the token that clears
-     contrast against a surface in both themes; knocking it back to 0.6 undid
-     that, and on a pale stage the hint all but disappeared. */
-  color: var(--color-fg-muted);
 }
 
 .mm-scene-panel {
   position: relative;
   z-index: 1;
   order: 2;
-  background-color: color-mix(in oklch, var(--color-surface) 88%, transparent);
-  backdrop-filter: blur(22px);
+  background-color: var(--color-surface);
   border-block-start: 1px solid var(--color-border);
 }
 
@@ -2215,6 +2406,20 @@ input[type='search']::-webkit-search-decoration {
   text-wrap: pretty;
 }
 
+.mm-progress-fill {
+  block-size: 100%;
+  inline-size: var(--mm-progress);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-500);
+  transition: inline-size 500ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-progress-fill {
+    transition: none;
+  }
+}
+
 .mm-unit-on {
   background-color: var(--color-accent-500);
   color: oklch(0.2 0.03 75);
@@ -2227,13 +2432,14 @@ input[type='search']::-webkit-search-decoration {
   }
 
   /*
-   * The panel reads first and the stage sits beside it. `align-self: start` is
-   * load-bearing on both: a sticky grid item stretched to its row height fills
-   * its own containing block and has nowhere left to travel.
+   * The panel reads first and the drawing sits beside it. `align-self: start` is
+   * load-bearing: a sticky grid item stretched to its row height fills its own
+   * containing block and has nowhere left to travel.
    */
   .mm-scene-stage {
     order: 2;
     block-size: calc(100dvh - var(--spacing-header));
+    padding-block: 2rem;
   }
 
   .mm-scene-panel {
@@ -2245,5 +2451,13 @@ input[type='search']::-webkit-search-decoration {
   .mm-panel-inner {
     max-inline-size: none;
     padding: 4rem 3rem 6rem;
+  }
+}
+
+/* A11Y-10 — the tape stops marching. The mark stays exactly where it was,
+   because the active state is carried by colour and width, not by motion. */
+@media (prefers-reduced-motion: reduce) {
+  ellipse.gf-mark--active {
+    animation: none;
   }
 }

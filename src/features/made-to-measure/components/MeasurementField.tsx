@@ -35,7 +35,7 @@ export function MeasurementField({
         /* The negative margin lets the band bleed into the gutter while the
            padding puts the text back, so the label still lines up with the
            section headings above it and nothing shifts as the state changes. */
-        '-mx-3 rounded-card px-3 py-2 transition-colors duration-200 motion-reduce:transition-none',
+        'rounded-card -mx-3 px-3 py-2 transition-colors duration-200 motion-reduce:transition-none',
         /*
          * The other half of the sync: the field says which measurement the
          * figure is showing, so the two never disagree about where you are.
