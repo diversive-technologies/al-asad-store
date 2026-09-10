@@ -5,12 +5,12 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/config/routes';
 import type { Messages } from '@/i18n/messages/en';
 
 import { requestPasswordResetAction } from '../actions';
-import { Field } from './Field';
 
 /**
  * §11 `resetPassword(email) -> void`.

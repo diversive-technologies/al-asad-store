@@ -55,6 +55,10 @@ Bounded contexts, transactional guarantees, module contracts and release scope
 32. Architectural Decision Record
 33. Risks
 
+**Part V — Amendments**
+
+34. Made-to-Measure (Module 18)
+
 ---
 ---
 
@@ -262,7 +266,7 @@ These are dependencies, not actors. Each sits behind a port defined by the domai
 
 ## 5.1 Modules
 
-Seventeen modules, each owning one body of data.
+Eighteen modules, each owning one body of data.
 
 | # | Module | Owns | Type |
 |---|---|---|---|
@@ -283,6 +287,7 @@ Seventeen modules, each owning one body of data.
 | 15 | Fabric Calculator | Requirement table | Supporting |
 | 16 | Reporting | Read projections | Read |
 | 17 | Administration | Configuration, audit log | Supporting |
+| 18 | Made-to-Measure | Measurement sets, measurement profiles, stitching offers, work orders | Supporting |
 
 ## 5.2 Dependency direction
 
@@ -489,6 +494,11 @@ Payment                        -- separate lifecycle from order
 - Order lines store **snapshots** of name, price and piece detail. An order is a historical record. Renaming a product or changing a price must never alter a placed order.
 - `Order.total = subtotal − discount_total + delivery_charge + gift_charge`, checked at placement and never recalculated afterwards.
 - Payment state is tracked separately from order state. They are different lifecycles with different owners, and conflating them is why so many stores cannot represent "delivered but not yet paid" — which is every Cash-on-Delivery order in transit.
+
+**Amended by section 34.** A made-to-measure line carries a fulfilment kind, an
+immutable measurement snapshot and a work order reference in addition to the
+fields above. The snapshot invariant is the same one stated here and applies for
+the same reason: a garment is cut to the numbers that were live at placement.
 
 ## 6.6 Order state machine
 
@@ -1355,6 +1365,8 @@ This is the correct handling of a headline feature with an external dependency: 
 
 No other message is sent. There is no ad-hoc send path.
 
+**Amended by section 34.8**, which adds two made-to-measure messages to this list.
+
 ---
 
 # 29. Release 2 — Deferred Scope
@@ -1444,6 +1456,13 @@ Every value the system treats as configurable. None is a code constant. All are 
 | 32 | Notification retry count | 23 | 3 |
 | 33 | Urdu line-height multiplier | 22 | 1.8 |
 | 34 | Reservation sweep interval | 13 | 5 minutes |
+| 35 | Stitching charge, by garment style | 18 | To be set |
+| 36 | Stitching lead time, by garment style | 18 | To be set |
+| 37 | Measurement set definitions | 18 | To be set |
+| 38 | Measurement plausibility bounds | 18 | To be set |
+| 39 | Default entry unit | 18 | Inches |
+| 40 | Made-to-measure cancellation cutoff | 18, 19 | At cutting |
+| 41 | Measurement confirmation required above deviation | 18 | To be set |
 
 ---
 
@@ -1468,6 +1487,10 @@ Every value the system treats as configurable. None is a code constant. All are 
 | 13 | Protected-terms list auto-populated from Fabric | Machine translation would destroy the fabric vocabulary | Fabrics cannot be created without Urdu forms |
 | 14 | Reviews return `Hidden`, not an empty set | Makes "0 reviews" impossible to render accidentally | Callers handle a distinct type |
 | 15 | Six filters at launch, not eight | Thin facet groups read as an unfinished store | Attributes captured now; filters enabled on evidence |
+| 16 | **Measurements stored as integer millimetres** | Unit is an entry and display concern, not a fact about a body. 40 inches and 101.6 cm are the same chest and must produce the same record | Every boundary converts; no floating-point drift accumulates across an order's life |
+| 17 | **Measurement sets are content, not code** | A new garment style, or a second client's tailor working to a different card, is rows. The diagram anchors and the instructions travel with the data | The interface holds no copy of the tailor's rules, so it cannot disagree with them |
+| 18 | Profiles versioned; order lines snapshot | A garment is cut to the numbers live at placement. A later profile edit must never rewrite what the workshop was told | Two records deliberately — the profile is a convenience, the snapshot is the fact |
+| 19 | Made-to-measure reserves metreage, not a size row | Stitching consumes cloth length. Reserving `(piece, size)` for it would be a fiction Inventory then has to maintain | One reservation shape per commercial form, both honest |
 
 ---
 
@@ -1482,6 +1505,211 @@ Every value the system treats as configurable. None is a code constant. All are 
 | 5 | Composite products make a set unbuyable from one missing piece | High commercially, easy to miss | `blockedProducts()` report is a first-class R1 report, not an inferred figure |
 | 6 | Try-On service timeline is outside this project's control | Low, by design | Port and stub ship in R1; the store never waits |
 | 7 | Single administrator is a single point of failure operationally | Medium | Permission model is ready for the second actor from day one; adding them is data |
+| 8 | **A mis-measured garment is destroyed cloth, not a return** | High. Non-returnable and non-recoverable, and the customer attributes the failure to the store rather than to their own tape | Plausibility bounds and cross-field checks server-side; *copy a garment you already own* offered as the default path because it measures a fit the customer has already confirmed; a confirmation step restating every number before payment; photo assist pre-fills but never submits unreviewed |
+| 9 | Stitching is a capacity constraint the store does not model | Medium. Lead time is a promise made at checkout against a workshop whose queue is invisible here | Lead time is configuration per garment style, not a constant. Section 26 gains an open-work-order line so the queue is visible before it is a broken promise |
+
+---
+
+---
+
+# PART V — AMENDMENTS
+
+---
+
+Sections added after the baseline specification was accepted. They are numbered
+from 34 upward rather than inserted in place, so every cross-reference in
+sections 1–33 stays correct.
+
+Where an amendment changes an earlier section, that section carries a pointer
+and the amendment states the delta. The rule itself is written once.
+
+---
+
+# 34. Made-to-Measure (Module 18)
+
+*Amendment 1 · adds module 18 · amends sections 5.1, 6.5, 28, 31, 32, 33*
+
+## 34.1 Why the module exists
+
+The catalogue already sells in two commercial forms — cloth by length, garments
+by size (section 1.2). Both leave a customer stranded. Someone who buys cloth
+must then find a tailor. Someone who does not fit a standard size cannot buy a
+stitched garment at all. Made-to-Measure closes the gap: the store takes the
+measurements and has the garment stitched to them.
+
+**The obstacle is not willingness, and this is the whole design constraint.**
+Most customers do not know what *chest* means as a measurement, where the tape
+goes, or whether it goes around the body or across it. A store that simply shows
+fourteen empty number fields has not offered made-to-measure; it has offered a
+form that most people abandon.
+
+The module therefore treats **instruction as first-class data, not help-page
+prose**. An interface that has to explain a measurement at the moment the
+customer enters it can only do so from data that travels with the measurement.
+This is the reason for section 34.6.
+
+## 34.2 Responsibility
+
+Capture and validate a customer's garment measurements, price the stitching
+service against a product, and carry those measurements onto the order as an
+immutable snapshot the workshop cuts against.
+
+## 34.3 Owns
+
+- **Measurement set definitions** — which measurements a garment style requires,
+  their order, kind, plausibility bounds, diagram anchors and instructions.
+- **Measurement profiles** — a customer's saved, versioned measurement records.
+- **Stitching offers** — per garment style: charge, lead time, and the finishing
+  options that style permits.
+- **Work orders** — the record the workshop cuts against, and its state.
+
+**Does not own.** Cloth stock (13). Metreage sufficiency (25). Price assembly
+(14). The order (18). Instruction copy in either language (22).
+
+## 34.4 Exposes
+
+```
+MadeToMeasure
+  measurementSet(garment_style)              -> MeasurementSet
+  stitchingOffer(product_id)                 -> Offer | NotOffered
+  validate(garment_style, measurements)      -> Valid | Implausible(point, reason)[]
+  requirement(garment_style, measurements)   -> Sufficient | Short(shortfall)
+  profilesFor(customer_id)                   -> MeasurementProfile[]
+  saveProfile(customer_id, input)            -> MeasurementProfile
+  workOrder(order_line_id)                   -> WorkOrder
+```
+
+`requirement` delegates to section 25 rather than reimplementing it. The Fabric
+Calculator already owns the mapping from body to metres, and a second copy of
+that table is the defect PD-01 describes.
+
+`saveProfile` always returns a **new version**. There is no update operation.
+
+## 34.5 Domain model
+
+```
+MeasurementSet
+  garment_style          -- KAMEEZ_SHALWAR | WAISTCOAT_SUIT | KURTA | ...
+  points[]               -- ordered; the order is the form's order
+    id                   -- CHEST | SHOULDER | SLEEVE_LENGTH | KAMEEZ_LENGTH | ...
+    kind                 -- GIRTH | LENGTH | WIDTH
+    region               -- TORSO | ARM | NECK | LEG
+    anchor_x, anchor_y   -- position in the silhouette's own coordinate space
+    path                 -- the tape's route, for drawing (see 34.6)
+    required             -- boolean
+    min_mm, max_mm       -- plausibility bounds
+    depends_on[]         -- cross-field checks, e.g. SHOULDER < CHEST
+
+MeasurementProfile
+  id
+  customer_id            -- nullable; guests measure too
+  garment_style
+  label                  -- customer-named: "My kameez"
+  values[]               -- point_id -> value_mm
+  unit_entered           -- IN | CM        (provenance only; storage is mm)
+  source                 -- STANDARD_SIZE | GARMENT_COPY | BODY | PHOTO_ASSISTED
+  version
+  superseded_by          -- nullable
+  created_at
+
+StitchingOffer
+  garment_style
+  charge
+  lead_time_days
+  options[]              -- collar, cuff, pocket, hem ...
+
+WorkOrder
+  order_line_id
+  measurement_snapshot   -- the values, copied; never a reference
+  state                  -- QUEUED -> CUT -> STITCHED -> FINISHED
+  cut_at                 -- nullable; the point of no return
+```
+
+## 34.6 Measurement capture contract
+
+The interface presents an **interactive figure** rather than a list of field
+names: the customer sees where each measurement is taken, and the figure and the
+form stay in step in both directions.
+
+That is an interface decision, but it constrains this module's data, so the
+constraint is recorded here:
+
+- **Every point carries its own anchor and tape path.** The figure is drawn from
+  the measurement set, not hand-authored per garment. Adding a measurement adds a
+  row and the diagram gains a point; nothing is edited in the interface.
+- **`kind` is load-bearing and must be honest.** A `GIRTH` wraps the body and a
+  `LENGTH` runs along it. Drawn on a front-facing figure the two are
+  indistinguishable, and confusing them is the single most common measuring
+  error. The interface renders them differently, and it can only do so because
+  the data says which is which.
+- **`region` selects the view.** A fourteen-point figure at phone width cannot
+  label every point legibly. The region lets the interface show the relevant part
+  of the body at usable scale.
+- **Instructions are Localisation content (22), keyed by point id**, in both
+  languages, and are rendered as text beside the field as well as on the figure.
+  The figure is an enhancement; a customer who cannot see it must still be able
+  to complete the form (section 30.3).
+- **The figure is a picture of a body and does not mirror under right-to-left
+  layout.** The layout around it mirrors; the anatomy does not. Anchors are
+  therefore stored in the figure's own coordinate space, never as
+  layout-relative offsets.
+
+## 34.7 Invariants
+
+- **Measurements are stored as integer millimetres.** Unit is an entry and
+  display concern. Two customers entering 40 in and 101.6 cm describe the same
+  chest and must produce the same record.
+- **A profile is never updated in place.** Editing supersedes; both versions are
+  retained.
+- **An order line snapshots the values.** Section 6.5 already requires order
+  lines to snapshot name, price and piece detail because an order is a historical
+  record. Measurements are the same kind of fact, and more consequential: they
+  are what the cloth was cut to.
+- **Plausibility is server-owned, and cross-field.** A shoulder wider than a
+  chest is impossible, not unusual. A kameez length below the floor is a typo.
+  The interface renders the refusal; it never invents the rule.
+- **The measurement set is content.** A new garment style, or a second client's
+  tailor working to a different card, is rows — never a component.
+- **Stitching reserves metreage, not a size row.** A made-to-measure line holds
+  cloth length against the unstitched piece via Inventory. It does not reserve
+  `(piece, size)`, and Inventory is not asked to pretend it does.
+- **Cancellation ends at cutting**, not at the section 31 time window. Once the
+  work order reaches `CUT` the line is non-cancellable and non-returnable. The
+  customer is told this before payment, on the same screen as the price — not in
+  terms and conditions afterwards.
+- **No customer photograph is persisted**, where photo assist is offered. Section
+  24's guarantee applies unchanged and for the same reason.
+- **Standard-size purchase is never removed.** Made-to-measure is an additional
+  path to the same catalogue, not a replacement for size selection.
+
+## 34.8 Release scope
+
+**In Release 1:**
+
+- Measurement sets, profiles, offers and work orders
+- The interactive figure and the guided form, both languages
+- Two capture paths: **standard size** and **copy a garment you already own**
+- Stitching priced as a line component; metreage reserved; lead time shown
+- The cut cutoff, stated at purchase and enforced in Returns (19)
+- Two notifications, extending 28.7: **work order cut** and **stitching complete**
+
+**Deferred, with the interface built (the section 28.5 pattern):**
+
+- **Body measurement path** — the full guided body form. The figure, the data and
+  the validation are the same; only the instruction set differs.
+- **Photo assist** — scale from a reference object to pre-fill lengths and
+  widths. Deferred deliberately, not for effort: a single photograph yields
+  lengths and landmark positions but **cannot yield circumference**, and
+  circumference is what decides fit. It is a scaffold for the form and must never
+  be presented as a measurement service. It ships once there are real orders to
+  check its estimates against.
+
+## 34.9 Notes
+
+The module is small in logic and large in data, which is the correct shape. What
+it must not become is a place where the tailor's rules are half in a table and
+half in a component — that is the failure mode, and section 34.6 exists to
+prevent it.
 
 ---
 

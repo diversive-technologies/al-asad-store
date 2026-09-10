@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/config/routes';
 import type { Messages } from '@/i18n/messages/en';
 
 import { requestCodeAction, signInWithCodeAction } from '../actions';
-import { Field } from './Field';
 
 export interface CodeSignInFormProps {
   messages: Messages;

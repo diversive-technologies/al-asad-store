@@ -32,6 +32,11 @@ auto-imported into every session.
   (transactional design) wherever stock, cart, checkout or orders are involved.
 - **Before agreeing anything is in scope** — §28 Release 1 Scope. §28.6 lists
   what is explicitly out.
+- **Made-to-Measure is §34, in Part V.** It was added after the baseline, so it
+  is numbered from 34 rather than inserted — sections 5.1, 6.5, 28.7, 31, 32
+  and 33 carry the deltas or a pointer to them. §34.6 is the one to read
+  before touching the measurement interface: it is where the interactive
+  figure constrains the data.
 
 Where the guidelines and the architecture doc conflict, surface it — do not
 silently pick one.
@@ -205,6 +210,7 @@ something on screen.
 | **M4** | **Bag & reservation** | Slide-in panel, per-piece size display, quantity, promo code, free-delivery progress, durable holds with read-time expiry | §16, §7.1, §7.3 |
 | **M5** | **Checkout** | Single page, guest checkout, four payment methods, COD cap + SMS confirmation, gift options, order placement | §17, §7.2, §28.2 |
 | **M6** | **Real auth & account** *(deferred)* | Registration, sign-in, phone-code, password reset, order history, saved addresses and sizes, wishlist | §11, §28.3 |
+| **M7** | **Made-to-Measure** | The second USP. Measurement sets as content, the interactive figure, the guided form, two capture paths, stitching priced as a line component, metreage reservation, the cut cutoff. Entry from the buy box, a homepage stage, `/stitched` and a bag nudge. | **§34** (Amendment 1), §25, §19 |
 
 ## Three properties that shape almost every decision
 

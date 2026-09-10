@@ -7,6 +7,8 @@ export const ROUTES = {
   signIn: '/sign-in',
   signUp: '/sign-up',
   forgotPassword: '/forgot-password',
+  /** §34 — the measurement studio, usable without buying anything. */
+  stitched: '/stitched',
   catalogue: {
     list: '/catalogue',
     detail: (slug: string) => `/catalogue/${slug}`,

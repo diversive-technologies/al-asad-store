@@ -2056,3 +2056,194 @@ input[type='search']::-webkit-search-decoration {
     opacity: 1;
   }
 }
+
+/*
+ * §34 — the measurement atelier.
+ *
+ * Every colour here resolves through the semantic tokens, so the set follows the
+ * page's theme rather than being a black room in both. An earlier pass pinned it
+ * dark on the reasoning that a lit object reads the same either way; that holds
+ * for a film behind a scrim, and did not hold here — a customer who has chosen
+ * the light store got a black page with no way out of it.
+ *
+ * The scene's own lighting is switched in `MeasurementStage`, because a rim
+ * light has nothing to separate the figure FROM on a pale ground.
+ */
+.mm-scene {
+  display: flex;
+  flex-direction: column;
+  min-block-size: calc(100dvh - var(--spacing-header));
+  color: var(--color-fg);
+  /* Flat, because the stage paints its own backdrop into the scene — a CSS
+     gradient here would only ever show around the canvas, not through it. */
+  background-color: var(--color-surface-muted);
+}
+
+/* Browser surfaces belong to the design too. */
+.mm-scene ::selection {
+  background-color: color-mix(in oklch, var(--color-accent-400) 34%, transparent);
+  color: var(--color-fg);
+}
+
+.mm-scene input {
+  caret-color: var(--color-accent-500);
+}
+
+.mm-scene-stage {
+  position: sticky;
+  /* `main` already clears the fixed bar, so this is the offset from it. */
+  inset-block-start: var(--spacing-header);
+  order: 1;
+  block-size: 50dvh;
+  align-self: start;
+  inline-size: 100%;
+}
+
+.mm-stage-loading {
+  block-size: 100%;
+}
+
+.mm-scene-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  /* The scene beneath is dragged and clicked; the caption must not intercept. */
+  pointer-events: none;
+  text-align: center;
+}
+
+/*
+ * The caption gets a PLATE, not a wash.
+ *
+ * A gradient scrim across the bottom of the stage was strong enough to read on a
+ * dark set and, on a light one, turned into a near-white sheet that dissolved
+ * the figure's legs — while still leaving the muted text under 4.5:1. A small
+ * blurred plate carries its own contrast wherever it lands and leaves the rest
+ * of the set alone.
+ */
+.mm-scene-caption,
+.mm-scene-idle {
+  padding: 0.7rem 1.15rem;
+  border: 1px solid color-mix(in oklch, var(--color-border) 65%, transparent);
+  border-radius: var(--radius-card);
+  background-color: color-mix(in oklch, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.mm-scene-name {
+  font-size: 1.0625rem;
+  letter-spacing: -0.01em;
+}
+
+.mm-scene-how {
+  margin-block-start: 0.25rem;
+  max-inline-size: 28ch;
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+  text-wrap: pretty;
+}
+
+.mm-scene-readout {
+  margin-block-start: 0.5rem;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--color-accent-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.mm-scene-idle {
+  max-inline-size: 32ch;
+  font-size: 0.8125rem;
+  color: var(--color-fg-muted);
+  text-wrap: pretty;
+}
+
+.mm-scene-drag {
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  /* No opacity multiplier. `--color-fg-muted` is already the token that clears
+     contrast against a surface in both themes; knocking it back to 0.6 undid
+     that, and on a pale stage the hint all but disappeared. */
+  color: var(--color-fg-muted);
+}
+
+.mm-scene-panel {
+  position: relative;
+  z-index: 1;
+  order: 2;
+  background-color: color-mix(in oklch, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(22px);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.mm-panel-inner {
+  margin-inline: auto;
+  max-inline-size: 34rem;
+  padding: 2.5rem var(--spacing-gutter) 5rem;
+}
+
+.mm-crumbs {
+  display: flex;
+  gap: 0.5rem;
+  margin-block-end: 2rem;
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+}
+
+.mm-crumbs a:hover {
+  color: var(--color-fg);
+}
+
+.mm-title {
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.mm-lead {
+  margin-block-start: 1rem;
+  max-inline-size: 46ch;
+  color: var(--color-fg-muted);
+  text-wrap: pretty;
+}
+
+.mm-unit-on {
+  background-color: var(--color-accent-500);
+  color: oklch(0.2 0.03 75);
+}
+
+@media (min-width: 64rem) {
+  .mm-scene {
+    display: grid;
+    grid-template-columns: minmax(0, 36rem) minmax(0, 1fr);
+  }
+
+  /*
+   * The panel reads first and the stage sits beside it. `align-self: start` is
+   * load-bearing on both: a sticky grid item stretched to its row height fills
+   * its own containing block and has nowhere left to travel.
+   */
+  .mm-scene-stage {
+    order: 2;
+    block-size: calc(100dvh - var(--spacing-header));
+  }
+
+  .mm-scene-panel {
+    order: 1;
+    border-block-start: 0;
+    border-inline-end: 1px solid var(--color-border);
+  }
+
+  .mm-panel-inner {
+    max-inline-size: none;
+    padding: 4rem 3rem 6rem;
+  }
+}

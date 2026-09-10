@@ -23,6 +23,7 @@ Tree still carries the search work in flight — see the end of this file.
 | M5 | Checkout | **Core done.** Quote, single-page checkout, §7.2 placement, confirmation. |
 | M6 | Real auth & account | **Auth screens built** against §11's shape; account area still deferred. |
 | USP1 | Try-On (§24) | **Interface complete, provider unconnected** — which is exactly §28.5. See below. |
+| USP2 | Made-to-Measure (§34) | **Measurement atelier built** on a supplied anatomical mesh, with every tape derived from the model's own surface. Posing is inert (no skeleton); entry points and the buy-box fork are not started. |
 
 ## M2 — what is built
 
@@ -687,6 +688,110 @@ is the part the tests cannot reach, since they stop at the mock layer.
 
 The production build has still NOT been run against this change.
 
+## Made-to-Measure (USP 2) — what is built
+
+Architecture §34, added as Amendment 1. The **measurement atelier** at
+`/stitched`, public and usable without buying anything.
+
+**Two rules were lifted by the operator, explicitly, and this is the record of
+it.** `BASE-01` (no runtime dependency without a bundle-cost justification) and
+`PERF-10` (200 kB first-load budget) are both overridden: `three` is a real
+dependency and its core chunk is **~1.5 MB raw**. Two earlier passes — a flat SVG
+figure, then a CSS-3D stack of cross-sections — were both rejected as too dull.
+It is loaded through `next/dynamic` with `ssr: false`, so the weight lands on this
+route and nowhere else, but the route is heavy and that is the deal.
+
+- **The figure is an operator-supplied mesh**, `public/models/figure.obj` — a
+  bare anatomical male with hands, fingers, feet and real musculature. It is
+  normalised on load to the height the measurements already assume, centred and
+  stood on the ground plane, and wears the same jade material and lighting.
+  The operator has confirmed there is no licensing issue with it.
+
+- **MEASUREMENTS ARE NOW TAKEN OFF THE MESH, not off a table.**
+  `lib/mesh-anatomy.ts` reads the loaded model into a world-space point cloud
+  once, and every tape is derived from it:
+
+  - **A girth is the CONVEX HULL of a cross-section**, which is what a tape does.
+    A tape pulled tight bridges every hollow it crosses — it spans the small of
+    the back rather than dipping into it. A curve that traced the surface
+    faithfully would read low on every measurement, and low is the direction that
+    produces a garment too tight to wear.
+  - **The chest ignores the arms without the mesh being segmented.** Grouping a
+    slice by lateral gaps separates ribcage from limbs, so a chest slice keeps the
+    part straddling the centre line and drops the rest.
+  - **The shoulder lands on the acromion the model actually has**, and its tape
+    walks the REAR arc of the hull between them — it is measured across the back,
+    and a hull offers both arcs with only one of them right.
+  - **An arm is sliced PERPENDICULAR to the limb.** A flat cut through an arm held
+    at fifty degrees returns an ellipse half again too long, and a cuff measured
+    off it is nonsense. The arm's axis is traced from the mesh rather than
+    assumed, because the pose an artist left it in is not knowable in advance.
+
+  `lib/body-profile.ts` and the procedural figure are still built, and now serve
+  as the **placeholder shown while the 2.3 MB model downloads** — every tape falls
+  back to them until the mesh has been read, so the page is never empty or wrong
+  while the download is in flight.
+
+- **Posing is inert while this mesh is in.** The OBJ carries no skeleton, so
+  `armLift` — arms up for a chest, T for a sleeve — does nothing. The data and the
+  rig are untouched and a rigged model restores it; nothing was deleted.
+
+- **THE ARMS ARE ON PIVOTS, and the model takes the pose the measurement needs.**
+  The arm is authored along its OWN length from the shoulder joint rather than by
+  height on the figure, so it can swing: it hangs at rest, lifts to 68° for a
+  chest (the tape has to pass under it — what a tailor asks out loud), and goes to
+  a full T for a sleeve. `armLift` is a column on the measurement, tweened
+  alongside the camera. The arm's tape and marker are CHILDREN of the arm group,
+  so they ride the pose instead of being left in mid-air.
+- **Frosted jade, lit like a product shot**, with `UnrealBloomPass` so the gold
+  tape reads as metal.
+- **The tape is `TubeGeometry` along a curve that rides the body**, drawing itself
+  on over 900ms by advancing `setDrawRange`.
+- **The camera turns to each measurement.** Hand-rolled spherical orbit rather
+  than `OrbitControls`, because the tween and the drag would otherwise fight over
+  the camera. Drag to spin and tilt; a click that did not travel is a raycast
+  against the markers. The **shoulder turns the figure around**, because that
+  measurement is taken across the back.
+- **It follows the page theme.** Light and dark are two different lighting sets,
+  not one set dimmed: on a pale ground the rim light has nothing to separate the
+  figure FROM, bloom washes out instead of glowing, and a translucent body loses
+  its edges — so the material closes up and the key does the work. The theme is
+  read from the resolved page background, because the store has three states
+  (light, dark, follow-the-system) and only the resolved colour knows the answer
+  in all three.
+- **The form does not scold.** Nothing goes red until the customer tries to save.
+- **One list still drives everything.** `lib/measurement-points.ts` holds thirteen
+  points — region, kind, bounds in millimetres, viewing angle, arm lift, and
+  coordinates in one of two spaces. §34 makes the real set CONTENT (ADR 17); this
+  is a fixture standing in for the tailor's card.
+
+Verified: **typecheck, lint, 207 tests and the production build all pass**, with
+`/stitched` in the build output, and the impeccable detector reports **no findings**.
+Measured in the running store rather than eyeballed: tabbing through four empty
+fields leaves **0** invalid fields and **0** alert nodes; submitting empty gives
+**13** invalid fields, the summary heading and **13** jump links, with focus landing
+on the summary; the chest lifts both arms and wraps the tape reading "40 in"; the
+sleeve goes to a T with the tape along the arm reading "25 in"; and the stage is
+light on a light page and dark on a dark one.
+
+`components/ui/field/` — `Field` was promoted out of `features/auth`, because a
+second feature needed it and one feature may not import another (MOD-01).
+
+## Made-to-Measure — what is left
+
+**Every entry point.** Nothing links to `/stitched` yet: no buy-box fork on the
+product page, no homepage stage, no bag nudge for unstitched cloth, no card
+badge. The studio exists and nobody can find it.
+
+**The second capture path** — *copy a garment you already own* — which §34.8 makes
+Release 1 scope alongside standard sizing. Same thirteen fields and the same
+validation; what changes is the figure's mode (a flat-laid garment rather than a
+body) and the instruction set. The data model already carries both.
+
+**Nothing is saved.** Submitting validates and confirms on screen; there is no
+contract, no BFF and no mock behind it, so no profile is written and no stitching
+charge is priced. The measurement set is a fixture, not the tailor's card.
+
 ## Deliberate gaps — do not "fix" these
 
 - **Product imagery is now the client's own.** Fourteen photographs in
@@ -1171,6 +1276,119 @@ out, and `/order/AA100001` still renders on a fresh load.
   STRUCT-02 wanted anyway, since routes compose rather than decide — and then to
   tighten comment blocks. Worth knowing before adding anything else to that file:
   it now sits at 79.
+- **`flex` and `grid` disagree about what a sticky item may do.** A sticky GRID
+  item is confined to its own grid area, so stacked single-column it scrolls away
+  the moment the next row starts; a sticky FLEX item is confined to the flex
+  container, which spans every item. And the sticky box must BE the item — one
+  that exactly fills its containing block has nowhere to travel and never sticks.
+  In grid it additionally needs `self-start`, or it stretches to the row height
+  and pins itself in place again.
+- **`items-center` on a flex column collapses a height-constrained child to zero
+  WIDTH.** The child is sized to its content and a grandchild's `w-full` resolves
+  against nothing. The figure rendered 2px wide with no error; take width from an
+  aspect ratio instead.
+- **`Object.fromEntries` widens a literal key union back to `string`.** A
+  `Record<'neck' | 'chest' | ..., T>` built that way will not satisfy its own
+  type. Pass the already-keyed registry object through rather than mapping it.
+- **`z.string().pipe(z.coerce.number())` does not typecheck.** `z.coerce`'s input
+  is `unknown`, not the `string` the pipe promises. If a form's values are
+  strings, validate them AS strings with a `refine` and convert at submission — a
+  resolver whose output type differs from its input also makes the `useForm`
+  generics fight back.
+- **`form.watch()` makes React Compiler skip memoising the whole component.**
+  `useWatch({ control })` is the same subscription without the opt-out.
+- **The preview pane returns BLANK screenshots while it is hidden**, and nothing
+  in the image says so — it looks exactly like a page that rendered nothing.
+  `tabs_context` reports it; `tabs_select` fronts it. Its screenshots also lag
+  behind interactions by seconds, so verify anything post-interaction with a DOM
+  probe and treat the picture as the slower witness.
+- **`EffectComposer` writes an OPAQUE result.** Wherever nothing was drawn the
+  canvas came back black, so the stage stayed dark on a light page however the
+  CSS behind it was themed — `alpha: true` on the renderer buys nothing once a
+  composer is in the chain. Give the scene its own `background`.
+- **A limb baked into figure heights cannot be posed.** Authoring the arm along
+  its own length from a joint is what turns a fixed sculpture into a rig, and it
+  costs nothing at the time: the same loft, indexed differently. Anything meant
+  to travel with the limb has to be a CHILD of its group and expressed in the
+  same space, or it stays behind in mid-air.
+- **A loft's end cap is a flat disc and it shows.** Taper every part to near zero
+  at both ends, and start a limb ABOVE its joint so the cap is swallowed by the
+  socket.
+- **`mode: 'onBlur'` on an all-required form scolds people for work they have not
+  done.** Every field went red the moment it was left, so tabbing down the form
+  painted the page red before a single value was entered — "empty" and "wrong"
+  looked identical. `onSubmit` with `reValidateMode: 'onChange'` is the pattern.
+- **React re-renders BEFORE `handleSubmit`'s promise settles.** Focusing an error
+  summary in `.finally()` silently does nothing: the summary does not exist yet
+  and the ref is still null. Record the intent BEFORE the submit and spend it in
+  an effect that also checks the summary is now there.
+- **A scrim strong enough for a dark set dissolves a light one.** The bottom
+  gradient behind the caption was a near-white sheet in light mode and still left
+  muted text under 4.5:1. A small blurred PLATE carries its own contrast wherever
+  it lands and leaves the rest of the set alone.
+- **Transmission scales with geometry thickness.** At a setting the torso could
+  carry, the calves — thin, backlit by a pale backdrop — faded out from the knee
+  down and the figure looked like it was dissolving.
+- **`next/dynamic` with `ssr: false` is what keeps a heavy scene off every other
+  route.** three's core lands in its own ~1.5 MB chunk that only `/stitched` asks
+  for.
+- **Writing a ref during render is a lint error, not a style note**
+  (`react-hooks/refs`). Keeping a callback fresh for a long-lived imperative scene
+  means assigning it in an effect.
+- **`preview_stop` can leave the dev server alive on port 3000.** The next
+  `preview_start` refuses with "port in use by node.exe (not a preview server)".
+  Check the PID's command line before killing it.
+- **A `find` result goes stale across a `navigate` in the same batch.** The click
+  lands on whatever now occupies the old coordinates — twice here it hit a
+  different field, and once it followed a link to the catalogue. Screenshot to
+  refresh the frame, then find and click.
+- **Proportion is what makes a figure read as a person, not detail.** The
+  mannequin was 11.3 heads tall for three rounds of "it looks like a dummy"
+  feedback, while effort went into material, lighting and anatomy of individual
+  parts. Count the heads FIRST; 7.5 to 8 is a person, and the
+  `img2threejs` skill's `humanoid_proportions.py` supplies the canon with its
+  provenance attached.
+- **A canon that names what it does NOT know is worth more than one that fills
+  every field.** That corpus refuses to supply hand, foot and thigh length rather
+  than interpolating them, which is exactly what keeps the sourced numbers
+  trustworthy. Mark borrowed convention as convention.
+- **Two lofted parts that meet on a shared ring must not BOTH be capped.** The
+  coincident discs face opposite ways and z-fight, drawing a bright seam ring —
+  ours landed exactly where the cuff is measured.
+- **A measurement authored in a limb's space needs its camera target resolved
+  THROUGH the pose.** Framing the arm measurements on the shoulder was stable but
+  wrong: at a T-pose the wrist is most of a metre off the centre line, so the
+  cuff tape sat off the edge of the stage with only its bloom showing.
+- **Thirteen equal markers are a menu at rest and a rash in close-up.** Shrink the
+  ones that are not being measured once one is chosen; at camera distance they
+  read as studs pressed into the body.
+- **A tape pulled tight is a CONVEX HULL, not a surface trace.** It bridges the
+  small of the back and the gap between the pectorals. Following the surface
+  faithfully reads low on every measurement, and low is the direction that cuts a
+  garment too tight to wear.
+- **A limb is a CONNECTED RUN, and that is the only reliable way to find its
+  end.** Below the hand there is no arm, so the outermost cluster at that height
+  becomes a LEG — near the axis and a long way down, which dragged a fitted arm
+  axis inward and put the cuff tape at hip height. An absolute jump threshold was
+  tried first and was worse than useless: the slice misses at scattered heights
+  INSIDE the arm, so the next real centroid is a whole gap away and the guard
+  fired on a legitimate step, collecting one centroid before giving up. Two misses
+  in a row ends the run; and an arm always travels AWAY from the axis, which
+  catches whatever a stray hit picks up next.
+- **A slab thickness that works at the waist finds four points at the wrist.**
+  Vertex density varies enormously across a model, so grow the slab until the
+  slice is a shape rather than a scatter — and set the minimum point count for the
+  THINNEST part, not the thickest.
+- **`visible = false` hides an object's CHILDREN too.** A fallback tape parented
+  into the hidden procedural arm group was built, positioned, and never drawn.
+- **A build CAN run against a live dev server at Next 16.3.4 — measured, not
+  assumed.** After `npm run build` with `next dev` up: `/stitched` 200,
+  `/catalogue` still rendering real product data, `/api/quick-add` answering 404
+  rather than the 502 that means MSW died, and the WebGL page still loading in the
+  browser. The `PROGRESS` caution was explicitly UNTESTED and rested on a theory
+  the same note had already disproved. One caveat, stated rather than glossed:
+  `/api/suggest` answered empty afterwards, and no BEFORE reading was taken, so
+  that one probe is inconclusive rather than clean.
 - **The Read tool does not render AVIF.** To look at converted output, composite
   a contact sheet as JPEG and read that instead — one image, one look.
 
