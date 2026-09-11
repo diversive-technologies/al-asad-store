@@ -7,9 +7,9 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-10, on branch `flat-model`. Last commit: `62363d3`
-(Made-to-Measure, committed incomplete because the rest forks onto this branch).
-Tree still carries the search work in flight — see the end of this file.
+Last updated: 2026-09-11, on `main`. Last commit: `2ef3be0` (Made-to-Measure as
+garment flats). The 3D experiment is kept, unmerged, on branch `3d-model` at
+`62363d3`. Nothing is pushed: `main` is two commits ahead of `origin/main`.
 
 ---
 
@@ -24,7 +24,7 @@ Tree still carries the search work in flight — see the end of this file.
 | M5 | Checkout | **Core done.** Quote, single-page checkout, §7.2 placement, confirmation. |
 | M6 | Real auth & account | **Auth screens built** against §11's shape; account area still deferred. |
 | USP1 | Try-On (§24) | **Interface complete, provider unconnected** — which is exactly §28.5. See below. |
-| USP2 | Made-to-Measure (§34) | **Measurement atelier rebuilt as GARMENT FLATS** on branch `flat-model` — the 3D figure and `three` are gone. Kameez, shalwar and waistcoat as SVG line art, each measurement marked on the drawing it is taken from. Entry points and the buy-box fork are still not started. |
+| USP2 | Made-to-Measure (§34) | **Measurement atelier rebuilt as GARMENT FLATS**, now on `main` — the 3D figure and `three` are gone (kept on branch `3d-model`). Kameez, shalwar and waistcoat as SVG line art, each measurement marked on the drawing it is taken from. Entry points and the buy-box fork are still not started. |
 
 ## M2 — what is built
 
@@ -710,6 +710,12 @@ JavaScript is now **1.48 MB across 29 chunks**, the largest of them 367 kB — l
 in total than the one chunk that was deleted. `grep` for `THREE` or
 `WebGLRenderer` in the built output returns nothing.
 
+**The 3D version is not deleted — it lives on branch `3d-model`** (`62363d3`),
+forked from `main` before the flats were fast-forwarded in, so nothing was
+rewritten. That branch still lists `three` in `package.json`, but the
+`node_modules` on this machine no longer has it: run `npm install` after checking
+it out, or `/stitched` will not build there.
+
 - **Three flats, drawn as tailor's patterns** — `lib/garment-drawings.ts`. Kameez
   (band collar, placket, buttons, tapered sleeves with cuffs, A-line body, side
   slits), shalwar (wide belt with the cloth gathered onto it, a nala, drape
@@ -798,7 +804,7 @@ in total than the one chunk that was deleted. `grep` for `THREE` or
   the round-trip, the bounds being stated on the stored figure, every annotation
   falling inside its own viewBox, the anchor rules, and the mark separation.
 
-Verified: **typecheck, lint, 229 tests and the production build all pass**, with
+Verified: **typecheck, lint, 235 tests and the production build all pass**, with
 `/stitched` in the build output. Measured in the running store rather than
 eyeballed: tabbing through five empty fields leaves **0** invalid fields and **0**
 alert nodes; submitting empty gives **13** invalid fields, the summary heading,
@@ -1034,6 +1040,13 @@ out, and `/order/AA100001` still renders on a fresh load.
   **Count OCCURRENCES, not lines.** `grep -c '<article'` on server HTML returns
   1 however many products rendered, because the markup is one long line. Use
   `grep -o … | wc -l`. This briefly read as a regression that had not happened.
+
+  **Third occurrence, and this one has a CERTAIN cause: switching branches with
+  the dev server running.** `git checkout main` plus a fast-forward rewrote about
+  thirty files on disk — to the 3D version and straight back — inside a second.
+  The catalogue went from 24 products to 0 at once, with no build and no long
+  session involved. **Stop the dev server before switching branches, or restart
+  it straight after.** The probe that caught it was the article count, again.
 
   **What this note used to say, and why it was wrong.** It claimed dev and build
   "share `.next`" and that running `npm run build` against a live dev server was
