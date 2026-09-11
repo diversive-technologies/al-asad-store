@@ -15,24 +15,15 @@ export interface HeroVideoSectionProps {
  * `-mt-header` pulls the section up under the fixed bar so the film starts at
  * the very top of the viewport, while `main` keeps its padding for every other
  * page. Full-bleed is opt-in; clearing the bar is the default.
- *
- * The section deliberately does NOT clip. Clipping lives on the film stage,
- * which is what needs it; hoisting it here would cut off the ambient glow at
- * exactly the edge it is supposed to spill past.
  */
 export function HeroVideoSection({ section }: HeroVideoSectionProps) {
   return (
-    <section
-      data-hero
-      className="bg-media-band hero-frame -mt-header relative isolate flex items-end"
-    >
+    <section data-hero className="hero-frame -mt-header relative isolate flex items-end">
       <HeroMedia poster={section.poster} video={section.video} />
 
       {/*
-       * The copy is held to the same max width as the header, and centred.
-       * On a viewport wide enough to show bands, that keeps every word over
-       * footage rather than over the page background, where light-on-media text
-       * would be unreadable in the light theme.
+       * The copy is held to the same max width as the header, and centred, so
+       * the headline lines up under the wordmark at every width.
        */}
       <div className="page-shell pb-16">
         <div className="flex max-w-xl flex-col items-start gap-4 text-start">

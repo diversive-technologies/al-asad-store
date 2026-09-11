@@ -123,13 +123,10 @@ const catalogueEntrySectionSchema = z.object({
 const stitchingEntrySectionSchema = z.object({
   kind: z.literal('STITCHING_ENTRY'),
   id: z.string().min(1),
-  eyebrow: z.string().min(1),
   heading: z.string().min(1),
   body: z.string().min(1),
   steps: z.array(z.string().min(1)).min(1),
   cta: ctaSchema,
-  /** Decorative, like the catalogue entry's stills (A11Y-04). */
-  imageUrl: z.string().min(1),
 });
 
 export const homepageSectionSchema = z.discriminatedUnion('kind', [

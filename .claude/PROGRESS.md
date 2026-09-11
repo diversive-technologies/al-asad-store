@@ -7,7 +7,9 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-11, on `main`, with the Made-to-Measure entry points built.
+Last updated: 2026-09-11, on `main`, with the Made-to-Measure entry points built
+and then revamped, the hero held to one screen, and a focus mode for the
+measurement studio on a phone.
 The 3D experiment is kept, unmerged, on branch `3d-model` at `62363d3`. Nothing
 is pushed: `main` is ahead of `origin/main`.
 
@@ -458,6 +460,47 @@ Two rules follow from the fix and should not be undone casually:
 Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
 2560 → 6 at 343px, all at 100% of viewport width.
 
+## Hero — one screen, edge to edge
+
+The film COVERS the hero box (`object-cover`, anchored to the top), and
+`hero-frame` caps that box at one screen (`100svh`): exactly one screen in
+portrait, and 16:9 at full width in landscape until that would pass the fold. So
+the film reaches both side edges at every size and never runs past the first
+screen. `svh` rather than `vh`, so "one screen" is the screen with the mobile
+browser's toolbar SHOWING.
+
+It used to be a 16:9 stage sized from the box's HEIGHT, with the landscape cap at
+125svh. That put the hero past the fold, and left bands at the sides, on anything
+wider than 16:9 — and most desktop browser viewports ARE wider than 16:9 once the
+browser's own chrome comes off the screen: a 1080p monitor gives about 1920×950.
+An **ambient glow** existed to fill those bands — a canvas sampling the playing
+frame four times a second, blurred and spilled 7.5rem past the film. It is gone,
+with its sampler, the `hero-ambient` utility, the `--spacing-ambient-spill` token
+and the `--color-media-band` token that coloured the bands.
+
+`object-top` is deliberate. On a wide screen the crop comes off the BOTTOM,
+because the subject's head sits near the top of the frame, and the caption and its
+scrim are at the bottom anyway. Checked on a 2560×1080 screenshot: head intact.
+
+Measured before and after — hero height in px, and whether the film reached both
+side edges:
+
+| Viewport | Before | After |
+| --- | --- | --- |
+| 390×844 phone | 844, edges ✓ | 844, edges ✓ |
+| 844×390 landscape phone | not measured | 390, edges ✓ |
+| 768×1024 tablet | 1024, edges ✓ | 1024, edges ✓ |
+| 1024×768 | 576, edges ✓ | 576, edges ✓ |
+| 1366×768 laptop | 769 — 1px past the fold | 768, edges ✓ |
+| 1920×950 (1080p monitor, real browser) | 1080 by the old rule, not measured — 130px past | 950, edges ✓ |
+| 1440×900 | 810, edges ✓ | 810, edges ✓ |
+| 1920×1080 | 1080, edges ✓ | 1080, edges ✓ |
+| 2560×1440 | not measured | 1440, edges ✓ |
+| 2560×1080 ultrawide | **1350 — 270px past, 80px bands each side** | 1080, edges ✓ |
+
+At every size after the change the headline stays inside the hero and there is no
+horizontal scroll.
+
 ## Auth — what is built
 
 Sign-in, sign-up and password reset, built against architecture §11's exposed
@@ -820,38 +863,161 @@ and the readout as `21 انچ آر پار ← 42 انچ گھیر`.
 The studio used to exist with nothing pointing at it. There are four ways in
 now, each checked in the running store:
 
-- **A header call to action on every page** — a filled jade "Stitched to size"
-  button beside search. It is a deliberate exception to "the header carries no
+- **A header call to action on every page** — a GOLD "Stitched to size" pill
+  beside search. It is a deliberate exception to "the header carries no
   navigation": that rule is against three links to one listing, and this is the
-  only way into a different feature. It is the one FILLED control in a bar whose
-  controls otherwise inherit its colour, which is what keeps it legible over the
-  hero film. Below `sm` it collapses to the ruler icon (36×32px) with the label
-  kept as `sr-only`, so the accessible name survives; the bar does not overflow.
-- **A homepage stage**, `STITCHING_ENTRY` — a new section kind rather than an
-  editorial banner, because the banner's quiet text link is wrong for a USP, and
-  because it carries what no other kind does: three numbered steps. It sits
-  directly under the hero on a jade band, with a SECONDARY button, because a
-  primary jade one disappears on jade. The copy is content, in both locales.
+  only way into a different feature. Gold rather than jade, because gold is the
+  studio's own mark — the rings on the drawings are stroked in it — and jade is
+  what everything else in the store is sold with. It is a plain `next/link`, not
+  `ButtonLink`: the button primitive's small size is 32px tall and the bar's icon
+  controls are 36px, so it sat on a different line from its neighbours, which is
+  what "not sitting inside" was. All four controls are now 36×36 at one top;
+  below `sm` it is a 36px square with a 20px ruler and the label kept `sr-only`,
+  so the accessible name survives.
+- **A homepage stage**, `STITCHING_ENTRY`, directly under the hero on a
+  `brand-700` band. Its picture is the store's own drawing instead of a stock
+  photograph: the studio's three garment flats (`GarmentMark`, reached through
+  the static-only `made-to-measure/contract` barrel so the homepage does not pull
+  in the studio's client boundary), each carrying one gold ring. The steps are
+  gold numerals rather than digits in bordered pills, and the button is the new
+  `onBrand` variant — `secondary` inverts to a dark grey box on this band in dark
+  mode. **The eyebrow is gone at the SCHEMA**, not only in the markup: a kicker
+  above a heading is banned by the design floor, and a contract still demanding
+  one invites it back. One flat below `md`, because three in a phone's column is
+  about 106px each.
 - **A fork in the buy box**, directly under Add to bag, because that is where a
-  customer who cannot find their size is already looking. It is drawn only when
-  the product carries a `stitching` offer — `{ leadTimeDays }` or `null` —
-  declared by the backend exactly as the Fabric Calculator's offer is, so the
-  interface never decides which garments the workshop will cut (DATA-13). The mock
-  offers it on every product at 7 days; narrowing it later is a mock-and-Java
-  change, never a component one.
-- **A bag nudge** under the lines, as a dashed card. It is a standing invitation,
-  deliberately NOT a claim about any line: a bag line carries no stitching offer,
-  and inferring one would be the interface inventing a catalogue rule. It lives in
-  `BagContents`, so the panel and `/bag` both carry it, and following it from the
-  panel closes the panel, because `BagProvider` already closes on a route change.
+  customer who cannot find their size is already looking. Drawn only when the
+  product carries a backend-declared `stitching` offer (`{ leadTimeDays }` or
+  `null`), so the interface never decides which garments the workshop will cut
+  (DATA-13); the mock offers it on every product at 7 days. It is NO LONGER A
+  CARD — border, radius, padding and filled disc are gone, because the buy box
+  around it has no containers and the box read as a sticker on the page.
+- **A bag nudge**, now `StitchingNudge` — extracted because `BagContents` was past
+  MOD-03's soft ceiling. Same shape as the fork. A standing invitation,
+  deliberately NOT a claim about any line, since a bag line carries no stitching
+  offer. The dashed grey box is gone: that is the drop-zone idiom and it read as a
+  placeholder. Stacked, the question gets the full width and fits one line at
+  390px, where it used to wrap to three.
 
-Verified: **typecheck, lint, 235 tests and the production build pass.** In the
-running store: the homepage HTML carries the section and two links to
-`/stitched` (header and section); the product page carries exactly one visible
-fork, in the buy-box column 48px under Add to bag, reading "Ready in about 7
-days"; `/bag` with one line carries exactly one nudge, 342px wide at phone width
-with no horizontal overflow; and in Urdu the page is `dir="rtl"` with the section
-heading, all three steps, the header label and the fork all translated.
+**The measure line** is what the fork and the nudge carry instead of a border: a
+1px gold rule dashed 4 on, 3.5 off — the studio ring's own dash, unrolled
+straight. A repeating gradient rather than a dashed border, because a border's
+dash phase cannot be moved; on hover or keyboard focus the tape advances two dash
+periods and rests. The direction flips under RTL through `--measure-march`, and
+the motion exists only under `prefers-reduced-motion: no-preference`.
+
+**Gold is a mark, never a voice.** `accent-500` as TEXT measured 2.29:1 on the
+light surface, and the fork's old `text-brand-600` call to action measured
+**2.82:1** on the dark one — a real A11Y-07 failure. Gold now appears only as
+stroke, rule, a fill behind dark text (`--color-on-accent`) and numerals on the
+jade band; every link-like line is `text-fg` plus an underline.
+
+Verified in the running store:
+
+| Check | Result |
+| --- | --- |
+| Stage contrast, light | heading 9.0, body 7.62, gold numerals 5.23, button 9.0 |
+| Stage body, dark | 7.57 |
+| Header call to action | 10.27 |
+| Fork call to action | 16.94 light, 16.45 dark — was 2.82 |
+| Fork body | 5.35 light |
+| Header, 1440 and 390 | four controls, all 36×36, one top |
+| Stage, 1440 | three flats at 300px each; the waistcoat 0.77× the kameez's height, as its viewBox says; strokes 1.25px and not scaling |
+| Stage, 390 | one flat, 208px wide; the band 899px tall, down from 1053; no horizontal scroll |
+| Bag, 390 | nudge 342px wide, no border or padding, question on one line |
+| RTL | flats swap order and do NOT mirror; chevrons turn 180°; the march runs −15px |
+| Focus on the jade band | ring resolves to `--color-on-brand`; the global `brand-500` ring there would be jade on jade |
+| Reduced motion | the march exists only under `no-preference`, confirmed in the compiled CSS |
+
+**Not observable from here: the march's feel.** The pane's animation clock is
+frozen, so the rule and its keyframes were confirmed present and the motion
+itself needs a human hover.
+
+**typecheck, lint, 235 tests and the production build pass.**
+
+## Made-to-Measure — focus mode on a phone
+
+Operator report: on a phone, choosing a field hid the guide. Stacked, the drawing
+is pinned to the top and the form scrolls up OVER it, so the drawing was covered
+at exactly the moment somebody reached a field and needed it.
+
+Below 64rem — every stacked layout, so phones and portrait tablets; the split
+layout is untouched — an active measurement now turns the studio into one fixed
+sheet under the bar: that field and a stepper (Previous · n of 13 · Next · Done)
+at the top, the drawing and its caption filling the rest.
+
+- **Every other field is visually hidden, NOT removed.** They stay in the tab
+  order, so Tab and a phone keyboard's own next-field arrows still move through
+  the set and focus mode follows. `form.setFocus` on a `display: none` input is
+  also a silent no-op, which would have broken both the stepper and the marks.
+- **Return moves to the next measurement** instead of submitting a form whose
+  other twelve fields are out of sight; on the last one it leaves focus mode.
+  Escape leaves too — unverifiable here, since the harness swallows Escape.
+- **Done hands focus to the field's ROW** (`tabIndex -1`) and scrolls it into
+  view. Focusing the input instead would reopen the keyboard, and focus mode with
+  it.
+- **Placed from `visualViewport`, not `dvh`.** A phone keyboard covers the page
+  without shrinking `100dvh` — iOS never resizes for it, and Chrome on Android
+  stopped at 108 — and iOS then PANS the visible area down the layout. The sheet
+  takes its height (`--mm-visible`) and its top (`--mm-top`) from the shared
+  `useVisibleHeight` / `useVisibleTop`, both `null` while the reader has
+  pinch-zoomed so that a zoom still magnifies. The page beneath is locked while
+  the sheet is up.
+- **The breakpoint exists once, in the stylesheet.** `useFocusMode` decides focus
+  mode is on by whether the stepper is drawn, so no second copy of 64rem can
+  drift.
+- **`z-sheet` (800)** joins the z-index scale, under `z-header`.
+- **A pointer activates a field on its CLICK, not on focus** — see the ghost-click
+  note under "Things that cost time". The press is recorded by a NATIVE
+  `pointerdown` listener registered as the module loads, because on a page fresh
+  from the server the studio's first press never reached React's handler. Verified
+  with an event log on a fresh load: press, focus and click all on Chest, focus
+  mode switching on only after the click.
+
+Verified at 390×844 in the running store: tapping Chest activates Chest; one
+field shown; the sheet 780px tall under the 64px bar, the drawing 342×484 and the
+caption ending at 832px; Return moved Shoulder → Chest with no submit and no error
+summary; Next moved on; Done brought back all 13 fields with focus on the row and
+the row in view; the drawing's Shoulder mark opened "1 of 13" with Previous
+disabled; title, tabs and Save hidden; no horizontal scroll. At 390×480 — about
+what a phone leaves with its keyboard up — everything still fits; the drawing is
+held at a 7rem floor, below which the sheet scrolls rather than lose the guide.
+At 1440 nothing changes: grid layout, sticky stage, stepper not drawn, and Save
+still submits (13 invalid, focus on the summary).
+
+**An adversarial review found nine real defects, all fixed** (three lenses, each
+finding checked by an independent skeptic; two further claims were refuted):
+
+- A press that turned into a scroll left a "pressed" flag set for good, after which
+  the keyboard's next-field arrow landed in a field without showing it, and the
+  customer typed into a field they could not see. The press is now remembered by
+  TIME and spent by the focus it causes; and in focus mode whichever measurement
+  input takes focus becomes the one shown, whatever any flag says.
+- With the keyboard up, iOS pans the visible area and would have carried the sheet
+  off the top. It is now placed from `visualViewport.offsetTop` too, with the page
+  beneath locked.
+- The studio's inputs were 14px, so iOS zoomed in on focus — cropping the sheet
+  sideways, and `height × scale` then made it taller than the screen. Stacked, the
+  inputs are 16px, and the scale arithmetic is gone.
+- Tab past Done went to footer links hidden under the sheet, with focus mode still
+  on. Focus leaving the sheet now ends focus mode.
+- Return in a field other than the active one fell through to implicit submission
+  with Save and the error summary out of sight. Return from any measurement field
+  now steps.
+- Short and sideways screens starved the drawing. The generic caption line goes in
+  focus mode — the field's hint and the "across → around" readout carry it — an
+  empty caption plate is hidden, the stepper is `sm`, and a phone on its side puts
+  the field and the drawing side by side.
+
+Re-verified in the running store: the drawing at 390×844 is 342×557 (was 484 tall);
+Tab moves the shown field; a press followed two seconds later by keyboard focus
+activates the field; Tab past Done lands on the footer's first link with focus mode
+off and the page unlocked; at 844×390 the field sits beside the drawing; inputs are
+16px; no horizontal scroll anywhere.
+
+**Not verifiable here: the on-screen keyboard itself.** The visual-viewport
+sizing, and Previous/Next keeping the keyboard up (`onMouseDown` preventDefault),
+need a real phone.
 
 ## Made-to-Measure — what is left
 
@@ -1111,8 +1277,9 @@ out, and `/order/AA100001` still renders on a fresh load.
   `TypeError: fetch failed` before believing a contract violation.
 - **Locale must be a query param, not `Accept-Language`.** Next's data cache is
   not keyed on that header, so both locales collided in one cache entry.
-- **`overflow-x: clip`, never `hidden`,** on the hero ambient wrapper — `hidden`
-  forces the other axis to `auto` and kills the intended downward spill.
+- **`overflow-x: clip`, never `hidden`,** when something has to spill on ONE axis
+  only — `hidden` forces the other axis to `auto` and kills the spill. Learned on
+  the hero's ambient glow, which has since been removed; the rule stands.
 - **Breakpoint resets must match the specificity they override.** `& > *` is
   (0,1,0) and cannot undo `& > *:nth-child(2n)` at (0,2,0); media queries add no
   specificity. Reset with `:nth-child(n)`.
@@ -1544,6 +1711,41 @@ out, and `/order/AA100001` still renders on a fresh load.
   effort went into everything except the proportion that was actually wrong.
   **When feedback repeats after a fix, the fix addressed the wrong thing — go
   back and measure the proportions before touching the drawing again.**
+
+- **A `prefers-reduced-motion: reduce` override loses to the rule that STARTS the
+  animation, if that rule is more specific.** `.measure-line { animation: none }`
+  is (0,1,0) and `.group:hover > .measure-line` is (0,3,0); a media query adds no
+  specificity, so the guard compiled, read correctly and did nothing. Grant the
+  motion inside `no-preference` instead, and there is nothing left to override —
+  the same shape as the breakpoint-reset note above.
+- **Chrome counts only KEYBOARD focus as `:focus-visible`.** A scripted
+  `el.focus()` after pointer activity matches `:focus` and not `:focus-visible`,
+  so a focus-ring probe reads "no outline" on a ring that works. Focus the
+  element, then press a real Tab and Shift+Tab.
+- **A canvas colour probe fails SILENTLY on a string it cannot parse.** Setting
+  `fillStyle` to an unparseable value is ignored and the previous fill stays, so
+  the focus ring read as "not on-brand" when the custom property's text
+  (`lab(98.87% …)`) and the computed outline (`lab(98.87 …)`) were the same
+  colour. Print both values before believing a mismatch.
+- **Changing the layout on FOCUS moves the target out from under the pointer.**
+  Focus lands between the press and the release, so a field that reshapes the
+  page when focused has its release — and the click — land on whatever is there
+  now. In the studio a tap on Chest came out as a tap on the drawing's Shoulder
+  mark, and could as easily have been Done; on touch it is the classic ghost
+  click. Activate pointer interactions on click, and keep focus for the keyboard.
+- **The preview harness's Enter sends keydown only, no keypress**, so implicit
+  form submission never fires from it. A form that "does not submit on Enter" in
+  the pane is the harness, not the form — click the submit button to test that
+  path.
+- **`event.timeStamp` is not one clock across event types.** A pointer event and
+  a focus event came back on different time bases, so "focus within a second of
+  the press" read as stale and the fix silently did nothing. Take both times from
+  `performance.now()` inside the handlers.
+- **A client subtree that hydrates on its first real event never sees that event
+  in its own handlers.** The studio's first `onPointerDown` did not run on a fresh
+  page, so anything that must know about the FIRST interaction needs a native
+  listener registered when the module loads. Test a fresh load separately: an
+  already-hydrated page passed every time while a fresh one failed.
 
 ## Commands
 

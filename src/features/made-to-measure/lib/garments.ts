@@ -205,6 +205,20 @@ export function measurementsFor(garment: GarmentId): readonly Measurement[] {
 }
 
 /**
+ * The order the form asks for them in — garment by garment, as the fieldsets lay
+ * them out — so the stepper, the keyboard's return key and Tab all move through
+ * the set the same way.
+ */
+export const MEASURING_ORDER: readonly MeasurementId[] = GARMENTS.flatMap((garment) =>
+  measurementsFor(garment).map((measurement) => measurement.id),
+);
+
+/** The measurement before or after this one, or null at either end: it does not wrap. */
+export function stepFrom(id: MeasurementId, direction: 1 | -1): MeasurementId | null {
+  return MEASURING_ORDER[MEASURING_ORDER.indexOf(id) + direction] ?? null;
+}
+
+/**
  * Where a marker sits.
  *
  * A ring is marked ON the ring, at its outer extremity, not at the centre of the

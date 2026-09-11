@@ -11,6 +11,7 @@ import { ROUTES } from '@/config/routes';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 
+import { useFocusMode } from '../hooks/use-focus-mode';
 import { takenIds } from '../lib/entries';
 import { GARMENTS, MEASUREMENTS, type GarmentId, type MeasurementId } from '../lib/garments';
 import { convertEntry, DEFAULT_UNIT, type Unit } from '../lib/units';
@@ -25,6 +26,7 @@ import { GarmentTabs } from './GarmentTabs';
 import { MeasurementCaption } from './MeasurementCaption';
 import { MeasurementErrorSummary } from './MeasurementErrorSummary';
 import { MeasurementProgress } from './MeasurementProgress';
+import { MeasurementStepper } from './MeasurementStepper';
 import { UnitToggle } from './UnitToggle';
 
 /**
@@ -101,6 +103,9 @@ export function MeasurementStudio({
     setActiveId(null);
   }
 
+  // On a phone the chosen measurement takes the screen — see `useFocusMode`.
+  const focus = useFocusMode(activeId, activate, setActiveId);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     if (inFlight.current) {
       event.preventDefault();
@@ -138,7 +143,7 @@ export function MeasurementStudio({
   const entered = active !== null && filledIds.has(active.id) ? Number(values[active.id]) : null;
 
   return (
-    <div className="mm-scene">
+    <div className="mm-scene z-sheet" {...focus.sceneProps}>
       <div className="mm-scene-stage">
         <GarmentTabs current={garment} onChoose={browse} messages={messages} />
 
@@ -209,6 +214,8 @@ export function MeasurementStudio({
                 locale={locale}
               />
             ))}
+
+            <MeasurementStepper focus={focus} messages={messages} locale={locale} />
 
             {/* §34.7 / Risk 8 — cloth gets cut, so the notice sits with the
                 action rather than in terms nobody reads afterwards. */}

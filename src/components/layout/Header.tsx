@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
-import { ButtonLink } from '@/components/ui/button';
 import { CLIENT } from '@/config/client';
 import { ROUTES } from '@/config/routes';
 import type { Messages } from '@/i18n/messages/en';
@@ -67,18 +66,30 @@ export function Header({ messages, localeSwitcher, search, bagTrigger, accountMe
         <div className="flex shrink-0 items-center gap-1">
           {/*
            * §34 — the one call to action the bar carries. It is not navigation:
-           * the argument above is against three links to one listing, and this
-           * is the only way into a different feature. It is FILLED where every
-           * other control here inherits the bar's colour, so it stays legible
-           * over the hero film and reads as the thing to press.
+           * the argument above is against three links to one listing, and this is
+           * the only way into a different feature.
            *
-           * Below `sm` it collapses to the icon. The label stays in the
-           * accessibility tree as `sr-only`, so the name survives (A11Y-04).
+           * GOLD, not jade, and that is what lets it sit in this bar. Jade is what
+           * takes money — Add to bag, Place order — and gold is the studio's own
+           * mark, the accent every measurement ring is drawn in. Neither
+           * `accent-400` nor `on-accent` is redefined for dark, so one declaration
+           * is legible over the hero film, over the solid bar, and in both themes.
+           *
+           * A plain `<Link>` rather than `ButtonLink`: the neighbours are a 36px
+           * geometry set of bare glyphs, not buttons, and matching that set is the
+           * fix for a control that did not sit in the row. `sr-only` is absolutely
+           * positioned, so below `sm` the label is not a flex item and the control
+           * is exactly 36x36 — while the name survives in the accessibility tree
+           * (A11Y-04).
            */}
-          <ButtonLink href={ROUTES.stitched} size="sm" className="me-1 gap-1.5 px-2.5 sm:px-3">
-            <Ruler aria-hidden className="size-4" />
+          <Link
+            href={ROUTES.stitched}
+            className="bg-accent-400 text-on-accent rounded-pill hover:bg-accent-500 me-1 flex h-9 w-9 shrink-0 items-center justify-center gap-2 text-sm font-medium transition-colors sm:w-auto sm:ps-3 sm:pe-3.5"
+          >
+            {/* I18N-05: a ruler is not directional, so it must NOT mirror. */}
+            <Ruler aria-hidden className="size-5 sm:size-4" />
             <span className="sr-only sm:not-sr-only">{messages.nav.stitchedCta}</span>
-          </ButtonLink>
+          </Link>
 
           {localeSwitcher}
 

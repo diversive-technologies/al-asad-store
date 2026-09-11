@@ -61,7 +61,7 @@ export function HomepageSections({
             return <CatalogueEntrySection key={section.id} section={section} />;
 
           case 'STITCHING_ENTRY':
-            return <StitchingEntrySection key={section.id} section={section} />;
+            return <StitchingEntrySection key={section.id} section={section} locale={locale} />;
 
           default:
             return assertNever(section);

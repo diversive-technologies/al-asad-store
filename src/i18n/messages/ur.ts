@@ -423,6 +423,10 @@ export const ur: Messages = {
       'کپڑا انہیں ناپوں پر کاٹا جاتا ہے، اس لیے سلا ہوا آرڈر واپس یا تبدیل نہیں ہو سکتا۔ ادائیگی سے پہلے ہم آپ کو تمام ناپ دوبارہ دکھائیں گے۔',
     saveCta: 'میرے ناپ محفوظ کریں',
     savedNotice: 'ناپ محفوظ ہو گئے۔ اب آپ انہیں ہر سلائی والے آرڈر پر استعمال کر سکتے ہیں۔',
+    stepPrevious: 'پچھلا',
+    stepNext: 'اگلا',
+    stepDone: 'مکمل',
+    stepPosition: '{total} میں سے {current}',
     points: {
       kameezShoulder: {
         label: 'کندھا',

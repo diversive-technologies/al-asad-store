@@ -470,6 +470,10 @@ export const en = {
       'Cloth is cut to these numbers, so a stitched order cannot be returned or exchanged. We will show you every measurement again before you pay.',
     saveCta: 'Save my measurements',
     savedNotice: 'Measurements saved. You can use them on anything we stitch.',
+    stepPrevious: 'Previous',
+    stepNext: 'Next',
+    stepDone: 'Done',
+    stepPosition: '{current} of {total}',
     points: {
       kameezShoulder: {
         label: 'Shoulder',

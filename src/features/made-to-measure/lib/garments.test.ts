@@ -8,8 +8,10 @@ import {
   MEASUREMENT_IDS,
   MEASUREMENTS,
   measurementsFor,
+  stepFrom,
   storedFromEntered,
   type Measurement,
+  type MeasurementId,
 } from './garments';
 
 const byId = (id: (typeof MEASUREMENT_IDS)[number]): Measurement => {
@@ -160,5 +162,32 @@ describe('two marks on one garment are never mistaken for one', () => {
         );
       }
     }
+  });
+});
+
+describe('stepping through the set one field at a time', () => {
+  it('moves from the last kameez measurement straight into the shalwar', () => {
+    expect(stepFrom('kameezBottom', 1)).toBe('shalwarWaist');
+    expect(stepFrom('shalwarWaist', -1)).toBe('kameezBottom');
+  });
+
+  it('stops at both ends rather than wrapping round', () => {
+    expect(stepFrom('kameezShoulder', -1)).toBeNull();
+    expect(stepFrom('waistcoatLength', 1)).toBeNull();
+  });
+
+  it('reaches every measurement exactly once, walking forward from the first', () => {
+    const walked: MeasurementId[] = [];
+    // Capped, so a stepper that wraps fails the test instead of hanging it.
+    for (
+      let id: MeasurementId | null = 'kameezShoulder';
+      id !== null && walked.length <= MEASUREMENT_IDS.length;
+      id = stepFrom(id, 1)
+    ) {
+      walked.push(id);
+    }
+
+    expect(walked).toHaveLength(MEASUREMENT_IDS.length);
+    expect(new Set(walked)).toEqual(new Set(MEASUREMENT_IDS));
   });
 });

@@ -69,7 +69,6 @@ interface HomepageCopy {
   catalogueHeading: string;
   catalogueBody: string;
   catalogueCta: string;
-  stitchingEyebrow: string;
   stitchingHeading: string;
   stitchingBody: string;
   stitchingSteps: readonly [string, string, string];
@@ -92,7 +91,6 @@ const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
     catalogueBody:
       'Every fabric and every cut, filterable by colour, price, piece count and availability.',
     catalogueCta: 'Open the catalogue',
-    stitchingEyebrow: 'Made to measure',
     stitchingHeading: 'Your next kameez, cut to the fit you already love',
     stitchingBody:
       'No tailor visit and no second person. Measure a garment you already own, and we cut the new one to match it.',
@@ -117,7 +115,6 @@ const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
     catalogueHeading: 'پورا مجموعہ، ایک ہی جگہ',
     catalogueBody: 'ہر کپڑا اور ہر ڈیزائن — رنگ، قیمت، پیس اور دستیابی کے مطابق چھانٹیں۔',
     catalogueCta: 'مجموعہ کھولیں',
-    stitchingEyebrow: 'ناپ پر سلائی',
     stitchingHeading: 'آپ کی اگلی قمیض، اسی فٹنگ پر جو آپ کو پسند ہے',
     stitchingBody:
       'نہ درزی کے پاس جانے کی ضرورت، نہ کسی دوسرے شخص کی۔ اپنا پہلے سے موجود لباس ناپیں، ہم نیا اسی کے مطابق کاٹیں گے۔',
@@ -181,12 +178,10 @@ export function homepageFor(locale: Locale) {
       {
         kind: 'STITCHING_ENTRY',
         id: 'stitching-entry',
-        eyebrow: copy.stitchingEyebrow,
         heading: copy.stitchingHeading,
         body: copy.stitchingBody,
         steps: [...copy.stitchingSteps],
         cta: { label: copy.stitchingCta, href: '/stitched' },
-        imageUrl: photoUrl('kameez-slate'),
       },
       {
         kind: 'PRODUCT_RAIL',

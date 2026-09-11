@@ -39,6 +39,14 @@
   --color-fg: oklch(0.22 0.01 90);
   --color-fg-muted: oklch(0.52 0.01 90);
   --color-on-brand: oklch(0.99 0.005 90);
+  /*
+   * Ink for the gold ground. NOT redefined in either dark block, on the
+   * `--color-on-media` precedent: the gold does not move with the theme, so
+   * its ink must not either. This is not a new colour - it NAMES a value this
+   * stylesheet already hard-codes twice, in `.gf-tag` and `.mm-unit-on`, both
+   * of which now read the token (PD-01 / SSOT-01).
+   */
+  --color-on-accent: oklch(0.2 0.03 75);
   --color-border: oklch(0.89 0.008 90);
 
   /*
@@ -50,14 +58,6 @@
   --color-media-scrim: oklch(0.16 0.01 90);
   --color-on-media: oklch(0.99 0.005 90);
 
-  /*
-   * The bands beside the hero film on viewports wider than the film itself.
-   * Deliberately the page background, so on a very wide screen the film reads
-   * as sitting ON the site rather than inside a black box. It follows the
-   * theme because `--color-surface` does.
-   */
-  --color-media-band: var(--color-surface);
-
   --radius-card: 0.5rem;
   --radius-pill: 9999px;
 
@@ -68,8 +68,6 @@
    * it to sit full-bleed behind a transparent bar.
    */
   --spacing-header: 4rem;
-  /* How far the ambient glow reaches below the film before it is fully faded. */
-  --spacing-ambient-spill: 7.5rem;
   /* How far alternate columns of the listing grid drop. */
   --spacing-search-closed: 2.25rem;
   --spacing-search-open: 24rem;
@@ -101,6 +99,11 @@
  * Z-index is not a Tailwind v4 theme namespace, so the scale is exposed as
  * explicit utilities. This keeps `z-modal` legal and `z-[1300]` prohibited.
  */
+/* A sheet that covers the page but stays under the bar — the measurement
+   studio's focus mode on a phone. */
+@utility z-sheet {
+  z-index: 800;
+}
 @utility z-header {
   z-index: 900;
 }
@@ -156,9 +159,8 @@
  * bar over the page background, where light-on-media text is invisible in the
  * light theme. New pages get a readable bar without opting in.
  *
- * The gradient is what makes the text legible over BOTH the film and the page
- * background bands beside it on a wide screen, which a flat colour cannot do
- * because those two backgrounds move in opposite directions between themes.
+ * The gradient keeps the bar's text legible over the brightest frames at the top
+ * of the film, without laying a hard-edged tinted strip across it.
  */
 body:has([data-hero]) header[data-scrolled='false'] {
   color: var(--color-on-media);
@@ -1451,110 +1453,43 @@ body:has([data-hero]) header[data-scrolled='false']::before {
 }
 
 /*
- * Hero geometry, in two regimes.
+ * Hero geometry: never taller than one screen, and the film always reaches both
+ * side edges.
  *
- * The old rule scaled the film to the viewport HEIGHT, and that was wrong for a
- * reason worth recording: a browser viewport is never the same shape as the
- * screen. A 1920x1080 monitor gives roughly a 1920x950 viewport once chrome is
- * accounted for, so the viewport is always WIDER than 16:9 — which meant every
- * laptop, not just ultra-wides, ended up with ~115px of dead band down each
- * side. Assuming viewport == screen is what produced that.
+ * The film COVERS this box (see HeroMedia), so the box's shape alone decides what
+ * gets cropped:
+ *
+ *  - Portrait and near-square: exactly one screen tall. The film gives up width
+ *    at both edges; a 16:9 film at full width on a 390px phone would be 220px
+ *    tall, which is not a hero.
+ *  - Landscape: the full width at 16:9, capped at one screen. A browser viewport
+ *    on a monitor is almost always WIDER than 16:9 once the browser's own chrome
+ *    is subtracted - 1920x1080 gives about 1920x950 - so the cap binds on most
+ *    desktops, and the film trims a little off its bottom edge rather than
+ *    running past the fold or leaving bands at the sides.
+ *
+ * It used to cap at 125svh and size the film from the box's HEIGHT: measured
+ * 1350px tall on a 1080px ultra-wide screen, with 80px bands beside the film
+ * that a glow sampled from the video existed to fill. Both are gone.
+ *
+ * `svh`, not `vh`, so "one screen" means the screen with the mobile browser's
+ * toolbar SHOWING. A hero sized to the larger viewport is taller than what the
+ * customer can see until they start to scroll.
  */
 @utility hero-frame {
-  /*
-   * Portrait and near-square: the film fills the screen and gives up width at
-   * both edges. A 16:9 film at full width on a 390px phone is 220px tall, which
-   * is not a hero.
-   */
-  min-block-size: 100svh;
+  block-size: 100svh;
 
   @media (min-aspect-ratio: 4 / 3) {
     /*
-     * Landscape: the film owns the full width at its own ratio. Nothing is
-     * cropped and nothing is stretched — the section simply takes the height
-     * 16:9 implies, which lands a little past the fold and hints at more below.
-     */
-    min-block-size: 0;
-    /*
      * `inline-size` is pinned, and that is load-bearing. With width left auto,
-     * `max-block-size` below clamps the height and `aspect-ratio` then drags the
-     * WIDTH in to preserve the ratio — the section itself shrinks and the page
-     * background shows beside it. Fixing the width means the ratio can only ever
-     * drive the height, which is the whole intent.
+     * `max-block-size` clamps the height and `aspect-ratio` then drags the WIDTH
+     * in to keep the ratio - the section shrinks and the page shows beside it.
+     * Fixing the width means the ratio can only ever drive the height.
      */
+    block-size: auto;
     inline-size: 100%;
     aspect-ratio: 16 / 9;
-
-    /*
-     * Ultra-wide only. Past roughly 2.22:1 the film's natural height would run
-     * far below the fold, so it is capped and genuine side space appears. That
-     * space is what the ambient glow is for. 16:9 and 16:10 never reach here.
-     */
-    max-block-size: 125svh;
-  }
-}
-
-/*
- * The ambient glow — a heavily blurred mirror of the frame currently playing,
- * in the manner of YouTube's ambient mode.
- *
- * It sits behind the film, so on most screens the only part anyone sees is the
- * spill below the film's bottom edge. On an ultra-wide it also fills the side
- * space, which is the point: the film reads as glowing into the page instead of
- * sitting in a box with padding.
- *
- * The mask is what keeps it a glow rather than a coloured band — it is fully
- * opaque behind the film, where it is hidden anyway, and fades to nothing
- * across the spill.
- */
-@utility hero-ambient {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-start: 0;
-  block-size: calc(100% + var(--spacing-ambient-spill));
-  z-index: -30;
-  pointer-events: none;
-
-  /*
-   * Clip sideways, spill downwards.
-   *
-   * `clip` rather than `hidden` is the whole trick: `overflow-x: hidden` forces
-   * the other axis to `auto`, which would turn the downward spill into a
-   * scrollbar. `clip` leaves `overflow-y: visible` alone. Without this the
-   * upscaled canvas hangs past the viewport and the page grows a horizontal
-   * scrollbar — measured at 63px.
-   */
-  overflow-x: clip;
-  overflow-y: visible;
-
-  /*
-   * The falloff is stepped rather than a plain two-stop gradient. A linear fade
-   * reads as a visible band with an edge at each end; easing it out makes the
-   * film dissolve into the page instead of stopping at a line.
-   */
-  mask-image: linear-gradient(
-    to bottom,
-    rgb(0 0 0) calc(100% - var(--spacing-ambient-spill)),
-    rgb(0 0 0 / 0.82) calc(100% - var(--spacing-ambient-spill) * 0.72),
-    rgb(0 0 0 / 0.45) calc(100% - var(--spacing-ambient-spill) * 0.42),
-    rgb(0 0 0 / 0.14) calc(100% - var(--spacing-ambient-spill) * 0.18),
-    transparent 100%
-  );
-
-  /*
-   * Fully opaque on purpose. At partial opacity the page background shows
-   * through and the side areas read as padding behind a film rather than as the
-   * film's own light — which was the entire point of the effect.
-   *
-   * The scale is generous so the blurred frame's colour reaches well past the
-   * film's edges; a 64px blur on a layer only 10% larger leaves a washed-out
-   * rim where there is nothing left to sample from.
-   */
-  & > canvas {
-    inline-size: 100%;
-    block-size: 100%;
-    transform: scale(1.45);
-    filter: blur(72px) saturate(1.2);
+    max-block-size: 100svh;
   }
 }
 
@@ -2270,7 +2205,7 @@ ellipse.gf-mark--active {
   padding: 0.15rem 0.5rem;
   border-radius: var(--radius-pill);
   background-color: var(--color-accent-500);
-  color: oklch(0.2 0.03 75);
+  color: var(--color-on-accent);
   font-size: 0.625rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2422,7 +2357,7 @@ ellipse.gf-mark--active {
 
 .mm-unit-on {
   background-color: var(--color-accent-500);
-  color: oklch(0.2 0.03 75);
+  color: var(--color-on-accent);
 }
 
 @media (min-width: 64rem) {
@@ -2454,10 +2389,304 @@ ellipse.gf-mark--active {
   }
 }
 
+/*
+ * FOCUS MODE — the stacked layout only.
+ *
+ * Stacked, the drawing is pinned to the top and the form scrolls up OVER it, so
+ * on a phone the guide was covered at the exact moment somebody reached a field.
+ * While a measurement is active the studio becomes one fixed sheet under the bar:
+ * that field and its stepper at the top, the drawing and its caption filling the
+ * rest, sized to the part of the screen the keyboard leaves (`--mm-visible`, from
+ * `useVisibleHeight`).
+ *
+ * Unlayered like the rest of `.mm-*`, so these beat the Tailwind utilities on the
+ * same elements — the form's `mt-10` and `gap-8` among them.
+ */
+.mm-stepper {
+  display: none;
+}
+
+@media (max-width: 63.9375rem) {
+  /* iOS zooms into any field under 16px as it takes focus and does not zoom back
+     out, which crops the sheet sideways and throws its sizing. Stacked layout
+     only; the store-wide `Input` fix is offered separately. */
+  .mm-scene input {
+    font-size: 1rem;
+  }
+
+  /* The page beneath cannot be dragged while the sheet is up. */
+  html:has(.mm-scene[data-focused]) {
+    overflow: hidden;
+  }
+
+  /*
+   * Placed from the VISUAL viewport. With the keyboard up iOS pans the visible
+   * area down the layout (`--mm-top`), which would carry a sheet pinned to the
+   * layout off the top of the screen. It clears the bar only while the bar is in
+   * view, and ends where the keyboard begins.
+   */
+  .mm-scene[data-focused] {
+    --mm-sheet-top: max(var(--mm-top, 0px), var(--spacing-header));
+    position: fixed;
+    inset-inline: 0;
+    inset-block-start: var(--mm-sheet-top);
+    block-size: calc(var(--mm-top, 0px) + var(--mm-visible, 100dvh) - var(--mm-sheet-top));
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .mm-scene[data-focused] .mm-scene-panel {
+    order: 1;
+    flex: none;
+    border-block-start: 0;
+    border-block-end: 1px solid var(--color-border);
+  }
+
+  .mm-scene[data-focused] .mm-panel-inner {
+    padding: 0.75rem var(--spacing-gutter);
+  }
+
+  .mm-scene[data-focused] .mm-scene-stage {
+    order: 2;
+    position: static;
+    flex: 1 1 0;
+    block-size: auto;
+    padding-block: 0.75rem;
+  }
+
+  .mm-scene[data-focused] form {
+    margin-block-start: 0;
+    gap: 0.75rem;
+  }
+
+  /* What the sheet has no room for. The drawing shows the garment the field
+     belongs to, the field's label names the measurement and its hint says where
+     the tape goes; the mark's shape and the "across → around" readout carry the
+     doubling, so the generic line under the drawing is spare too. */
+  .mm-scene[data-focused]
+    :is(.mm-crumbs, .mm-title, .mm-lead, .mm-tabs, .mm-scene-name, .mm-scene-how),
+  .mm-scene[data-focused] form > :not(fieldset, .mm-stepper),
+  .mm-scene[data-focused] .mm-scene-caption:not(:has(.mm-scene-readout)) {
+    display: none;
+  }
+
+  /* A floor, so the guide never shrinks to nothing on a short screen with the
+     keyboard up; below it the sheet scrolls instead. */
+  .mm-scene[data-focused] .mm-flat-frame {
+    min-block-size: 7rem;
+  }
+
+  /*
+   * Every OTHER field is hidden visually but stays in the document and the tab
+   * order. Removing them would break the keyboard's own next-field arrows and Tab,
+   * which move through the set and carry focus mode along; it would also leave
+   * `form.setFocus` aiming at an input that is not rendered, a silent no-op.
+   */
+  .mm-scene[data-focused]
+    :is(fieldset:not(:has([data-active])), fieldset > legend, .mm-field:not([data-active])) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .mm-scene[data-focused] .mm-stepper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+/* A phone on its side has height for one thing, so the field and the drawing sit
+   side by side rather than stacked. */
+@media (max-width: 63.9375rem) and (orientation: landscape) {
+  .mm-scene[data-focused] {
+    flex-direction: row;
+  }
+
+  .mm-scene[data-focused] .mm-scene-panel {
+    flex: 0 0 min(22rem, 50%);
+    overflow-y: auto;
+    border-block-end: 0;
+    border-inline-end: 1px solid var(--color-border);
+  }
+
+  .mm-scene[data-focused] .mm-scene-stage {
+    align-self: stretch;
+    min-inline-size: 0;
+  }
+}
+
 /* A11Y-10 — the tape stops marching. The mark stays exactly where it was,
    because the active state is carried by colour and width, not by motion. */
 @media (prefers-reduced-motion: reduce) {
   ellipse.gf-mark--active {
     animation: none;
   }
+}
+
+/*
+ * §34 OFF THE STUDIO - the measurement vocabulary, where the store offers to cut
+ * something to a customer's own numbers.
+ *
+ * Two halves of one language. The MEASURE LINE is `ellipse.gf-mark` unrolled: the
+ * studio marks a measurement with a 1px gold ellipse dashed 4 on, 3.5 off, and off
+ * the studio that same mark goes straight. The GARMENT MARK is the drawing itself,
+ * at a fraction of the studio's size. Gold and dashed means measured to your
+ * numbers; jade filled still means this takes money.
+ */
+
+/*
+ * A repeating gradient rather than `border-block-start: 1px dashed`, for one
+ * reason: a dashed border's rhythm belongs to the browser and its phase cannot be
+ * moved, and the phase is the one authored moment these surfaces get.
+ */
+@utility measure-line {
+  display: block;
+  block-size: 1px;
+  inline-size: 100%;
+  /* 4 on, 3.5 off - `ellipse.gf-mark`'s own `stroke-dasharray`, in px. */
+  background-image: linear-gradient(to right, var(--color-accent-500) 0 4px, transparent 4px 7.5px);
+  background-size: 7.5px 1px;
+  background-repeat: repeat-x;
+  /*
+   * Two dash periods - `@keyframes gf-tape`'s own `-15`. It travels toward the
+   * READING end, so the sign flips under RTL. It is carried on a custom property
+   * because the hover rule below sets the `animation` SHORTHAND, which resets
+   * `animation-direction` to `normal` and would silently kill a direction
+   * declared anywhere else.
+   */
+  --measure-march: 15px;
+}
+
+/* I18N-12. */
+[dir='rtl'] .measure-line {
+  --measure-march: -15px;
+}
+
+/*
+ * The one authored moment: the tape advances two dash periods under the pointer
+ * or under keyboard focus, and rests. A state change from an already-drawn
+ * default - nothing appears from nothing - one-shot rather than looping, on the
+ * house curve the slide-over and every popover already use.
+ *
+ * UNLAYERED on purpose: `@utility` output lands in `@layer utilities`, and an
+ * unlayered rule beats a layered one whatever the specificity.
+ */
+/*
+ * A11Y-10 by OPT-IN rather than by override. A `reduce` block setting
+ * `.measure-line { animation: none }` loses to these selectors - (0,1,0) against
+ * (0,3,0), and a media query adds no specificity - so under reduced motion the
+ * tape went on marching. Granting the motion only where it is wanted leaves
+ * nothing to override.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .group:hover > .measure-line,
+  .group:focus-visible > .measure-line,
+  .group:has(:focus-visible) > .measure-line {
+    animation: measure-march 520ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@keyframes measure-march {
+  to {
+    background-position-x: var(--measure-march);
+  }
+}
+
+@utility garment-mark {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  /*
+   * PROPORTION BY CONSTRUCTION. Every drawing is 200 units wide, so equal COLUMN
+   * width plus each drawing's own ratio makes the 200x200 waistcoat draw shorter
+   * than - and no wider than - the 200x260 kameez. Sizing all three to a common
+   * block-size instead, which is the obvious move, draws the waistcoat as long as
+   * a full kameez and the widest object in the row: the one error somebody who
+   * owns the garments would see instantly.
+   */
+  aspect-ratio: var(--gm-ratio);
+  color: inherit;
+}
+
+@utility garment-rail {
+  display: flex;
+  /* Hung from the shoulder and waistband line, as garments hang on a rail. A
+     bottom alignment would expose the hems: the waistcoat's ink ends at 87% of
+     its box and the kameez's at 94%. */
+  align-items: flex-start;
+  gap: 2rem;
+  /* One flat below 48rem: three in a phone's column is ~106px each, the same
+     sub-pixel failure that keeps the drawing off the header. */
+  max-inline-size: 13rem;
+  margin-inline: auto;
+
+  & > * {
+    flex: 1 1 0;
+    min-inline-size: 0;
+  }
+
+  @media (min-width: 48rem) {
+    /* Pictures stop long before an ultrawide does. `page-shell` caps the PAGE at
+       160rem; a row of three drawings needs its own limit, or a 2560px screen
+       shows three small islands in a field of jade. */
+    max-inline-size: 80rem;
+  }
+}
+
+/*
+ * THE SAME THREE STROKES, AT A FRACTION OF THE STUDIO'S SIZE.
+ *
+ * `.gf-outline` is `stroke-width: 1.6` in USER UNITS on a 260-tall viewBox that
+ * renders about 450px tall in the studio. Scale the drawing down and the stroke
+ * scales with it: at 200px wide the outline paints 1.2px, at 56px 0.34px, at 18px
+ * 0.11px - a grey smudge rather than a drawing. So exactly two things change off
+ * the studio: the strokes stop scaling, and the outline takes `currentColor` so
+ * one drawing serves the jade band, the page surface and both themes.
+ *
+ * UNLAYERED, deliberately - `.gf-outline` and its siblings are unlayered
+ * top-level rules, so an override of them has to sit outside a layer too.
+ */
+.garment-mark .gf-outline,
+.garment-mark .gf-detail,
+.garment-mark .gf-mark {
+  vector-effect: non-scaling-stroke;
+}
+
+.garment-mark .gf-outline {
+  stroke: currentColor;
+  stroke-width: 1.25;
+  opacity: 0.92;
+}
+
+.garment-mark .gf-detail {
+  stroke: currentColor;
+  stroke-width: 0.75;
+  opacity: 0.55;
+}
+
+/* The one ring. Gold and dashed at rest rather than idle-grey: off the studio
+   there is no selection state, so the mark states its meaning outright. */
+.garment-mark .gf-mark {
+  stroke: var(--color-accent-400);
+  stroke-width: 1;
+  opacity: 0.95;
+}
+
+/*
+ * The global focus outline is `brand-500`, which on a brand ground is jade on
+ * jade - about 1.4:1, which is no indicator at all (STY-10 / A11Y-03). Unlayered,
+ * because a `focus-visible:outline-*` utility at the call site would land in
+ * `@layer utilities` and lose to the very rule it is trying to override.
+ */
+.stitching-stage :focus-visible {
+  outline-color: var(--color-on-brand);
 }
