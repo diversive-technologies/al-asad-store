@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
+import Link from 'next/link';
 
 import { ButtonLink } from '@/components/ui/button';
 import { InfoPopover } from '@/components/ui/popover';
@@ -12,6 +13,7 @@ import type { Messages } from '@/i18n/messages/en';
 import type { CartLineId } from '@/lib/domain/ids';
 import { unwrap } from '@/lib/result';
 import { formatTemplate } from '@/lib/utils/format';
+import { Ruler } from '@/lib/vendor/icons';
 
 import { removeBagLine, updateLineQuantity } from '../api/bag-browser';
 import type { AddToBagResult, BagLine } from '../schemas/bag.schema';
@@ -154,6 +156,21 @@ export function BagContents({ locale, messages }: BagContentsProps) {
               <p>{t.heldInfoExtend}</p>
             </InfoPopover>
           </div>
+
+          {/*
+           * §34's bag nudge. A standing invitation, deliberately NOT a claim about
+           * any line above: a bag line carries no stitching offer, and deciding
+           * here which of them the workshop would cut would be the interface
+           * inventing a catalogue rule (DATA-13).
+           */}
+          <Link
+            href={ROUTES.stitched}
+            className="border-border hover:border-brand-500 rounded-card text-fg-muted hover:text-fg focus-visible:ring-brand-500 mt-4 flex items-center gap-3 border border-dashed p-3 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <Ruler aria-hidden className="text-brand-600 size-4 shrink-0" />
+            <span className="flex-1">{t.stitchingNudge}</span>
+            <span className="text-brand-600 font-medium">{t.stitchingNudgeCta}</span>
+          </Link>
         </>
       )}
     </>

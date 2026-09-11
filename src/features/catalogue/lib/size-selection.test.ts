@@ -53,6 +53,7 @@ function makeProduct(type: 'SIMPLE' | 'SET', pieces: readonly Piece[]): ProductD
     estimatedDeliveryDate: '2026-09-11',
     infoSections: [],
     fabricCalculator: null,
+    stitching: null,
     isNew: false,
   };
 }

@@ -7,9 +7,9 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-11, on `main`. Last commit: `2ef3be0` (Made-to-Measure as
-garment flats). The 3D experiment is kept, unmerged, on branch `3d-model` at
-`62363d3`. Nothing is pushed: `main` is two commits ahead of `origin/main`.
+Last updated: 2026-09-11, on `main`, with the Made-to-Measure entry points built.
+The 3D experiment is kept, unmerged, on branch `3d-model` at `62363d3`. Nothing
+is pushed: `main` is ahead of `origin/main`.
 
 ---
 
@@ -24,7 +24,7 @@ garment flats). The 3D experiment is kept, unmerged, on branch `3d-model` at
 | M5 | Checkout | **Core done.** Quote, single-page checkout, §7.2 placement, confirmation. |
 | M6 | Real auth & account | **Auth screens built** against §11's shape; account area still deferred. |
 | USP1 | Try-On (§24) | **Interface complete, provider unconnected** — which is exactly §28.5. See below. |
-| USP2 | Made-to-Measure (§34) | **Measurement atelier rebuilt as GARMENT FLATS**, now on `main` — the 3D figure and `three` are gone (kept on branch `3d-model`). Kameez, shalwar and waistcoat as SVG line art, each measurement marked on the drawing it is taken from. Entry points and the buy-box fork are still not started. |
+| USP2 | Made-to-Measure (§34) | **Measurement atelier rebuilt as GARMENT FLATS**, now on `main` — the 3D figure and `three` are gone (kept on branch `3d-model`). Kameez, shalwar and waistcoat as SVG line art, each measurement marked on the drawing it is taken from. Four ways in are built — a header call to action on every page, a homepage stage, a buy-box fork and a bag nudge. Nothing is saved yet. |
 
 ## M2 — what is built
 
@@ -815,11 +815,50 @@ drawing to the shalwar; and the page renders correctly light, dark, at 1440px an
 at 390px. Urdu was checked at `dir="rtl"` — every string, `13 میں سے 1 ناپ لیے گئے`,
 and the readout as `21 انچ آر پار ← 42 انچ گھیر`.
 
+## Made-to-Measure — entry points
+
+The studio used to exist with nothing pointing at it. There are four ways in
+now, each checked in the running store:
+
+- **A header call to action on every page** — a filled jade "Stitched to size"
+  button beside search. It is a deliberate exception to "the header carries no
+  navigation": that rule is against three links to one listing, and this is the
+  only way into a different feature. It is the one FILLED control in a bar whose
+  controls otherwise inherit its colour, which is what keeps it legible over the
+  hero film. Below `sm` it collapses to the ruler icon (36×32px) with the label
+  kept as `sr-only`, so the accessible name survives; the bar does not overflow.
+- **A homepage stage**, `STITCHING_ENTRY` — a new section kind rather than an
+  editorial banner, because the banner's quiet text link is wrong for a USP, and
+  because it carries what no other kind does: three numbered steps. It sits
+  directly under the hero on a jade band, with a SECONDARY button, because a
+  primary jade one disappears on jade. The copy is content, in both locales.
+- **A fork in the buy box**, directly under Add to bag, because that is where a
+  customer who cannot find their size is already looking. It is drawn only when
+  the product carries a `stitching` offer — `{ leadTimeDays }` or `null` —
+  declared by the backend exactly as the Fabric Calculator's offer is, so the
+  interface never decides which garments the workshop will cut (DATA-13). The mock
+  offers it on every product at 7 days; narrowing it later is a mock-and-Java
+  change, never a component one.
+- **A bag nudge** under the lines, as a dashed card. It is a standing invitation,
+  deliberately NOT a claim about any line: a bag line carries no stitching offer,
+  and inferring one would be the interface inventing a catalogue rule. It lives in
+  `BagContents`, so the panel and `/bag` both carry it, and following it from the
+  panel closes the panel, because `BagProvider` already closes on a route change.
+
+Verified: **typecheck, lint, 235 tests and the production build pass.** In the
+running store: the homepage HTML carries the section and two links to
+`/stitched` (header and section); the product page carries exactly one visible
+fork, in the buy-box column 48px under Add to bag, reading "Ready in about 7
+days"; `/bag` with one line carries exactly one nudge, 342px wide at phone width
+with no horizontal overflow; and in Urdu the page is `dir="rtl"` with the section
+heading, all three steps, the header label and the fork all translated.
+
 ## Made-to-Measure — what is left
 
-**Every entry point.** Nothing links to `/stitched` yet: no buy-box fork on the
-product page, no homepage stage, no bag nudge for unstitched cloth, no card
-badge. The studio exists and nobody can find it.
+**The card badge.** A product card still does not say that it can be made to
+measure. That needs the offer on the CARD projection, not only on the product
+page, and the card is the most reused component in the store — so it is its own
+change rather than a rider on the entry points.
 
 **The body path**, which §34.8 defers and §34.6a keeps deferred. The same set,
 the same kinds, the same bounds and the same instructions drive it; what differs

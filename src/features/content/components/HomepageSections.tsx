@@ -9,6 +9,7 @@ import { CategoryGridSection } from './CategoryGridSection';
 import { EditorialBannerSection } from './EditorialBannerSection';
 import { HeroVideoSection } from './HeroVideoSection';
 import { ProductRailSection } from './ProductRailSection';
+import { StitchingEntrySection } from './StitchingEntrySection';
 
 export interface HomepageSectionsProps {
   sections: readonly HomepageSection[];
@@ -58,6 +59,9 @@ export function HomepageSections({
 
           case 'CATALOGUE_ENTRY':
             return <CatalogueEntrySection key={section.id} section={section} />;
+
+          case 'STITCHING_ENTRY':
+            return <StitchingEntrySection key={section.id} section={section} />;
 
           default:
             return assertNever(section);

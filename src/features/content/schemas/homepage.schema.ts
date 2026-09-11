@@ -111,12 +111,34 @@ const catalogueEntrySectionSchema = z.object({
   previewImageUrls: z.array(z.string().min(1)),
 });
 
+/**
+ * §34's homepage stage — the route into Made-to-Measure.
+ *
+ * A kind of its own rather than an EDITORIAL_BANNER instance, for two reasons.
+ * The banner's quiet text link is exactly wrong for the store's second USP. And
+ * this carries something no other section does: the steps. Somebody who has
+ * never ordered stitching online needs to see that it is three things they can
+ * do at home, not a fitting appointment, before the button means anything.
+ */
+const stitchingEntrySectionSchema = z.object({
+  kind: z.literal('STITCHING_ENTRY'),
+  id: z.string().min(1),
+  eyebrow: z.string().min(1),
+  heading: z.string().min(1),
+  body: z.string().min(1),
+  steps: z.array(z.string().min(1)).min(1),
+  cta: ctaSchema,
+  /** Decorative, like the catalogue entry's stills (A11Y-04). */
+  imageUrl: z.string().min(1),
+});
+
 export const homepageSectionSchema = z.discriminatedUnion('kind', [
   heroVideoSectionSchema,
   productRailSectionSchema,
   categoryGridSectionSchema,
   editorialBannerSectionSchema,
   catalogueEntrySectionSchema,
+  stitchingEntrySectionSchema,
 ]);
 
 export type HomepageSection = z.infer<typeof homepageSectionSchema>;
@@ -125,6 +147,7 @@ export type ProductRailSection = z.infer<typeof productRailSectionSchema>;
 export type CategoryGridSection = z.infer<typeof categoryGridSectionSchema>;
 export type EditorialBannerSection = z.infer<typeof editorialBannerSectionSchema>;
 export type CatalogueEntrySection = z.infer<typeof catalogueEntrySectionSchema>;
+export type StitchingEntrySection = z.infer<typeof stitchingEntrySectionSchema>;
 
 export const homepageSchema = z.object({
   sections: z.array(homepageSectionSchema),

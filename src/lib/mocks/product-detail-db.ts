@@ -369,8 +369,19 @@ export interface ProductDetailPayload {
     minHeightCm: number;
     maxHeightCm: number;
   } | null;
+  stitching: { leadTimeDays: number } | null;
   isNew: boolean;
 }
+
+/**
+ * §34 — which products the workshop will make to measure, and how long it takes.
+ *
+ * The backend's rule, stood in for here. Release 1 offers it on every kameez,
+ * shalwar, kurta and waistcoat, which in this catalogue is every product — so
+ * the `null` branch exists in the contract and in the interface, and a rule that
+ * narrows it later is a change here and in Java, never in a component.
+ */
+const STITCHING_OFFER = { leadTimeDays: 7 } as const;
 
 const FABRIC_KEYS = ['wash-n-wear', 'boski', 'karandi', 'cotton'] as const;
 
@@ -466,6 +477,7 @@ export function toProductDetail(record: CatalogueRecord, locale: Locale): Produc
       .slice(0, 10),
     infoSections: [...INFO_SECTIONS[locale]],
     fabricCalculator: fabricCalculatorOfferFor(record, locale),
+    stitching: { ...STITCHING_OFFER },
     isNew: record.isNew,
   };
 }

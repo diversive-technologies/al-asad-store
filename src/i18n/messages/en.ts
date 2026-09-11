@@ -13,6 +13,9 @@ export const en = {
     tagline: 'Ethnic apparel, stitched and unstitched.',
   },
   nav: {
+    /* §34 — the one call to action the header carries. At phone width it
+       collapses to the icon, and this text stays on as its accessible name. */
+    stitchedCta: 'Stitched to size',
     home: 'Home',
     catalogue: 'Catalogue',
     unstitched: 'Unstitched',
@@ -37,6 +40,13 @@ export const en = {
     submit: 'Submit',
   },
   product: {
+    /* §34 — the made-to-measure fork under Add to bag. Drawn only when the
+       backend offers stitching for the product, the way the Fabric Calculator
+       is. */
+    stitchingForkHeading: 'Or have it stitched to your measurements',
+    stitchingForkBody:
+      'Measure a garment you already own, and we will cut this one to the same fit. Ready in about {days} days.',
+    stitchingForkCta: 'Take my measurements',
     newBadge: 'New',
     discountBadge: 'Sale',
     lowStockBadge: 'Low stock',
@@ -159,6 +169,9 @@ export const en = {
     rightsReserved: 'All rights reserved.',
   },
   bag: {
+    /* §34 — a standing invitation, not a claim about any line in the bag. */
+    stitchingNudge: 'Want the next one made to your measurements?',
+    stitchingNudgeCta: 'Measure a garment you own',
     title: 'Bag',
     emptyBody: 'Your bag is empty.',
     startShopping: 'Start shopping',

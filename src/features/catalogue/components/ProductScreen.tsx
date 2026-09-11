@@ -12,6 +12,7 @@ import type { ProductDetail } from '../schemas/product-detail.schema';
 import { FabricCalculator } from './FabricCalculator';
 import { ProductBuyBox } from './ProductBuyBox';
 import { ProductGallery } from './ProductGallery';
+import { StitchingFork } from './StitchingFork';
 
 export interface ProductScreenProps {
   product: ProductDetail;
@@ -98,6 +99,15 @@ export function ProductScreen({
             locale={locale}
             messages={messages}
           />
+
+          {/*
+           * §34 — drawn only when the BACKEND offers stitching for this product,
+           * the same way the Fabric Calculator is, so nothing here decides which
+           * garments the workshop will cut (DATA-13).
+           */}
+          {product.stitching === null ? null : (
+            <StitchingFork offer={product.stitching} locale={locale} messages={messages} />
+          )}
 
           {tryOn}
 

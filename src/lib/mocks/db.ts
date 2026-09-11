@@ -69,6 +69,11 @@ interface HomepageCopy {
   catalogueHeading: string;
   catalogueBody: string;
   catalogueCta: string;
+  stitchingEyebrow: string;
+  stitchingHeading: string;
+  stitchingBody: string;
+  stitchingSteps: readonly [string, string, string];
+  stitchingCta: string;
 }
 
 const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
@@ -87,6 +92,16 @@ const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
     catalogueBody:
       'Every fabric and every cut, filterable by colour, price, piece count and availability.',
     catalogueCta: 'Open the catalogue',
+    stitchingEyebrow: 'Made to measure',
+    stitchingHeading: 'Your next kameez, cut to the fit you already love',
+    stitchingBody:
+      'No tailor visit and no second person. Measure a garment you already own, and we cut the new one to match it.',
+    stitchingSteps: [
+      'Lay a kameez, shalwar or waistcoat you own flat on a bed.',
+      'Measure it, with drawings that show you where the tape goes.',
+      'We stitch your new one to exactly the same fit.',
+    ],
+    stitchingCta: 'Take my measurements',
   },
   ur: {
     heroHeadline: 'واش این ویئر، بوسکی اور کرنڈی',
@@ -102,6 +117,16 @@ const HOMEPAGE_COPY: Record<Locale, HomepageCopy> = {
     catalogueHeading: 'پورا مجموعہ، ایک ہی جگہ',
     catalogueBody: 'ہر کپڑا اور ہر ڈیزائن — رنگ، قیمت، پیس اور دستیابی کے مطابق چھانٹیں۔',
     catalogueCta: 'مجموعہ کھولیں',
+    stitchingEyebrow: 'ناپ پر سلائی',
+    stitchingHeading: 'آپ کی اگلی قمیض، اسی فٹنگ پر جو آپ کو پسند ہے',
+    stitchingBody:
+      'نہ درزی کے پاس جانے کی ضرورت، نہ کسی دوسرے شخص کی۔ اپنا پہلے سے موجود لباس ناپیں، ہم نیا اسی کے مطابق کاٹیں گے۔',
+    stitchingSteps: [
+      'اپنی قمیض، شلوار یا واسکٹ بستر پر سیدھی بچھائیں۔',
+      'ہمارے خاکوں کی مدد سے ناپیں، جو بتاتے ہیں کہ فیتہ کہاں رکھنا ہے۔',
+      'ہم آپ کا نیا لباس بالکل اسی فٹنگ پر سی دیں گے۔',
+    ],
+    stitchingCta: 'میرے ناپ لیں',
   },
 };
 
@@ -147,6 +172,21 @@ export function homepageFor(locale: Locale) {
         headline: copy.heroHeadline,
         subheadline: copy.heroSubheadline,
         cta: { label: copy.heroCta, href: '/catalogue' },
+      },
+      /*
+       * §34's homepage stage, placed directly under the hero. Made-to-Measure is
+       * the store's second USP, so it is the first thing a visitor scrolls to,
+       * not the last.
+       */
+      {
+        kind: 'STITCHING_ENTRY',
+        id: 'stitching-entry',
+        eyebrow: copy.stitchingEyebrow,
+        heading: copy.stitchingHeading,
+        body: copy.stitchingBody,
+        steps: [...copy.stitchingSteps],
+        cta: { label: copy.stitchingCta, href: '/stitched' },
+        imageUrl: photoUrl('kameez-slate'),
       },
       {
         kind: 'PRODUCT_RAIL',

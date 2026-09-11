@@ -14,6 +14,7 @@ export const ur: Messages = {
     tagline: 'روایتی ملبوسات، سلے اور بغیر سلے۔',
   },
   nav: {
+    stitchedCta: 'ناپ پر سلائی',
     home: 'صفحۂ اول',
     catalogue: 'مجموعہ',
     unstitched: 'بغیر سلے',
@@ -38,6 +39,10 @@ export const ur: Messages = {
     submit: 'جمع کریں',
   },
   product: {
+    stitchingForkHeading: 'یا اسے اپنے ناپ پر سلوائیں',
+    stitchingForkBody:
+      'اپنا کوئی پہلے سے موجود لباس ناپیں، ہم یہ بھی اسی فٹنگ پر کاٹیں گے۔ تقریباً {days} دن میں تیار۔',
+    stitchingForkCta: 'میرے ناپ لیں',
     newBadge: 'نیا',
     discountBadge: 'رعایت',
     lowStockBadge: 'اسٹاک کم ہے',
@@ -154,6 +159,8 @@ export const ur: Messages = {
     rightsReserved: 'جملہ حقوق محفوظ ہیں۔',
   },
   bag: {
+    stitchingNudge: 'اگلا لباس اپنے ناپ پر بنوانا چاہیں گے؟',
+    stitchingNudgeCta: 'اپنا کوئی لباس ناپیں',
     title: 'تھیلا',
     emptyBody: 'آپ کا تھیلا خالی ہے۔',
     startShopping: 'خریداری شروع کریں',
@@ -419,8 +426,7 @@ export const ur: Messages = {
     points: {
       kameezShoulder: {
         label: 'کندھا',
-        instruction:
-          'قمیض سیدھی بچھائیں۔ پیٹھ کی طرف ایک کندھے کی سلائی سے دوسری تک ناپیں۔',
+        instruction: 'قمیض سیدھی بچھائیں۔ پیٹھ کی طرف ایک کندھے کی سلائی سے دوسری تک ناپیں۔',
       },
       kameezChest: {
         label: 'چھاتی',

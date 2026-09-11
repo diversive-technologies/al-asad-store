@@ -23,6 +23,7 @@ export {
   Minus,
   Moon,
   Plus,
+  Ruler,
   Search,
   Sparkles,
   SlidersHorizontal,

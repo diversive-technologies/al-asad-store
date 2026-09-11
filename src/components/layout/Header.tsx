@@ -3,9 +3,11 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
+import { ButtonLink } from '@/components/ui/button';
 import { CLIENT } from '@/config/client';
 import { ROUTES } from '@/config/routes';
 import type { Messages } from '@/i18n/messages/en';
+import { Ruler } from '@/lib/vendor/icons';
 
 import { StickyHeaderShell } from './StickyHeaderShell';
 
@@ -63,6 +65,21 @@ export function Header({ messages, localeSwitcher, search, bagTrigger, accountMe
         <div className="flex min-w-0 flex-1 justify-end">{search}</div>
 
         <div className="flex shrink-0 items-center gap-1">
+          {/*
+           * §34 — the one call to action the bar carries. It is not navigation:
+           * the argument above is against three links to one listing, and this
+           * is the only way into a different feature. It is FILLED where every
+           * other control here inherits the bar's colour, so it stays legible
+           * over the hero film and reads as the thing to press.
+           *
+           * Below `sm` it collapses to the icon. The label stays in the
+           * accessibility tree as `sr-only`, so the name survives (A11Y-04).
+           */}
+          <ButtonLink href={ROUTES.stitched} size="sm" className="me-1 gap-1.5 px-2.5 sm:px-3">
+            <Ruler aria-hidden className="size-4" />
+            <span className="sr-only sm:not-sr-only">{messages.nav.stitchedCta}</span>
+          </ButtonLink>
+
           {localeSwitcher}
 
           {/* D5: some clients ship a single brand treatment. The tokens still

@@ -101,6 +101,22 @@ export const modelInfoSchema = z.object({
 
 export type ModelInfo = z.infer<typeof modelInfoSchema>;
 
+/**
+ * §34 — present when this product can be made to the customer's measurements,
+ * `null` when it cannot. The BACKEND decides, exactly as it does for the Fabric
+ * Calculator: which garment styles the workshop will cut is a catalogue rule,
+ * and an interface that inferred it from the pieces would be a second
+ * implementation of it (DATA-13).
+ *
+ * The lead time travels with the offer because it is the one fact that makes the
+ * offer worth taking, and it is the workshop's number, not the storefront's.
+ */
+export const stitchingOfferSchema = z.object({
+  leadTimeDays: z.number().int().positive(),
+});
+
+export type StitchingOffer = z.infer<typeof stitchingOfferSchema>;
+
 const productDetailShape = z.object({
   id: productIdSchema,
   code: z.string().min(1),
@@ -130,6 +146,8 @@ const productDetailShape = z.object({
    * (DATA-13).
    */
   fabricCalculator: fabricCalculatorOfferSchema.nullable(),
+  /** §34 — see `stitchingOfferSchema`. */
+  stitching: stitchingOfferSchema.nullable(),
   isNew: z.boolean(),
 });
 
