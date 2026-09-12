@@ -7,9 +7,11 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-11, on `main`, with the Made-to-Measure entry points built
-and then revamped, the hero held to one screen, and a focus mode for the
-measurement studio on a phone.
+Last updated: 2026-09-12, on `main`, with all six Made-to-Measure plan phases done
+— the client's order, the list served as content, a real save with a review, the
+tailor's-card path, finishing choices that decide what is asked, and the tailor's
+rules as rows. Every rule row, bound and card convention is FIXTURE until the
+client's written list arrives; the machinery around them is built.
 The 3D experiment is kept, unmerged, on branch `3d-model` at `62363d3`. Nothing
 is pushed: `main` is ahead of `origin/main`.
 
@@ -26,7 +28,7 @@ is pushed: `main` is ahead of `origin/main`.
 | M5 | Checkout | **Core done.** Quote, single-page checkout, §7.2 placement, confirmation. |
 | M6 | Real auth & account | **Auth screens built** against §11's shape; account area still deferred. |
 | USP1 | Try-On (§24) | **Interface complete, provider unconnected** — which is exactly §28.5. See below. |
-| USP2 | Made-to-Measure (§34) | **Measurement atelier rebuilt as GARMENT FLATS**, now on `main` — the 3D figure and `three` are gone (kept on branch `3d-model`). Kameez, shalwar and waistcoat as SVG line art, each measurement marked on the drawing it is taken from. Four ways in are built — a header call to action on every page, a homepage stage, a buy-box fork and a bag nudge. Nothing is saved yet. |
+| USP2 | Made-to-Measure (§34) | **Measurement atelier rebuilt as GARMENT FLATS**, now on `main` — the 3D figure and `three` are gone (kept on branch `3d-model`). Kameez, shalwar and waistcoat as SVG line art, each measurement marked on the drawing it is taken from. Four ways in are built — a header call to action on every page, a homepage stage, a buy-box fork and a bag nudge. The list is served as content (plan Phase 2) and measurements are SAVED — after a server check and a review, append-only, to the mock (plan Phase 3) — and collar, ban and cuff choices decide which points are asked (plan Phase 5). A customer can copy a tailor's card instead, with the card's photo shown beside the form and never sent (plan Phase 4, FIXTURE conventions). The tailor's rules are rows on the server (plan Phase 6): a rule that REFUSES, and a rule that only ASKS — a quiet note under the field offering "Measure again" or "Keep my number", with what the customer keeps recorded against the rule by name. |
 
 ## M2 — what is built
 
@@ -591,12 +593,14 @@ TryOnPanel → POST /api/try-on → generateTryOn() → apiRequest → [MSW = mo
   determines its own colourway and the backend resolves it (DATA-13). The day the
   catalogue grows selectable colourways, the field joins the schema.
 - **The unavailable state is reached honestly, not simulated.** No API key means
-  `isConfigured()` is false, `isAvailable()` answers false, and the product page
-  renders NO try-on button. That is the repository's default and the state §28.5
-  describes. Verified in the running store: 0 try-on buttons, Add to Bag present,
-  page intact — ADR 12 and §30.2 holding in the interface, not just on paper.
-- **Absence IS the unavailable state.** A button that opens a panel to announce
-  the feature is off is a control that cannot do its job. The panel's three
+  `isConfigured()` is false and `isAvailable()` answers false — the repository's
+  default and the state §28.5 describes. *Superseded in the interface:* the product
+  page used to draw no try-on button in that state; it now always draws the entry
+  (see "The interface, after the operator saw it" below), and the panel is what
+  reports the feature unavailable.
+- **Absence WAS the unavailable state** — superseded the same way. The reasoning
+  was that a button opening a panel to announce the feature is off is a control
+  that cannot do its job. The panel's three
   unavailable sentences — disabled, failed, timed out — exist for the real race:
   the offer caches for 60s, so a provider that drops after it was read leaves a
   live button that must fail in words rather than spin forever.
@@ -843,7 +847,8 @@ it out, or `/stitched` will not build there.
   ground of its own: the strokes are `--color-fg` and simply invert. That is the
   whole of what the 3D version needed two lighting rigs and a bloom pass for.
 
-- **34 tests** across `garments`, `entries` and `units`, covering the doubling,
+- **48 tests** (vitest, after plan Phase 1) across `garments`, `measurement-set`,
+  `conversion`, `entries` and `units`, covering the doubling,
   the round-trip, the bounds being stated on the stored figure, every annotation
   falling inside its own viewBox, the anchor rules, and the mark separation.
 
@@ -887,9 +892,10 @@ now, each checked in the running store:
   about 106px each.
 - **A fork in the buy box**, directly under Add to bag, because that is where a
   customer who cannot find their size is already looking. Drawn only when the
-  product carries a backend-declared `stitching` offer (`{ leadTimeDays }` or
-  `null`), so the interface never decides which garments the workshop will cut
-  (DATA-13); the mock offers it on every product at 7 days. It is NO LONGER A
+  product carries a backend-declared `stitching` offer (`null`, or since plan
+  Phase 2 `{ garmentStyle, leadTimeDays }` — the studio's own style offer), so the
+  interface never decides which garments the workshop will cut (DATA-13), and the
+  fork opens the studio on that style's list. It is NO LONGER A
   CARD — border, radius, padding and filled disc are gone, because the buy box
   around it has no containers and the box read as a sticker on the page.
 - **A bag nudge**, now `StitchingNudge` — extracted because `BagContents` was past
@@ -1019,6 +1025,552 @@ off and the page unlocked; at 844×390 the field sits beside the drawing; inputs
 sizing, and Previous/Next keeping the keyboard up (`onMouseDown` preventDefault),
 need a real phone.
 
+## Made-to-Measure — plan Phase 1: the client's order
+
+The plan is `.claude/working-docs/made-to-measure-plan.md`, approved for full
+implementation on 11 September 2026; its build-status table is the place to look
+for where the phases stand. The architecture changes it needs are PROPOSED in
+`made-to-measure-amendment-2.md` and are **not** in `system-architecture.md` —
+the code implements them ahead of that decision.
+
+- **The client's order.** Kameez Length, Sleeve, Shoulder, Neck, Chest, Hem, then
+  Cuff; shalwar Length, Poncha, then Waist and Thigh; the waistcoat after. The
+  eight the client listed are required and everything else is optional and says
+  so. The fields, the stepper, Tab and the error list all walk the one order, and
+  `measurement-set.test.ts` pins the client's eight.
+- **Three facts per point, kept apart.** `kind` (GIRTH | LENGTH | WIDTH) decides
+  only the drawn shape; `enteredAs` (HALF | FULL) decides the arithmetic; `basis`
+  (GARMENT | BODY) says what the number describes. The doubling used to follow the
+  drawn ring, which refused the client's own card figures and could not express a
+  neck. The hint and the readout follow the arithmetic: "19.5 in across → 39 in
+  around" for a half, "15.5 in around" for a full neck, and a full girth is never
+  told "we double it".
+- **Neck is a field with no mark.** A GIRTH read in full on the opened band,
+  13–20 in. The front view cannot show a neck truthfully — a line across the
+  fastened band pictures half of one — so the mark waits for a drawing of the
+  band laid open, and `GarmentFlat`, the anchors and the separation test skip a
+  point with no mark.
+- **One conversion order**, in `lib/conversion.ts`: multiply into millimetres,
+  double if half, round ONCE. Rounding first had made 19.5 across 990 mm and 39
+  around 991 mm. `enteredBounds` states the range a field accepts, rounded INWARD
+  so the printed range never admits a value the field refuses; the schema, the
+  progress count, the marks and the error text all ask `acceptsEntry`.
+- **Typed values are never rewritten.** Inches show two decimals and centimetres
+  one; a unit switch converts FROM what was typed (`useUnitConversion`), so 18.25
+  goes to 46.4 cm and comes back as exactly 18.25 — verified in the store.
+- **The fixture moved to `lib/measurement-set.ts`** — and in Phase 2 on into the
+  mock backend, leaving that file as pure queries over a served list. Four new
+  fields on fourteen points would have taken `garments.ts` past its 300-line
+  ceiling; it now holds only the per-point arithmetic.
+- **One KNOWN OVERLAP, named in a test: the shalwar waist** (650–1800 mm). On a
+  nala shalwar the nefa gathers on the cord, and a gathered and a spread reading
+  both fall in range; the instruction says to loosen the nala and spread the nefa
+  flat, and the client is asked which shalwar they sew. Every other half point's
+  maximum is under twice its minimum: the cuff narrowed to 180–305 mm, the hem to
+  a 1790 mm ceiling, and the poncha's minimum rose from 200 to 330 mm — 200 was an
+  opening no foot passes through, and was the only thing making it overlap.
+- **A unit switch never makes an accepted figure refused.** The display rounds to
+  nearest while the bounds round inward, so a figure ON a limit crossed it — a
+  33 cm neck showed as 12.99 in beside a 13 in minimum, on 11 of the 14 points.
+  `showAccepted` shows such a figure at the limit it sits on, one display step
+  away; a test walks every accepted value of every point in both directions.
+- **The studio's Urdu needs a native tailor's review before any demo.** The thigh
+  instruction had carried a misspelling with an obscene reading (fixed), and the
+  shalwar instructions named the cord where they meant the nefa (fixed).
+- **Honest copy.** The page no longer says "we will cut" or "we will show you
+  every measurement again before you pay", and the button checks rather than
+  saves — there is no save, order or payment behind it yet.
+- **Deviation from the plan:** the stepper's "n of 14" still counts every point,
+  because it is a position in the walk; only the progress count is required-only.
+
+**Demo caveat:** this is the copy-a-garment path, so the client's own "teera 8.5"
+is still refused — a garment's shoulder is taken whole. The tailor's-card path is
+Phase 4.
+
+Verified, after the review's fixes: typecheck, lint, **259 tests** (52 in this
+feature) and the production build pass. A 33 cm neck and a 75 cm chest switched
+to inches read 13 and 29.52, still counted, and came back as exactly 33 and 75.
+In the running store at 1440px: the fields in the client's order with "(optional)"
+labels, no neck mark, "0 of 8 required measurements taken", the chest and neck
+readouts above, 18.25 / 19.5 / 15.5 surviving inches → centimetres → inches, and a
+submit with only the eight required fields filled passing with no error. In Urdu
+the page is `dir="rtl"`, with "کف (اختیاری)", the neck instruction and
+"8 میں سے 0 ضروری ناپ لیے گئے".
+
+## Made-to-Measure — plan Phase 2: the list served as content
+
+The studio no longer holds a measurement list. It reads three things from the
+backend — mocked at the HTTP boundary like everything else (D1) — and editing a
+data row changes the form without touching a component.
+
+- **Three reads** (`api/fetch-studio.ts`), all content, all cached with tags: the
+  style offers (`madeToMeasure.styles`), one style's list (`madeToMeasure.set`,
+  `?style=`, a 404 becoming `ok(null)`), and the wording by id for every style in
+  one language (`localisation.measurementCopy`, `?locale=`). The mock is
+  `src/lib/mocks/measurement-sets-db.ts`: KAMEEZ_SHALWAR (11 points) and
+  WAISTCOAT_SUIT (14, the waistcoat required), at 7 and 10 days — FIXTURE.
+- **The contract refuses what the studio cannot use** — a point or piece declared
+  twice, a piece resuming after another has begun, a point on an undeclared piece,
+  a minimum not below its maximum, a half on anything but a girth, a ring on a
+  length or a span on a girth, a drawing the storefront does not have, an id that
+  is not a plain code, an empty list.
+- **What parses but cannot be drawn is degraded, not refused.** `lib/marks.ts`
+  drops a shape outside its drawing, or within 24 units of an earlier mark on the
+  same garment, and logs it once (`logContentIssue`); the field still works. A
+  point with no WORDS is refused — a field with no name cannot be filled — so
+  `joinCopy` names the ids and the page shows its unavailable state.
+- **A style is an address.** `/stitched?style=WAISTCOAT_SUIT`. A bare, stale or
+  malformed address opens the FIRST style offered, so no style is named in code
+  (D5). `StyleChooser` is two links with `aria-current`, hidden in focus mode. The
+  navigation stays on the client and the studio stays mounted, so every figure
+  typed survives a switch; a chosen point or garment the new list lacks falls back.
+- **The split MOD-03 asked for:** `useMeasurementForm` (form, unit, submit, summary
+  focus), `MeasurementStage` (the drawing side), `MeasurementPanel` (the form
+  side). Every lib function and hook takes the list as an argument.
+- **The homepage emblem is picture data** — each drawing declares its own
+  `emblem` — so the homepage makes no read for it. `EMBLEM_RING`, `measurementById`
+  and the barrel's list exports are gone, and `GarmentId` is `DrawingId`.
+- **The product page's offer IS the studio's offer**: `stitchingOfferSchema` is
+  `styleOfferSchema`, through the contract barrel, and the fork opens the style the
+  product is cut as. A boy's kurta carries no offer, because every served bound is
+  an adult's.
+- **The message files lose the measurement wording** (it is served now) and gain
+  `styleLabel` and `unavailable`.
+- **Two defects found in the store, fixed:** the error summary read "Shoulder …
+  Shoulder" on a suit — it is grouped by garment now; and "every figure is within
+  range" would have survived a switch to a style with empty required fields —
+  `isReviewing` is derived, so it holds only while it is true.
+- `/stitched` has its own `loading.tsx` (a skeleton on the studio's own grid) and
+  `error.tsx`.
+
+**A four-lens review (correctness, the rulebook, usability, the plan) found real
+defects, all fixed:**
+
+- **A unit switch skipped figures kept from another style**, so a 20 in waistcoat
+  chest came back as "20" beside "cm", counted as nothing, and a second switch
+  rewrote it for good. `lib/unit-switch.ts` now converts every figure the form
+  holds; verified in the store — 20 in kept across a switch to the kameez shalwar
+  and to centimetres came back as 50.8 cm, still counted.
+- **A one-piece kurta opened the kameez shalwar list** and was asked for a shalwar
+  it was not buying. A KURTA list is served; a test holds every product's list to
+  as many garments as the product has pieces.
+- **A point chosen on one list came back chosen** when that list returned, which
+  on a phone locked the page into an empty focus mode. A new list now resets the
+  choice while rendering.
+- A turned ring was checked for "inside its drawing" unturned; the contract let
+  through a garment with nothing to measure and a style offered twice; a style
+  with no NAME in one language took the whole page down (it is now left out and
+  reported); a unit switch left stale errors (they are judged again); "every
+  figure is within range" could hold beside a kept out-of-range figure.
+- **Rules:** a hook body at 79 lines against MOD-03's 60 (the submit logic is now
+  `useSummarySubmit`); three components over 7 props (messages come from
+  `useMessages()`); the offer schema used by two features promoted to
+  `lib/domain/style-offer.ts` (STRUCT-05) and the product read tagged
+  `made-to-measure` too; capitals on served garment names (I18N-09); an `as` cast,
+  template-literal classes, inline prop types, an untyped schema builder, a
+  duplicated unit suffix, the mock file past 300 lines (now split into lists and
+  words).
+- **Usability:** gold focus rings at about 1.7:1 are the store's jade ring now; a
+  style switch has a pending state, a polite announcement ("Waistcoat suit: 14
+  measurements to take.") and a line saying figures are kept; the style choice is
+  an underlined strip, no longer the garment tabs' pill; it REPLACES the address,
+  so Back leaves the studio; the suit's second shoulder and chest are named
+  "Waistcoat shoulder" and "Waistcoat chest" in the content; the unavailable page
+  has a heading, "Try again" and "Shop standard sizes"; the skeleton holds every
+  block the panel will; the lead no longer says "kameez" on a waistcoat list.
+
+Verified: typecheck, lint, **296 tests** (89 in this feature and the domain) and
+the production build pass. In the running store: 11 fields for the kameez shalwar, 14 for the
+suit, and `?style=NOPE` falling back to 11; 21 typed in the chest survived a
+switch to the suit with "1 of 11"; a submit on the suit gave 10 errors in three
+garment groups with focus on the summary; at 390×844 focus mode on the suit reads
+"14 of 14" with Next disabled and the chooser hidden; in Urdu the served words
+render at `dir="rtl"`, "11 میں سے 0 ضروری ناپ لیے گئے" among them. The plan's own
+checks, run with the mock temporarily bent and then restored: swapped rows reorder
+the form; a mark pushed off its drawing is dropped and logged while the page
+renders; a corrupted row gives the error state, with `points.12` named in the log;
+a missing Urdu word gives the error state in Urdu only; the homepage still draws
+all three emblems. And when MSW died mid-session, the studio showed its own
+unavailable state and logged `[made-to-measure] NETWORK` once.
+
+## Made-to-Measure — plan Phase 3: a real save, with a review first
+
+**Measurements can be saved now** — against the mock backend, so into memory.
+
+- **Check, review, save.** "Check my measurements" validates in the browser (an
+  affordance), then asks the server's `validate` through
+  `/api/made-to-measure/check`. A refusal lands on the field it is about and in
+  the grouped summary, in our words — the server sends a REASON, never a sentence
+  (`lib/field-problems.ts`). A pass shows the review; "Save my measurements" calls
+  `saveProfile` through `/api/made-to-measure/profiles`; the confirmation says
+  what was saved, whether it replaced an earlier save, and where it is kept — with
+  the account, or "for this browser only, and not linked to an account".
+- **What is sent is what was TYPED**: per point the figure as a string and the unit
+  it was typed in (`typedEntriesOf`) — never the converted figure a unit switch
+  put in the field, and never a figure kept from another style. The server
+  derives the millimetres from the list VERSION it served (A2-2), so 19.5 in
+  across records 991 mm with centimetres on screen (a test).
+- **The review shows every figure twice**, as typed and as kept, one table per
+  garment. The kept figure is the SERVER's millimetres in the customer's unit;
+  within the record's half-millimetre rounding it is shown as the customer's own
+  figure (`keptFigure`) — straight back, 24 in read as 24.02 and looked altered.
+  A real difference, such as a server holding a point FULL, still shows.
+- **Append-only (§34.7, D6).** Each save is a new version; the one it replaces is
+  marked `supersededBy` and kept. Every list version stays servable, and a
+  version the server no longer serves is refused as `SET_VERSION_UNKNOWN` — the
+  page then says the guide changed.
+- **The owner never comes from the body.** The BFF attaches it
+  (`API_HEADERS.measurementOwner`): the D3 mock session's email, or for a guest an
+  httpOnly `aa_measurements` cookie written only when they first SAVE. Both routes
+  refuse another origin (SEC-08).
+- **Mock rules, FIXTURE** (`lib/mocks/profile-rules.ts`): the derivation, bounds,
+  required points, an unreadable figure, an unknown point, and one placeholder hard
+  rule — the hem at least the chest, `hemAtLeastChest` — until the client's list
+  (Phase 6). The store, the owners and the version check are `profiles-db.ts`; the
+  points and lists are `measurement-points-db.ts` and `measurement-sets-db.ts`.
+- The "every figure is within range" notice is gone: the review replaced it.
+
+**The Phase 3 review** (four lenses: security and data, state, interface, plan)
+found real defects, all fixed:
+
+- **A forged device cookie could supersede an account's profiles** — the store was
+  keyed by the key alone, so `DEVICE:someone@example.com` was the same owner as
+  `ACCOUNT:someone@example.com`. Owners are now keyed by kind AND key. Device tokens
+  are minted by the module (`ENDPOINTS.madeToMeasure.deviceTokens`), and a token it
+  never issued is refused; the BFF then mints a fresh one and retries once
+  (`saveForCustomer`), as the bag does with a dead cart id. The cookie is written
+  only once a save SUCCEEDS, with the cart's options (`capabilityCookieOptions`).
+- **Only the current list version is accepted.** An open tab over a retired list is
+  refused as `SET_VERSION_SUPERSEDED`, and the page offers "Load the new guide" (a
+  `router.refresh()` the figures survive) rather than telling the customer to reload.
+- **The contract tightened**: a figure is ASCII digits, four and two at most, and
+  anything else is `UNREADABLE` (`0x15` used to parse as 21); each point once; at
+  least one; findings carry a `ruleId`; a profile carries `source` and its
+  acknowledgements. Urdu keyboard digits are normalised before sending.
+- **The step is derived, not copied** (STATE-02): `useProfileSave` reads its
+  EDITING / REVIEWING / SAVED union straight off two TanStack mutations, both
+  through `unwrap` (DATA-03a). An answer landing after a style switch is ignored; a
+  refused save goes back to the fields with focus on the summary; a rejection
+  carrying only confirmations goes on the fields instead of reading as a changed
+  list; a finding on a point the page lacks is judged stale instead of vanishing.
+- **A finding stands only while its figures do** (`useServerFindings`): changing
+  the chest clears the hem's "smaller than the Chest".
+- **Interface.** "Checking…" and "Saving…" with `aria-busy` rather than disabled
+  buttons, which dropped focus; the drawing's marks are inert outside the fields;
+  the review's "as typed" is the string as sent; below a 26rem panel the typed
+  figure moves under the measurement's name, and the garments' tables share one
+  column layout; the confirmation lost the word "version", gained a way on, and
+  "Measure again" became "Change and save again".
+- **Rules.** The 304-line mock was split under MOD-03, three function bodies over
+  60 lines were split into `useStudioSelection`, `ReviewTable` and a narrower
+  `StudioFlow`, the dead browser derivation (`recordedMm`) went, and
+  `fieldRowId`, `formatList`, `NO_STORE` and `readJsonBody` are shared helpers.
+
+**D3, recorded rather than patched:** the account owner comes from the mock session
+cookie, which is unsigned JSON. Anyone can write one and save as any email. That is
+D3's placeholder working as designed — §11 (M6) replaces it with a session Java
+verifies — and it confers nothing beyond these mock profiles.
+
+Verified in the running store: a hem of 24 in across under a 25 in chest passed
+the browser's own range and was refused by the server on the hem, "This came out
+smaller than the Chest…", with focus on the summary; fixed to 26, the review
+listed eight rows in the served order ("25 in across → 50 in around"), Save gave
+"Saved as version 1 of your Kameez shalwar measurements. They are kept on this
+device.", and "Measure again" brought the fields back with every figure kept. At
+390×844: Return stepped focus into the next field, the review tables and the page
+had no sideways scroll, and focus mode was off in the review. Directly against the
+routes: another origin 403; a chest posted out of range REJECTED with its limit;
+two saves on one device cookie gave versions 1 and 2; with the mock session cookie
+two saves were kept with the ACCOUNT as versions 1 and 2 and no device cookie was
+written; and a body naming its own owner was ignored — the save went to the
+device. In Urdu at 390px the review reads right to left, "21 انچ آر پار" beside
+"42 انچ گھیر", with no sideways scroll.
+
+**Re-verified after the review's fixes** — typecheck, lint, **332 tests** and the
+production build pass. Against the routes: another origin 403; a point sent twice
+400; version 99 refused as `SET_VERSION_UNKNOWN`; a rejected guest save wrote no
+cookie; a first save wrote `aa_measurements` and a second on it was version 2; a
+well-shaped but never-issued device cookie was replaced and saved (it was a 502
+before `saveForCustomer`); a mock-session save was kept with the ACCOUNT and wrote
+no device cookie even with one sent. In the store at 1280px: a 20 in hem under a
+25 in chest was refused on the hem with focus on the summary; changing the chest
+to 19 cleared the hem's finding and the summary; the review took focus on its
+heading with no live marks on the drawing, "19 in across" beside "38 in around";
+Save said "We have your Kameez shalwar measurements. They are saved for this
+browser only…" with a link to `/catalogue`; "Change and save again" returned to
+the fields with every figure kept and focus on the first row. At 360px the review
+table is 312px with no sideways scroll, the typed figure under each name, and a
+second save read "These replace the Kameez shalwar measurements you saved before."
+In Urdu the page is `dir="rtl"`, a chest typed as "۱۹٫۵" on an Urdu keyboard was
+sent as 19.5 and kept as "39 انچ گھیر", the two garments' kept columns start at
+the same offset, and the confirmation reads in Urdu. The design detector found
+nothing in the changed components.
+
+**A testing trap, not a bug:** at a phone viewport the Browser pane's `ref`
+clicks do NOT scroll the element into view first, so a click on a field below the
+fold lands on whatever is at those coordinates and every keystroke after it goes
+nowhere. Scroll the field into view (or focus it by script after one real click
+has hydrated the page) before typing. A probe read straight after a key press can
+also run before the page has handled it; wait a beat before believing it.
+
+## Made-to-Measure — plan Phase 5: collar, band and cuff choices
+
+Built ahead of Phase 4, which waits on real cards. **Every value and default is
+FIXTURE** — plan question 5 asks what the client's words mean.
+
+- **Five choices, served on the set read** (A2-7, `options[]`): neck style (ban or
+  collar), the ban's width and ends (only with a ban), sleeve end (cuff or plain),
+  cuff style (only with a cuff). A condition names an EARLIER choice, so they
+  settle in one pass (`lib/options.ts` `choicesInPlay`); the contract refuses a
+  forward reference, an unknown value, a default the choice lacks, a choice of one.
+- **Choices decide what is ASKED** (`askedWhen` on a point). The cuff is asked with
+  a cuff; a new optional **sleeve opening (mohri)** with a plain sleeve, on the
+  same place on the drawing — `sanitizeMarks` lets two points that are never asked
+  together share a place (`neverTogether`, which follows nested conditions up).
+  `askedStudio` is the one rule: the form's schema, the progress count, the stepper
+  and focus mode, the error summary, the marks, the tabs, the review and the
+  submission all read the list it returns. A figure on a point set aside is kept,
+  converted with the rest, and neither judged, stepped to nor sent.
+- **The drawing follows the choices** (`lib/kameez-variants.ts`): collar points, a
+  taller band, square ends, a folded double cuff, a turned plain hem. A value names
+  a drawing variant; one the drawing does not know draws the default, never a
+  garment with a part missing. The default is the kameez the studio always drew,
+  so the homepage emblems are unchanged.
+- **Choices are part of the save.** The submission carries `preferences` (every
+  choice in play, defaults included); the mock server settles them itself and
+  refuses a choice it does not know (`OPTION_UNKNOWN`), one sent while it does not
+  apply (`OPTION_NOT_APPLICABLE`) and a figure for a point not asked
+  (`POINT_NOT_ASKED`) — the page reads all three as a changed list. The profile
+  keeps the settled choices, and the review lists them first.
+- **They describe the garment IN HAND** — what the tape is laid on — and a line
+  above them says so. Whether the kameez being stitched may differ is plan
+  question 10.
+- `SegmentedChoice` is the one pill radio group; the unit toggle uses it too.
+
+**The review** (three lenses: correctness, the rulebook, usability and the plan)
+found real defects, all fixed:
+
+- **An answer landing after a choice changed was shown against the new choices** —
+  the review then listed the old choices, hid the old cuff row, and Save stored a
+  cuff the page no longer showed. An answer is now keyed on the list AND the
+  choices it was sent with (`lib/studio-step.ts` `keyOf`), and a changed pair
+  returns to the fields.
+- A unit switch gave a set-aside point the plain conversion, so 9 cm on the cuff
+  came back as 3.54 in beside a 3.55 in minimum; the switch now sees the whole
+  served list. Two points never asked together only through a nested condition
+  were weighed as crowding each other.
+- **In focus mode on a phone the choices were hidden but still in the tab order**:
+  Shift+Tab reached an unseen radio, and an arrow key could change the sleeve
+  unseen. `.mm-choices` now leaves the page in focus mode (`display: none`).
+- The neck and chest instructions said "collar" under the default ban; the value
+  reads "Ban (band collar)". The drawing's tag re-cased served labels carrying
+  protected terms (I18N-09) — it is sentence case now. The selected pill measured
+  2.3:1 (A11Y-07) and carries a boundary in its own ink.
+- Rules: the save hook split into `lib/studio-step.ts` (pure) and
+  `use-profile-requests.ts`; `MeasurementFieldsets`, `GarmentHotspots` and
+  `studioFlow` took three function bodies back under 60 lines; no argument is
+  mutated (TS-09); prop interfaces are named (CMP-04); picks are a map of branded
+  ids (TS-12); variant names are typed, and each is tested to change the drawing
+  (PD-01); the mock reads request bodies as `unknown` and checks them
+  (`readSubmission`) rather than casting; module 18's mock handlers moved to
+  `made-to-measure-handlers.ts`.
+- The Urdu sleeve-opening label is neutral words, not a spelling of "mohri" with a
+  second reading; the ban's "corners" became "ends" to match the English.
+
+Verified: typecheck, lint, **372 tests** and the production build pass. Against the
+routes: a cuff sent with a plain sleeve is refused `POINT_NOT_ASKED`, a ban width
+with a collar `OPTION_NOT_APPLICABLE`, a choice sent twice 400, a body with no
+choices 400; a save with a collar and a plain sleeve kept both choices and the
+sleeve opening at 356 mm (7 in across). In the store at 1280px: Plain removed the
+cuff field and its style and asked the opening, drew a turned hem and marked the
+opening; Collar removed the ban's width and ends, drew collar points and still asked
+the neck; the eight required figures with the opening left EMPTY passed to the
+review; the review listed "Neck style Ban (band collar) · … · Sleeve end Plain"
+first; the pills are marked selected only where checked. At 390×844 focus mode
+reads "1 of 11", the choices are gone from the page and from the tab order, and
+the tag reads "Kameez length". In Urdu every choice and value renders right to
+left.
+
+**Deviations** (plan, Phase 5 "As built"): the neck stays asked with a collar (a
+collarless value is question 11); a plain sleeve asks its opening instead, so the
+stepper total does not drop; the cuff is optional with a cuff — "required when"
+waits for the client's list; every choice starts at its default and nothing
+records whether it was picked (an operator question).
+
+## Made-to-Measure — plan Phase 4: copy my tailor's card
+
+**Every card convention is FIXTURE** — how a card writes each figure is plan
+questions 1 and 3. The client's own example (chest 19.5, ghera 20.5, teera 8.5,
+cuff 8.5) is what the fixture is shaped to accept.
+
+- **A second way of measuring, as an address.**
+  `/stitched?style=KAMEEZ_SHALWAR&source=TAILOR_CARD`. A style offering both paths
+  shows a "How are you measuring?" strip under the style strip — one component,
+  `ChoiceStrip`, for both (PD-01). The chosen path travels with every style link
+  (`ROUTES.stitchedWith`, a named-parameter builder on `URLSearchParams`); a style
+  without it serves its first path and SAYS so in the paths' own names, judged by
+  comparing the path asked for with the path served (`StyleChoice.requestedSource`),
+  never from how the backend answered. Coming back restores the card.
+- **A card list is its own list** — (style, source, version) is a list's identity
+  (A2-3), with `sources[]` on the set read — and its points have their own ids, so
+  a card's half chest is never the garment's field. Card rows are BUILT FROM the
+  garment rows (`measurement-card-points-db.ts`, `fromGarment`): the same bounds on
+  the stored figure and the same marks, with only the card's convention changed —
+  the teera HALF the shoulder (a half WIDTH, its own `HALF_WIDTH` reading, drawn on
+  the half written down) and the cuff FULL. No card point is asked by a choice.
+- **The words say what the store does with a figure**, never what cards usually do:
+  "We read the card's chest as half the way round: 19.5 is kept as 39. Type it as
+  written." The hint asks for every figure as written, "19½ as 19.5"; ½, ¼, ¾, 1/2,
+  1/4 and 3/4 are read as decimals everywhere (`normaliseDigits`). On the card the
+  review's "as typed" is the bare figure, character for character the card's.
+- **A figure written the other way is named** (`writtenOtherWay`): out of range but
+  in range halved or doubled, the field says "This looks like a whole figure, but we
+  read this one off the card as half…" (and the garment path's own version) instead
+  of the bare range. Every range now names its unit.
+- **Finishing choices appear on the card too**, describing the kameez to be stitched
+  and deciding nothing asked; the line above them says so.
+- **The photo** is picked on the device and shown beside the form, with a switch
+  between it and the drawing and an enlarge toggle. `useObjectUrl`
+  (`src/hooks/use-object-url.ts`) makes its `blob:` address when it is chosen and
+  revokes it when replaced or unmounted; the studio holds it above every switch, so
+  it lasts until the page closes. A photo the browser cannot show (an iPhone's HEIC
+  on a desktop) says so. In focus mode the picker gives its room to the photo. A
+  test pins the submission's keys, so nothing that could carry a file rides along.
+- **The server keeps the path as a fact of the list**: the profile's `source` and
+  each value's `origin` (TRANSCRIBED) come from the list typed against, and the mock
+  parses bodies with a zod schema rather than casting. The hem-at-least-chest rule
+  applies to the card's own points.
+- A unit switch converts every point any list has shown in this studio, so a figure
+  kept from the other path comes back at a value its own field accepts.
+
+**Deviations** (plan, Phase 4 "As built"): the card path exists for the kameez
+shalwar and the kurta, not the waistcoat suit (question 4); every entry point still
+opens the garment path (question 2); choices carry across a path switch.
+
+Verified: typecheck, lint, **389 tests** and the production build pass. In the store
+at 1280px: the card path lists nine card fields with the finishing choices and the
+card hint, and every style link carries the path; the waistcoat suit, which has no
+card, falls back with "“Copy my tailor’s card” is not offered for this style yet, so
+this is “Copy a garment I own”." while its style links keep the card; a chest of 39
+said it looks whole and to halve it; 20½ in the ghera was accepted; an empty teera
+read "between 6.89 and 11.81 in"; a card photo chosen on the kameez shalwar was the
+same `blob:` photo after a switch to the kurta. At 375px no sideways scroll, the
+photo frame 327×247. In Urdu at 1280 and 375px, right to left with no sideways
+scroll: «کندھا (تیرا)», the fallback naming both paths, and the status
+"قمیض شلوار، اپنے درزی کے کارڈ سے: 9 ناپ لینے ہیں۔".
+
+## Made-to-Measure — plan Phase 6: the tailor's rules, as rows
+
+The client's written list has not arrived, so this builds the MACHINERY and fills
+it with **FIXTURE rows** — every ratio, tolerance and severity ours, labelled so in
+the file header and named aloud at any demo. When the list arrives it replaces
+rows, not code. **No model produces or checks a figure** (A2-11): a rule is a row
+of integers, judged the same way twice.
+
+- **Rules are rows, on the server.** `src/lib/mocks/profile-rule-rows.ts` holds
+  them and `profile-rule-eval.ts` judges them, beside the derivation rather than in
+  the store or the lists. A row is `{id, severity MUST | WARN, point, from,
+  permille, offsetMm, toleranceBelowMm, toleranceAboveMm, when, showsTarget}`.
+  Five rows: the hem at least the chest (MUST, as Phase 3 shipped it), and four
+  that ASK — the shoulder and the neck against the chest, the neck's tolerance
+  differing under a ban and a collar, and a waistcoat chest against the kameez's.
+- **The arithmetic is integers only**, so the mock and Java cannot drift:
+  `expected = floor((permille × from + 500) / 1000) + offsetMm`, then the distance
+  from it, with the two sides kept apart and BELOW the tighter of them (A2-6) —
+  cloth cut too small cannot be let out. An "at least" rule is the same arithmetic
+  at a permille of 1000, so there is one evaluator, not two.
+- **A rule is written ONCE and holds on both paths.** It names the GARMENT point,
+  and a card point answers for the point it was built from (`GARMENT_POINT_OF`,
+  recorded where the card rows are made). `hemAtLeastChest` was two rows and is one.
+  This settles the plan's open question by the garment point id rather than a role
+  vocabulary: a role would have to sit on the point row, and the set read spreads
+  every point field onto the wire, so the rulebook would ship to the browser. A
+  test proves no rule id, permille or tolerance appears anywhere in interface code.
+- **A WARN rule asks; it never scolds.** The field gets a quiet note — what looks
+  unusual, the measurement it was judged against by name, and two answers:
+  "Measure again" ("Check the card again" off a card) or "Keep my number" ("Keep
+  the card's figure"). It is never red, never `aria-invalid`, never `role="alert"`
+  and never in the error summary; its own "Worth a second look" section lists the
+  noted fields with a way to each, takes focus when a check only asks, and says so
+  politely once every note is answered. A refusal still lands on the red summary.
+- **No note gives a target figure, on ANY point** — stricter than the plan, which
+  forbids one on shoulder, neck and cuff. Every WARN row withholds it and the words
+  have nowhere to put one; a test asserts no note text contains a digit even when
+  the finding carries one. A number to copy would be us filling the measurement in.
+- **Keeping a figure is recorded.** The save is refused while anything is
+  outstanding, unanswered notes included (A2-5, which Phase 3 contradicted by
+  blocking on refusals alone). An answer counts only against a finding the server
+  actually raised, is rebuilt from that finding rather than from the body, and one
+  that matches nothing is ignored rather than refused — every refusal reason reads
+  as "the guide has changed", which would dead-end a customer who did nothing
+  wrong. The same answer twice is malformed. The profile records which RULE SET
+  judged it, and rule sets are append-only, so an old answer's rule stays resolvable.
+- **A note stands only while its figures do, and so does a keep** — judged on what
+  was TYPED rather than on what the fields show (`lib/standing.ts`). The same fix
+  went to server REFUSALS, which until now vanished whenever the customer toggled
+  inches and centimetres. Changing the chest clears the shoulder's note, because
+  that is the figure it was judged against.
+- The review marks every figure the customer was asked about and kept.
+
+**The phase's review** (three lenses — correctness, the rulebook, the customer and
+the plan — with every finding then put to an independent skeptic; 7 of 18 stood)
+found one defect that would have broken the phase for a whole class of customer:
+**a figure typed on an Urdu keyboard, or as a card fraction, made every finding
+invisible.** What is sent is normalised (`۲۱` → `21`) while the field still holds
+what was typed, and a finding stood only while the two matched character for
+character — so the check would have appeared to do nothing, for ever, with no way
+to discover why. Both sides now read the figure the way it is sent.
+
+It also found that **three FIXTURE rules could not be satisfied at the top of the
+chest's range**: the ratios were fitted without the points' own bounds, so above a
+certain chest no figure the shoulder, neck or waistcoat chest accepts could clear
+its rule, and the only way past was to keep a number against an impossible rule.
+The three ceilings are raised — they are FIXTURE as well — and a test pins the
+property for every rule on every list. And four smaller ones, all fixed: the
+note's focus request stayed armed behind a refusal and would have fired on the
+keystroke that cleared the last red field; the field's accessible description read
+the note's BUTTONS as prose; the gold tape was declared twice (PD-01); and the
+store passed MOD-03's 300-line ceiling, so reading an inbound body moved to its own
+module.
+
+**A defect found by hand, not by a test:** pressing "Keep my number" a second time
+in a later check did nothing. The answers were held in a map keyed by note, and one
+whose figures had since changed stayed in that map while no longer standing, so the
+next press deleted the lapsed entry instead of adding a new one. The toggle now
+reads what is in force, and a lapsed answer is let go when the next one lands.
+
+**Deviations:** no cuff rule — the only evidence for a chest-to-cuff proportion is
+the client's single card where the shoulder and the cuff both read 8.5, which plan
+question 3 asks about, and a rule built on it would make a possible transcription
+slip into tailoring. "Required when" waits for the written list. An expected figure
+still comes from ONE other measurement.
+
+Verified after the review's fixes: typecheck, lint, **432 tests** and the
+production build pass, with `/stitched`, `/api/made-to-measure/check` and
+`/api/made-to-measure/profiles` in the build output. In the running store at 1280px: a 16 in shoulder beside a 21 in chest
+gave the note "This is smaller than usual beside your Chest. Cloth cut too small
+cannot be let out." with **0** invalid fields, **0** alert nodes, no digit in the
+note, and focus on the quiet summary; "Keep my number" went on, off and on again,
+kept its label and its place, and the status line flipped to "Every note is
+answered."; the keep survived inches → centimetres → inches with the figures
+returning exactly (16 → 40.6 → 16, 21 → 53.3 → 21); the review then marked the
+shoulder "You checked this and kept it." and the save confirmed. Changing the chest
+cleared both the note and the keep. Directly against the routes: an unanswered note
+gives REJECTED carrying that CONFIRM finding and stores nothing; answered, it saves
+with `acknowledgedFindings` holding exactly the server's match and `ruleSetVersion`
+2 beside `setVersion` 1; an answer in the wrong direction is ignored and the note
+still stands; the same answer twice is 400; another origin is 403; an answered check
+returns no findings and echoes the answer back. On the card path the note reads
+"…beside the Chest on the card" with "Check the card again" and "Keep the card's
+figure", the word "measure" appears nowhere, and a hem narrower than the chest now
+says "Check both against the card" — the Phase 4 defect that told a card customer to
+measure again. In Urdu at 1280px the page is `dir="rtl"` with every note, action and
+status line in Urdu and no sideways scroll. At 375px focus mode shows the active
+field's note and both buttons, the drawing holds 357px, the stepper reads
+"Previous · 3 of 9 · Next · Done", and a noted row that is not active has its
+buttons at `display: none` with none reachable — the tab-order trap the finishing
+choices once had. **The Urdu still needs a native tailor's review before any demo.**
+
 ## Made-to-Measure — what is left
 
 **The card badge.** A product card still does not say that it can be made to
@@ -1030,13 +1582,29 @@ change rather than a rider on the entry points.
 the same kinds, the same bounds and the same instructions drive it; what differs
 is which picture the tape is laid on and how the instruction is worded.
 
-**Nothing is saved.** Submitting validates and confirms on screen; there is no
-contract, no BFF and no mock behind it, so no profile is written and no stitching
-charge is priced. The measurement set is a fixture, not the tailor's card.
+**Saved measurements cannot be read back.** A save is real (to the mock), but
+nothing reads a profile back into the fields, so a reload — or a style switch
+whose load FAILS, which unmounts the form — loses the figures on screen even though
+the saved profile is kept. Reading back belongs with the account area or with
+ordering. No stitching charge is priced yet either. The operator questions this
+raised (a guest signing in later, one profile per style, retention) are in the
+plan, under "For the operator".
 
-**Thirteen measurements is a fixture, not the tailor's card.** §34 makes the real
-set content (ADR 17). The bounds are plausible rather than authoritative, and
-they are GARMENT figures — a kameez chest carries ease a body chest does not.
+**Open for the operator** (plan, "For the operator"): whether a missing
+translation should keep taking the studio down in that language, and whether
+"nothing offered" should become an ordinary state that also hides the entry
+points.
+
+**The served lists are FIXTURE content, not the client's written list**
+(`src/lib/mocks/measurement-sets-db.ts`, since plan Phase 2; the card lists since
+Phase 4, on conventions no real card has confirmed yet). The studio now reads
+them as content (ADR 17), so the real card replaces rows, not code. The ORDER is
+the client's; the bounds, the required flags on the points they did not list, the
+half/full conventions and — since Phase 6 — the tailor's RULE rows with their
+ratios and tolerances (`src/lib/mocks/profile-rule-rows.ts`) are all placeholders
+until the written list arrives. The machinery around them is built and tested; what
+it is filled with is ours, and a demo should say so. They are GARMENT figures — a kameez chest carries ease a body chest does
+not — and ADULT figures, which is why a boy's kurta carries no stitching offer.
 
 ## Deliberate gaps — do not "fix" these
 
@@ -1649,8 +2217,9 @@ out, and `/order/AA100001` still renders on a fresh load.
   THINNEST part, not the thickest.
 - **`visible = false` hides an object's CHILDREN too.** A fallback tape parented
   into the hidden procedural arm group was built, positioned, and never drawn.
-- **A build CAN run against a live dev server at Next 16.3.4 — measured, not
-  assumed.** After `npm run build` with `next dev` up: `/stitched` 200,
+- **WRONG — see "A build run beside `next dev` corrupts `.next/dev/types`" at the
+  end of this list.** What this note claimed: a build CAN run against a live dev
+  server at Next 16.3.4 — measured, not assumed. After `npm run build` with `next dev` up: `/stitched` 200,
   `/catalogue` still rendering real product data, `/api/quick-add` answering 404
   rather than the 502 that means MSW died, and the WebGL page still loading in the
   browser. The `PROGRESS` caution was explicitly UNTESTED and rested on a theory
@@ -1746,6 +2315,70 @@ out, and `/order/AA100001` still renders on a fresh load.
   page, so anything that must know about the FIRST interaction needs a native
   listener registered when the module loads. Test a fresh load separately: an
   already-hydrated page passed every time while a fresh one failed.
+- **A build run beside `next dev` corrupts `.next/dev/types` — never run one while
+  the dev server is up.** Both processes write `routes.d.ts` and `validator.ts`
+  there, and `tsconfig.json` deliberately includes `.next/dev/types/**/*.ts`. A
+  shorter write over a longer file left the old tail behind — `never }` after the
+  real end of `routes.d.ts`, `nore type __Unused…` inside `validator.ts` — so the
+  build compiled and then "Failed to type check" with TS1128 at those lines, and
+  `npm run typecheck` failed the same way from then on. The corruption PERSISTS: a
+  second build with the dev server idle failed identically. The fix: stop the dev
+  server, check port 3000 is free, delete those two files, `npx next typegen`,
+  then typecheck and build. This is the earlier note's "untested" caution coming
+  true, and it overturns its "measured" claim.
+- **Zod 4's `.nonempty()` refuses an empty array but still TYPES it `T[]`.** Under
+  `noUncheckedIndexedAccess` the first element is then `T | undefined` everywhere,
+  and every consumer grows a dead branch. `z.tuple([item], item)` refuses the same
+  input and types it `[T, ...T[]]`.
+- **MSW died a fourth time, after only four client-component edits**, in the
+  middle of Phase 2 — well short of the "long session" the earlier notes blame.
+  The tell was the studio's own unavailable state plus `[made-to-measure]
+  NETWORK` in the log, and 0 articles on `/catalogue`. No cause established;
+  restart and re-probe after any burst of edits before believing a page.
+- **A barrel and its first consumer written in one burst can leave a stale
+  module behind:** the product schema threw `styleOfferSchema is not defined`
+  because the dev server had evaluated `contract.ts` before its new export
+  landed. It is not a cycle; a restart cleared it.
+- **The dev server did NOT serve a stale served list across a restart**, despite
+  `revalidate: 300` on the read: swapped mock rows showed at once after a
+  restart. That is what makes "edit the mock and restart" a usable check here.
+
+- **A schema test that leaves a field out tests the wrong thing.** The form's
+  schema refuses `undefined`, but a form never holds it — a field shows `''` — so a
+  fixture without the optional fields failed for a reason no customer can meet.
+  Build a form fixture from `emptyEntry(points)` and overlay the figures.
+- **A choice is part of what an answer is ABOUT.** Keying a pending request only on
+  the list let an answer about Cuff be shown after the customer picked Plain. Any
+  input that changes which fields are asked belongs in the staleness key.
+- **When the pane stops drawing, clicks fail but the page still works.** With the
+  app window behind another, every `left_click` refused ("has not drawn yet") and
+  screenshots came back blank, yet `find`, `form_input`, `form.requestSubmit()`
+  and a scripted `link.click()` all drove the hydrated studio correctly — enough to
+  verify a submit, a client navigation and a file choice (a canvas PNG set through
+  `DataTransfer` and a bubbling `change`). Scope every probe to elements outside
+  `[hidden]`, and read the result from the DOM rather than a picture.
+- **A toggle must read what is IN FORCE, not what the map remembers.** "Keep my
+  number" held each answer in a Map keyed by its note, and an answer whose figures
+  had since changed stayed in that map while no longer standing. The next press
+  therefore DELETED the lapsed entry instead of adding a new one: the button did
+  nothing, and only a second press turned it on. Decide from the same value the
+  render shows, and let a lapsed entry go when the next answer lands, so it cannot
+  come back to life if the customer happens to type the old figure again. Found by
+  pressing the button twice in the browser; no test would have caught it, because
+  the state it depends on only exists across two checks.
+- **MSW died twice more in one Phase 6 session**, each time within minutes of a
+  fresh start and after two or three edits — one of them a comment. The studio's
+  own unavailable state ("The measuring guide could not be loaded") is honest and
+  looks exactly like a defect in whatever was just written, so read the two probes
+  BEFORE suspecting the change: `/api/quick-add?slug=x` answering 502 and
+  `/catalogue` rendering 0 `<article>` is the mock, not the code. Both times that
+  pair ended the hunt in seconds.
+- **An undrawn pane is 0 pixels wide, and every page then "scrolls sideways".**
+  `clientWidth` and `innerWidth` read 0 while `scrollWidth` read 184, English and
+  Urdu alike, and the "offenders" were the header's logo and icons at negative
+  offsets — a phantom RTL overflow. Set an explicit size with `resize_window`
+  (1280×800, or the mobile preset) before any overflow probe, and print
+  `clientWidth` beside the result.
 
 ## Commands
 

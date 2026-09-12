@@ -40,7 +40,11 @@ export function StitchingFork({ offer, locale, messages }: StitchingForkProps) {
   const t = messages.product;
 
   return (
-    <Link href={ROUTES.stitched} className="group rounded-card flex flex-col items-start gap-4">
+    /* Straight to the list for the style this product is cut as. */
+    <Link
+      href={ROUTES.stitchedFor(offer.garmentStyle)}
+      className="group rounded-card flex flex-col items-start gap-4"
+    >
       {/* The measure line: `ellipse.gf-mark` unrolled. The studio marks a
           measurement with a 1px gold ellipse dashed 4 on, 3.5 off; off the studio
           the same mark goes straight. It REPLACES the border rather than

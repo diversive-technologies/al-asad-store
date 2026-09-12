@@ -1,6 +1,7 @@
 import type { Locale } from '@/i18n/locales';
 
 import { CATALOGUE, frameUrls, vocabularyLabel, type CatalogueRecord } from './catalogue-db';
+import { styleOfferFor } from './measurement-sets-db';
 
 /**
  * D1 — the product-page fixture, derived from the SAME `CATALOGUE` records the
@@ -369,19 +370,35 @@ export interface ProductDetailPayload {
     minHeightCm: number;
     maxHeightCm: number;
   } | null;
-  stitching: { leadTimeDays: number } | null;
+  stitching: { garmentStyle: string; leadTimeDays: number } | null;
   isNew: boolean;
 }
 
 /**
- * §34 — which products the workshop will make to measure, and how long it takes.
+ * §34 — which style the workshop cuts each garment as, and so which offer, lead
+ * time and measurement list the product's fork opens. The backend's rule, stood
+ * in for here; the offer itself comes from the studio's own table, so the product
+ * page and the studio quote the same days.
  *
- * The backend's rule, stood in for here. Release 1 offers it on every kameez,
- * shalwar, kurta and waistcoat, which in this catalogue is every product — so
- * the `null` branch exists in the contract and in the interface, and a rule that
- * narrows it later is a change here and in Java, never in a component.
+ * Each product opens a list with as many garments as it has pieces — a kurta is
+ * one garment, so it opens KURTA and is never asked for a shalwar it is not
+ * buying. `served-sets.test.ts` pins that.
+ *
+ * A boy's kurta is NOT offered. Every bound on the served lists is an adult's, so
+ * the studio would refuse a boy's figures — and a fork that opens a form nobody
+ * can complete is worse than no fork. It returns when a boys' set is served.
  */
-const STITCHING_OFFER = { leadTimeDays: 7 } as const;
+const STITCHING_STYLE: Readonly<Record<CatalogueRecord['garment'], string | null>> = {
+  waistcoat: 'WAISTCOAT_SUIT',
+  kameez: 'KAMEEZ_SHALWAR',
+  kurta: 'KURTA',
+  'boys-kurta': null,
+};
+
+function stitchingOfferFor(record: CatalogueRecord): ProductDetailPayload['stitching'] {
+  const style = STITCHING_STYLE[record.garment];
+  return style === null ? null : styleOfferFor(style);
+}
 
 const FABRIC_KEYS = ['wash-n-wear', 'boski', 'karandi', 'cotton'] as const;
 
@@ -477,7 +494,7 @@ export function toProductDetail(record: CatalogueRecord, locale: Locale): Produc
       .slice(0, 10),
     infoSections: [...INFO_SECTIONS[locale]],
     fabricCalculator: fabricCalculatorOfferFor(record, locale),
-    stitching: { ...STITCHING_OFFER },
+    stitching: stitchingOfferFor(record),
     isNew: record.isNew,
   };
 }

@@ -5,8 +5,11 @@ import type { Messages } from './en';
  *
  * I18N-09: fabric and garment vocabulary carried by the backend's
  * protected-terms list is rendered exactly as supplied and is never
- * transliterated here. The interface labels below are ordinary translatable
- * copy and carry no protected terms.
+ * transliterated here. Some labels below DO name garments and tailoring
+ * measures — قمیض، شلوار، واسکٹ، دامن کا گھیر، پائنچہ — in the words a Pakistani
+ * tailor uses. They are hand-written until the protected-terms list covers the
+ * tailoring vocabulary (Made-to-Measure Amendment 2), and are then replaced by
+ * what it supplies.
  */
 export const ur: Messages = {
   site: {
@@ -397,90 +400,132 @@ export const ur: Messages = {
   madeToMeasure: {
     pageTitle: 'آپ کے ناپ کے مطابق سلائی',
     pageLead:
-      'اپنی پہلے سے موجود قمیض ناپیں، ہم اگلی اسی کے مطابق کاٹ دیں گے۔ یہ خود کو ناپنے سے آسان ہے، اور جو فٹنگ آپ پہلے پسند کر چکے ہیں وہی نقل کرتا ہے۔',
+      'اپنے پہلے سے موجود کپڑے بچھا کر ناپیں۔ یہ خود کو ناپنے سے آسان ہے، اور جو فٹنگ آپ پہلے پسند کر چکے ہیں وہی نقل کرتا ہے۔',
     figureHint:
       'نیچے سے کوئی ناپ منتخب کریں، یا خاکے پر کسی نشان کو دبائیں — ہم دکھائیں گے کہ فیتہ کہاں رکھنا ہے۔',
     garmentLabel: 'لباس',
-    garments: {
-      KAMEEZ: 'قمیض',
-      SHALWAR: 'شلوار',
-      WAISTCOAT: 'واسکٹ',
-    },
+    styleLabel: 'آپ کیا سلوانا چاہتے ہیں؟',
+    styleHint: 'انداز بدلنے سے آپ کے لکھے ہوئے ناپ برقرار رہتے ہیں۔',
+    styleNow: '{style}: {count} ناپ لینے ہیں۔',
+    styleNowPath: '{style}، {path}: {count} ناپ لینے ہیں۔',
+    styleFallback: 'یہ انداز فی الحال نہیں سلتا، اس لیے یہ {style} کے ناپ ہیں۔',
+    unavailable:
+      'ناپ کی رہنمائی لوڈ نہیں ہو سکی۔ آپ دوبارہ کوشش کر سکتے ہیں، یا تب تک معیاری سائز میں خریداری کر سکتے ہیں۔',
+    browseStandard: 'معیاری سائز دیکھیں',
+    pageLeadCard: 'اپنے درزی کے کارڈ یا پرچی سے ناپ بالکل ویسے ہی نقل کریں جیسے لکھے ہیں۔',
+    sourceLabel: 'آپ کیسے ناپ رہے ہیں؟',
+    sourceGarment: 'اپنی سلی ہوئی قمیض سے',
+    sourceCard: 'اپنے درزی کے کارڈ سے',
+    sourceHint: 'ایک پر لکھے ناپ وہیں رہتے ہیں؛ دوسرے میں نقل نہیں ہوتے۔',
+    sourceFallback: '«{requested}» اس انداز کے لیے ابھی دستیاب نہیں، اس لیے یہ «{served}» ہے۔',
+    cardHint: 'ہر ناپ بالکل ویسا لکھیں جیسا کارڈ پر ہے — ساڑھے انیس کو 19.5۔ دگنا کرنا ہمارا کام ہے۔',
+    halfWidthHint: 'لکیر کے مطابق آدھی چوڑائی ناپیں۔ ہم اسے دگنا کر لیں گے۔',
+    readoutHalf: '{half} آدھا ← {whole} پورا',
+    readoutHalfTyped: '{value} آدھا',
+    noteChoose: 'اپنے کارڈ کی تصویر منتخب کریں',
+    noteReplace: 'دوسری تصویر منتخب کریں',
+    notePrivacy: 'تصویر اسی فون یا کمپیوٹر پر رہتی ہے۔ یہ ہمیں کبھی نہیں بھیجی جاتی۔',
+    noteViewLabel: 'دکھائیں',
+    noteViewNote: 'آپ کا کارڈ',
+    noteViewDrawing: 'خاکہ',
+    noteAlt: 'آپ کے درزی کا کارڈ',
+    noteUnreadable:
+      'یہ تصویر یہاں نہیں دکھائی جا سکتی۔ JPEG یا PNG آزمائیں — اس کا اسکرین شاٹ بھی چلے گا۔',
+    noteZoomIn: 'تصویر بڑی کریں',
     ringHint: 'کپڑا بچھا کر سیدھا آر پار ناپیں۔ ہم اسے دگنا کر لیں گے۔',
     spanHint: 'سیدھی لکیر میں ناپیں، فیتہ کھینچے بغیر۔',
+    fullGirthHint: 'فیتے کی پوری لمبائی پڑھیں۔ اسے دگنا نہ کریں۔',
     unitLabel: 'ناپ کی اکائی',
     unitInches: 'انچ',
     unitCentimetres: 'سینٹی میٹر',
     unitShortInches: 'انچ',
     unitShortCentimetres: 'سم',
-    dragHint: 'نشان دبائیں',
     readout: '{value} {unit}',
     readoutRing: '{across} آر پار ← {around} گھیر',
-    progress: '{total} میں سے {done} ناپ لیے گئے',
+    readoutAround: '{value} گھیر',
+    readoutAcross: '{value} آر پار',
+    progress: '{total} میں سے {done} ضروری ناپ لیے گئے',
+    optionalLabel: '{label} (اختیاری)',
+    choicesHint:
+      'بتائیں کہ جو لباس آپ ناپ رہے ہیں وہ کیسے سلا ہوا ہے۔ نیچے کے ناپ آپ کے انتخاب کے مطابق بدلتے ہیں، اور آپ کا لکھا ہوا سب محفوظ رہتا ہے۔',
+    choicesHintCard: 'بتائیں کہ لباس کیسے سلنا ہے۔ اس سے کارڈ کے ناپ نہیں بدلتے۔',
     errorSummaryTitle: 'یہ ناپ دوبارہ دیکھیں',
-    outOfRange: '{min} سے {max} کے درمیان کوئی عدد لکھیں۔',
+    outOfRange: '{min} سے {max} {unit} کے درمیان کوئی عدد لکھیں۔',
     cutNotice:
-      'کپڑا انہیں ناپوں پر کاٹا جاتا ہے، اس لیے سلا ہوا آرڈر واپس یا تبدیل نہیں ہو سکتا۔ ادائیگی سے پہلے ہم آپ کو تمام ناپ دوبارہ دکھائیں گے۔',
-    saveCta: 'میرے ناپ محفوظ کریں',
-    savedNotice: 'ناپ محفوظ ہو گئے۔ اب آپ انہیں ہر سلائی والے آرڈر پر استعمال کر سکتے ہیں۔',
+      'سلائی کا آرڈر دینے پر کپڑا انہیں ناپوں پر کاٹا جاتا ہے، اس لیے سلا ہوا آرڈر واپس یا تبدیل نہیں ہو سکتا۔',
+    saveCta: 'میرے ناپ جانچیں',
+    checking: 'جانچ ہو رہی ہے…',
+    storeUnreachable: 'ہم اسٹور تک نہیں پہنچ سکے۔ آپ کے ناپ یہیں موجود ہیں — براہِ کرم دوبارہ کوشش کریں۔',
+    checkStale:
+      'یہ صفحہ کھولنے کے بعد ناپ کی رہنمائی بدل گئی ہے۔ آپ کے لکھے ہوئے ناپ برقرار رہیں گے۔',
+    loadNewGuide: 'نئی رہنمائی لوڈ کریں',
+    findingRequired: 'یہ ناپ ضروری ہے۔',
+    findingUnreadable: 'ناپ ہندسوں میں لکھیں، جیسے 19.5۔',
+    findingOrder: 'یہ {related} سے میل نہیں کھاتا۔ اسے دوبارہ ناپیں، اور {related} بھی۔',
+    findingOrderBelow:
+      'یہ {related} سے چھوٹا نکلا، جو درست نہیں ہو سکتا۔ اسے دوبارہ ناپیں، اور {related} بھی۔',
+    findingOrderAbove:
+      'یہ {related} سے بڑا نکلا، جو درست نہیں ہو سکتا۔ اسے دوبارہ ناپیں، اور {related} بھی۔',
+    findingDeviation: 'آپ کے باقی ناپوں کے ساتھ یہ غیر معمولی ہے۔ اسے دوبارہ ناپیں۔',
+    findingOrderCard: 'یہ {related} سے میل نہیں کھاتا۔ دونوں کو کارڈ سے ملائیں۔',
+    findingOrderBelowCard:
+      'یہ {related} سے چھوٹا نکلا، جو درست نہیں ہو سکتا۔ دونوں کو کارڈ سے ملائیں۔',
+    findingOrderAboveCard:
+      'یہ {related} سے بڑا نکلا، جو درست نہیں ہو سکتا۔ دونوں کو کارڈ سے ملائیں۔',
+    findingDeviationCard: 'آپ کے باقی ناپوں کے ساتھ یہ غیر معمولی ہے۔ اسے کارڈ سے ملائیں۔',
+    noteSmaller:
+      '{related} کے ساتھ یہ معمول سے چھوٹا ہے۔ چھوٹا کٹا ہوا کپڑا بڑا نہیں کیا جا سکتا۔',
+    noteLarger: '{related} کے ساتھ یہ معمول سے بڑا ہے۔',
+    noteUnusual: 'آپ کے باقی ناپوں کے ساتھ یہ غیر معمولی ہے۔',
+    noteSmallerCard:
+      'کارڈ پر لکھے {related} کے ساتھ یہ معمول سے چھوٹا ہے۔ چھوٹا کٹا ہوا کپڑا بڑا نہیں کیا جا سکتا۔',
+    noteLargerCard: 'کارڈ پر لکھے {related} کے ساتھ یہ معمول سے بڑا ہے۔',
+    noteUnusualCard: 'کارڈ کے باقی ناپوں کے ساتھ یہ غیر معمولی ہے۔',
+    noteAsk: 'اسے دوبارہ ناپیں، یا ہمیں بتائیں کہ آپ کا ناپ یہی رہنے دیں۔',
+    noteAskCard: 'اسے کارڈ سے ملا لیں، یا ہمیں بتائیں کہ کارڈ والا ناپ یہی رہنے دیں۔',
+    noteMeasureAgain: 'دوبارہ ناپیں',
+    noteCheckCard: 'کارڈ دوبارہ دیکھیں',
+    noteKeep: 'میرا ناپ یہی رہنے دیں',
+    noteKeepCard: 'کارڈ والا ناپ رہنے دیں',
+    noteKept: 'آپ یہی ناپ رکھ رہے ہیں۔ ہم درج کر لیتے ہیں کہ آپ نے اسے جانچ لیا ہے۔',
+    noteKeptCard:
+      'آپ کارڈ والا ناپ رکھ رہے ہیں۔ ہم درج کر لیتے ہیں کہ آپ نے اسے کارڈ سے ملا لیا ہے۔',
+    noteSummaryTitle: 'ایک بار پھر دیکھ لیں',
+    noteSummaryLead: 'ان میں سے ہر ایک کے نیچے ایک نوٹ ہے۔ اسے دوبارہ ناپیں، یا اپنا ناپ رہنے دیں۔',
+    noteSummaryLeadCard:
+      'ان میں سے ہر ایک کے نیچے ایک نوٹ ہے۔ اسے کارڈ سے ملا لیں، یا کارڈ والا ناپ رہنے دیں۔',
+    noteSummaryDone: 'ہر نوٹ کا جواب ہو گیا۔ جائزہ دیکھنے کے لیے اپنے ناپ دوبارہ جانچیں۔',
+    findingLooksWhole:
+      'یہ پورا گھیر لگتا ہے، مگر یہ ناپ کپڑا بچھا کر آر پار لیا جاتا ہے — اس کا آدھا۔ آر پار ناپیں۔',
+    findingLooksWholeCard:
+      'یہ پورا ناپ لگتا ہے، مگر ہم کارڈ سے یہ ناپ آدھا پڑھتے ہیں۔ اگر کارڈ پر پورا لکھا ہے تو یہاں آدھا لکھیں۔',
+    findingLooksHalf: 'یہ آدھا ناپ لگتا ہے، مگر یہ ناپ پورا لیا جاتا ہے۔ فیتہ دوبارہ دیکھیں۔',
+    findingLooksHalfCard:
+      'یہ آدھا ناپ لگتا ہے، مگر ہم کارڈ سے یہ ناپ پورا پڑھتے ہیں۔ اگر کارڈ پر آدھا لکھا ہے تو یہاں دگنا لکھیں۔',
+    reviewTitle: 'محفوظ کرنے سے پہلے انہیں دیکھ لیں',
+    reviewLead:
+      'ہر ناپ جیسا آپ نے لکھا، اور جیسا محفوظ رہے گا۔ محفوظ ناپ ہی سے درزی کام کرتا ہے۔',
+    reviewColumnPoint: 'ناپ',
+    reviewColumnTyped: 'جیسا آپ نے لکھا',
+    reviewColumnRecorded: 'جیسا محفوظ رہے گا',
+    reviewChange: 'بدلیں',
+    reviewChangeLabel: '{label} بدلیں',
+    reviewKeptLead: 'نوٹ کے بعد جو ناپ آپ نے رکھے، وہ نیچے نشان زد ہیں۔',
+    reviewKept: 'آپ نے اسے جانچ کر یہی رکھا۔',
+    saveProfileCta: 'میرے ناپ محفوظ کریں',
+    saving: 'محفوظ ہو رہے ہیں…',
+    backToForm: 'کچھ بدلنا ہے',
+    savedTitle: 'آپ کے ناپ محفوظ ہو گئے',
+    savedFirst: 'آپ کے {style} کے ناپ ہمارے پاس محفوظ ہیں۔',
+    savedReplaced: 'یہ آپ کے پہلے محفوظ کیے ہوئے {style} کے ناپ کی جگہ لیں گے۔',
+    savedAccount: 'یہ آپ کے اکاؤنٹ کے ساتھ محفوظ ہیں۔',
+    savedDevice: 'یہ صرف اسی براؤزر کے لیے محفوظ ہیں، اور کسی اکاؤنٹ سے منسلک نہیں۔',
+    savedOnward: 'کلیکشن دیکھیں',
+    measureAgain: 'بدل کر دوبارہ محفوظ کریں',
     stepPrevious: 'پچھلا',
     stepNext: 'اگلا',
     stepDone: 'مکمل',
     stepPosition: '{total} میں سے {current}',
-    points: {
-      kameezShoulder: {
-        label: 'کندھا',
-        instruction: 'قمیض سیدھی بچھائیں۔ پیٹھ کی طرف ایک کندھے کی سلائی سے دوسری تک ناپیں۔',
-      },
-      kameezChest: {
-        label: 'چھاتی',
-        instruction: 'بغل سے ایک انچ نیچے، قمیض بچھا کر سیدھا آر پار ناپیں۔',
-      },
-      kameezLength: {
-        label: 'قمیض کی لمبائی',
-        instruction: 'کندھے کے سب سے اونچے مقام سے سیدھا دامن تک۔',
-      },
-      kameezSleeve: {
-        label: 'آستین کی لمبائی',
-        instruction: 'کندھے کی سلائی سے، آستین کے اوپر سے، کف کے باہری کنارے تک۔',
-      },
-      kameezCuff: {
-        label: 'کف',
-        instruction: 'کف بند کر کے اس کے منہ کو آر پار ناپیں۔',
-      },
-      kameezBottom: {
-        label: 'دامن کا گھیر',
-        instruction: 'قمیض بچھا کر دامن کو سب سے چوڑی جگہ سے آر پار ناپیں۔',
-      },
-      shalwarWaist: {
-        label: 'کمر',
-        instruction: 'شلوار بچھا کر ازاربند کی پٹی کو بغیر کھینچے آر پار ناپیں۔',
-      },
-      shalwarLength: {
-        label: 'شلوار کی لمبائی',
-        instruction: 'ازاربند کی پٹی کے اوپر سے سیدھا پائنچے تک۔',
-      },
-      shalwarThigh: {
-        label: 'ران',
-        instruction: 'ایک پائنچے کو، چدے کی سلائی سے ذرا نیچے، سب سے چوڑی جگہ آر پار ناپیں۔',
-      },
-      shalwarPaincha: {
-        label: 'پائنچہ',
-        instruction: 'پائنچے کے منہ کو آر پار ناپیں۔',
-      },
-      waistcoatShoulder: {
-        label: 'کندھا',
-        instruction: 'پیٹھ کی طرف ایک کندھے کی سلائی سے دوسری تک۔',
-      },
-      waistcoatChest: {
-        label: 'چھاتی',
-        instruction: 'واسکٹ بند کر کے، بغلوں سے ذرا نیچے، آر پار ناپیں۔',
-      },
-      waistcoatLength: {
-        label: 'واسکٹ کی لمبائی',
-        instruction: 'کندھے کے سب سے اونچے مقام سے سیدھا دامن تک۔',
-      },
-    },
   },
   errors: {
     network: 'ہم اسٹور تک نہیں پہنچ سکے۔ براہِ کرم دوبارہ کوشش کریں۔',

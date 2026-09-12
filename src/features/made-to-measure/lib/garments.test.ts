@@ -1,193 +1,90 @@
 import { describe, expect, it } from 'vitest';
 
-import { DRAWINGS } from './garment-drawings';
-import {
-  anchorOf,
-  enteredFromStored,
-  GARMENTS,
-  MEASUREMENT_IDS,
-  MEASUREMENTS,
-  measurementsFor,
-  stepFrom,
-  storedFromEntered,
-  type Measurement,
-  type MeasurementId,
-} from './garments';
+import type { Geometry } from '../schemas/measurement-set.schema';
+import { DRAWING_IDS, DRAWINGS } from './garment-drawings';
+import { anchorOf, enteredFromStored, readingOf, storedFromEntered } from './garments';
+import { EVERY_POINT, pointOf } from './test-support';
 
-const byId = (id: (typeof MEASUREMENT_IDS)[number]): Measurement => {
-  const measurement = MEASUREMENTS.find((candidate) => candidate.id === id);
-  if (measurement === undefined) throw new Error(`no measurement ${id}`);
-  return measurement;
+const drawn = (id: string): Geometry => {
+  const { geometry } = pointOf(id);
+  if (geometry === null) throw new Error(`${id} has no mark`);
+  return geometry;
 };
 
-describe('the shape of an annotation is its arithmetic', () => {
-  it('doubles a ring, because it is measured across a garment folded in half', () => {
-    const chest = byId('kameezChest');
-    expect(chest.annotation.shape).toBe('RING');
-    expect(storedFromEntered(chest, 21)).toBe(42);
+describe('how a figure is written decides the arithmetic', () => {
+  it('doubles a figure written as a half, measured across a garment folded in half', () => {
+    expect(storedFromEntered(pointOf('kameezChest'), 19.5)).toBe(39);
   });
 
-  it('takes a span exactly as the tape reads it', () => {
-    const shoulder = byId('kameezShoulder');
-    expect(shoulder.annotation.shape).toBe('SPAN');
-    expect(storedFromEntered(shoulder, 18)).toBe(18);
+  it('records a full figure exactly as the tape reads it', () => {
+    expect(storedFromEntered(pointOf('kameezShoulder'), 18)).toBe(18);
+    // A neck is a GIRTH, but it is read whole on the opened band.
+    expect(storedFromEntered(pointOf('kameezNeck'), 15.5)).toBe(15.5);
   });
 
   it('round-trips both ways, so the field and the record cannot drift apart', () => {
-    for (const measurement of MEASUREMENTS) {
-      expect(enteredFromStored(measurement, storedFromEntered(measurement, 30))).toBe(30);
+    for (const point of EVERY_POINT) {
+      expect(enteredFromStored(point, storedFromEntered(point, 30))).toBe(30);
     }
   });
 
   it('states its bounds on the STORED figure', () => {
-    // A ring's bound is a circumference, so the field accepts half of it. Getting
-    // this backwards would refuse every correct entry on six of the thirteen.
-    const chest = byId('kameezChest');
+    // A half figure's bound is a circumference, so the field accepts half of it.
+    // Getting this backwards would refuse every correct entry on every half point.
+    const chest = pointOf('kameezChest');
     expect(enteredFromStored(chest, chest.minMm)).toBe(chest.minMm / 2);
+  });
+});
 
-    for (const measurement of MEASUREMENTS) {
-      expect(measurement.minMm).toBeLessThan(measurement.maxMm);
+describe('the reading follows the arithmetic, never the drawn shape', () => {
+  it('never tells anyone to double a girth that is read in full', () => {
+    const neck = pointOf('kameezNeck');
+    expect([neck.kind, neck.enteredAs]).toEqual(['GIRTH', 'FULL']);
+    expect(readingOf(neck)).toBe('FULL_GIRTH');
+
+    for (const point of EVERY_POINT) {
+      expect(readingOf(point) === 'HALF_GIRTH', point.id).toBe(point.enteredAs === 'HALF');
     }
   });
 });
 
-describe('the set and the drawings agree', () => {
-  it('holds each declared id exactly once', () => {
-    expect(MEASUREMENTS.map((measurement) => measurement.id)).toEqual([...MEASUREMENT_IDS]);
-  });
-
-  it('partitions cleanly by garment, so nothing is orphaned or shown twice', () => {
-    const counted = GARMENTS.flatMap((garment) => measurementsFor(garment));
-    expect(counted).toHaveLength(MEASUREMENTS.length);
-    expect(new Set(counted.map((measurement) => measurement.id)).size).toBe(MEASUREMENTS.length);
-  });
-
-  it('draws every garment that has measurements', () => {
-    for (const garment of GARMENTS) {
-      expect(DRAWINGS[garment].outline.length).toBeGreaterThan(0);
-      expect(measurementsFor(garment).length).toBeGreaterThan(0);
-    }
-  });
-});
-
-describe('every mark lands on the drawing it belongs to', () => {
-  /*
-   * A coordinate typo does not throw. It puts a mark — and the button over it —
-   * outside the viewBox, where it is clipped and simply cannot be pressed.
-   */
-  it('keeps each annotation inside its own viewBox', () => {
-    for (const measurement of MEASUREMENTS) {
-      const drawing = DRAWINGS[measurement.garment];
-      const { annotation } = measurement;
-
-      const [minX, maxX, minY, maxY] =
-        annotation.shape === 'RING'
-          ? [
-              annotation.cx - annotation.rx,
-              annotation.cx + annotation.rx,
-              annotation.cy - annotation.ry,
-              annotation.cy + annotation.ry,
-            ]
-          : [
-              Math.min(annotation.x1, annotation.x2),
-              Math.max(annotation.x1, annotation.x2),
-              Math.min(annotation.y1, annotation.y2),
-              Math.max(annotation.y1, annotation.y2),
-            ];
-
-      expect(minX, measurement.id).toBeGreaterThanOrEqual(0);
-      expect(maxX, measurement.id).toBeLessThanOrEqual(drawing.width);
-      expect(minY, measurement.id).toBeGreaterThanOrEqual(0);
-      expect(maxY, measurement.id).toBeLessThanOrEqual(drawing.height);
-    }
-  });
-
+describe('where a mark sits', () => {
   it('marks a ring ON the ring rather than in the middle of the garment', () => {
-    const chest = byId('kameezChest');
-    if (chest.annotation.shape !== 'RING') throw new Error('expected a ring');
+    const ring = drawn('kameezChest');
+    if (ring.shape !== 'RING') throw new Error('expected a ring');
     // The middle of a chest is the centre front, which is where the placket and
     // its buttons are — a dot there is taken for a button.
-    expect(anchorOf(chest)).toEqual({
-      x: chest.annotation.cx - chest.annotation.rx,
-      y: chest.annotation.cy,
-    });
+    expect(anchorOf(ring)).toEqual({ x: ring.cx - ring.rx, y: ring.cy });
   });
 
   it('follows a rotated ring round, so a cuff mark sits on the cuff', () => {
-    const cuff = byId('kameezCuff');
-    if (cuff.annotation.shape !== 'RING') throw new Error('expected a ring');
-    expect(cuff.annotation.rotate).toBeDefined();
+    const cuff = drawn('kameezCuff');
+    if (cuff.shape !== 'RING') throw new Error('expected a ring');
+    expect(cuff.rotate).toBeDefined();
 
     const anchor = anchorOf(cuff);
-    const distance = Math.hypot(anchor.x - cuff.annotation.cx, anchor.y - cuff.annotation.cy);
-    expect(distance).toBeCloseTo(cuff.annotation.rx, 6);
+    expect(Math.hypot(anchor.x - cuff.cx, anchor.y - cuff.cy)).toBeCloseTo(cuff.rx, 6);
     // Rotated, so it is not the axis-aligned point a horizontal ellipse would give.
-    expect(anchor.y).not.toBeCloseTo(cuff.annotation.cy, 6);
+    expect(anchor.y).not.toBeCloseTo(cuff.cy, 6);
   });
 
   it('puts a span mark on the span, off its midpoint', () => {
-    const shoulder = byId('kameezShoulder');
-    if (shoulder.annotation.shape !== 'SPAN') throw new Error('expected a span');
+    const span = drawn('kameezShoulder');
+    if (span.shape !== 'SPAN') throw new Error('expected a span');
 
-    const anchor = anchorOf(shoulder);
-    expect(anchor.y).toBe(shoulder.annotation.y1);
-    expect(anchor.x).toBeGreaterThan(shoulder.annotation.x1);
-    expect(anchor.x).toBeLessThan((shoulder.annotation.x1 + shoulder.annotation.x2) / 2);
+    const anchor = anchorOf(span);
+    expect(anchor.y).toBe(span.y1);
+    expect(anchor.x).toBeGreaterThan(span.x1);
+    expect(anchor.x).toBeLessThan((span.x1 + span.x2) / 2);
   });
 });
 
-describe('two marks on one garment are never mistaken for one', () => {
-  /*
-   * Each mark carries a 2.25rem button. Two anchors closer than this are two
-   * overlapping hit areas — the later one in document order swallows part of the
-   * earlier one, and the customer presses the wrong measurement with no way to
-   * tell. It has happened once already: the chest ring and the kameez length
-   * arrow both resolved to within fifteen units of the centre front.
-   *
-   * Twenty-four drawing units is roughly the width of a dot plus its air at the
-   * smallest size these drawings render at.
-   */
-  const MINIMUM_SEPARATION = 24;
-
-  it.each([...GARMENTS])('keeps every %s mark apart', (garment) => {
-    const anchors = measurementsFor(garment).map((measurement) => ({
-      id: measurement.id,
-      ...anchorOf(measurement),
-    }));
-
-    for (const [index, a] of anchors.entries()) {
-      for (const b of anchors.slice(index + 1)) {
-        expect(Math.hypot(a.x - b.x, a.y - b.y), `${a.id} vs ${b.id}`).toBeGreaterThanOrEqual(
-          MINIMUM_SEPARATION,
-        );
-      }
-    }
-  });
-});
-
-describe('stepping through the set one field at a time', () => {
-  it('moves from the last kameez measurement straight into the shalwar', () => {
-    expect(stepFrom('kameezBottom', 1)).toBe('shalwarWaist');
-    expect(stepFrom('shalwarWaist', -1)).toBe('kameezBottom');
-  });
-
-  it('stops at both ends rather than wrapping round', () => {
-    expect(stepFrom('kameezShoulder', -1)).toBeNull();
-    expect(stepFrom('waistcoatLength', 1)).toBeNull();
-  });
-
-  it('reaches every measurement exactly once, walking forward from the first', () => {
-    const walked: MeasurementId[] = [];
-    // Capped, so a stepper that wraps fails the test instead of hanging it.
-    for (
-      let id: MeasurementId | null = 'kameezShoulder';
-      id !== null && walked.length <= MEASUREMENT_IDS.length;
-      id = stepFrom(id, 1)
-    ) {
-      walked.push(id);
-    }
-
-    expect(walked).toHaveLength(MEASUREMENT_IDS.length);
-    expect(new Set(walked)).toEqual(new Set(MEASUREMENT_IDS));
+describe('the emblem each garment wears off the studio', () => {
+  it.each([...DRAWING_IDS])('keeps the %s emblem inside its own drawing', (id) => {
+    const { emblem, width, height } = DRAWINGS[id];
+    expect(emblem.cx - emblem.rx).toBeGreaterThanOrEqual(0);
+    expect(emblem.cx + emblem.rx).toBeLessThanOrEqual(width);
+    expect(emblem.cy - emblem.ry).toBeGreaterThanOrEqual(0);
+    expect(emblem.cy + emblem.ry).toBeLessThanOrEqual(height);
   });
 });

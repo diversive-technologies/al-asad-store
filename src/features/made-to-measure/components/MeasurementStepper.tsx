@@ -9,7 +9,7 @@ import { formatNumber, formatTemplate } from '@/lib/utils/format';
 import { ChevronLeft, ChevronRight } from '@/lib/vendor/icons';
 
 import type { FocusMode } from '../hooks/use-focus-mode';
-import { MEASURING_ORDER, stepFrom } from '../lib/garments';
+import { stepFrom } from '../lib/measurement-set';
 
 /* Keeps the caret in the field while stepping, so a phone's keyboard stays up
    rather than dropping and springing back for every measurement. */
@@ -33,7 +33,7 @@ export function MeasurementStepper({
   readonly locale: Locale;
 }) {
   const t = messages.madeToMeasure;
-  const { activeId } = focus;
+  const { activeId, order } = focus;
   if (activeId === null) return null;
 
   return (
@@ -43,7 +43,7 @@ export function MeasurementStepper({
         variant="ghost"
         size="sm"
         className="gap-1 px-2"
-        disabled={stepFrom(activeId, -1) === null}
+        disabled={stepFrom(order, activeId, -1) === null}
         onMouseDown={keepFocus}
         onClick={() => {
           focus.step(-1);
@@ -56,8 +56,8 @@ export function MeasurementStepper({
 
       <p className="text-fg-muted flex-1 text-center text-xs tabular-nums">
         {formatTemplate(t.stepPosition, {
-          current: formatNumber(MEASURING_ORDER.indexOf(activeId) + 1, locale),
-          total: formatNumber(MEASURING_ORDER.length, locale),
+          current: formatNumber(order.indexOf(activeId) + 1, locale),
+          total: formatNumber(order.length, locale),
         })}
       </p>
 
@@ -66,7 +66,7 @@ export function MeasurementStepper({
         variant="ghost"
         size="sm"
         className="gap-1 px-2"
-        disabled={stepFrom(activeId, 1) === null}
+        disabled={stepFrom(order, activeId, 1) === null}
         onMouseDown={keepFocus}
         onClick={() => {
           focus.step(1);

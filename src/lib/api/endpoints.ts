@@ -131,6 +131,34 @@ export const ENDPOINTS = {
     /** Section 28.3 tracks a guest order by number. */
     order: (orderNumber: string) => `/api/v1/orders/${orderNumber}`,
   },
+  /**
+   * §34 module 18 — Made-to-Measure. The measurement list is CONTENT (ADR 17):
+   * served per garment style, in the order the form asks, carrying ids and shapes
+   * and no words (§34.3).
+   */
+  madeToMeasure: {
+    /** The styles the workshop stitches, each with its lead time (A2-4). */
+    styles: '/api/v1/made-to-measure/styles',
+    /** One style's measurement set, by `?style=` (A2-3). A style not offered is a 404. */
+    set: '/api/v1/made-to-measure/measurement-sets',
+    /**
+     * §34.4 `validate` (A2-5) — what WOULD be recorded, and what stands in the way.
+     * Stores nothing, so the studio's review can ask before anything is saved.
+     */
+    validation: '/api/v1/made-to-measure/validations',
+    /** §34.4 `saveProfile` (A2-5, A2-8) — always a NEW version; there is no update. */
+    profiles: '/api/v1/made-to-measure/profiles',
+    /**
+     * A guest's device token — the owner of their profiles until they sign in —
+     * minted by the module, as a cart id is minted by the cart's (§16).
+     */
+    deviceTokens: '/api/v1/made-to-measure/device-tokens',
+  },
+  /** §22 Localisation. */
+  localisation: {
+    /** The studio's wording by id, for every style at once, per `?locale=`. */
+    measurementCopy: '/api/v1/localisation/measurement-copy',
+  },
   newsletter: {
     subscribe: '/api/v1/newsletter/subscriptions',
   },

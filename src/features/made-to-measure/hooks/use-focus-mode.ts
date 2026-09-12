@@ -4,8 +4,10 @@ import type { CSSProperties, FocusEvent, KeyboardEvent } from 'react';
 import { flushSync } from 'react-dom';
 
 import { useVisibleHeight, useVisibleTop } from '@/hooks/use-visible-height';
+import type { MeasurementPointId } from '@/lib/domain/ids';
 
-import { MEASURING_ORDER, stepFrom, type MeasurementId } from '../lib/garments';
+import { fieldRowId } from '../lib/field-row';
+import { stepFrom } from '../lib/measurement-set';
 
 type SceneEvents = {
   readonly onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
@@ -14,7 +16,9 @@ type SceneEvents = {
 };
 
 export interface FocusMode {
-  readonly activeId: MeasurementId | null;
+  readonly activeId: MeasurementPointId | null;
+  /** The served list's order, which is the order the stepper walks. */
+  readonly order: readonly MeasurementPointId[];
   readonly step: (direction: 1 | -1) => void;
   readonly leave: () => void;
   readonly sceneProps: SceneEvents & {
@@ -30,9 +34,12 @@ function isOn(scene: HTMLElement): boolean {
 }
 
 /** The measurement an event's target is the input for, if it is one. */
-function measurementOf(target: EventTarget | null): MeasurementId | null {
+function measurementOf(
+  order: readonly MeasurementPointId[],
+  target: EventTarget | null,
+): MeasurementPointId | null {
   if (!(target instanceof HTMLInputElement)) return null;
-  return MEASURING_ORDER.find((id) => id === target.name) ?? null;
+  return order.find((id) => id === target.name) ?? null;
 }
 
 /* STY-01a — live measurements of the screen, so they travel as custom
@@ -43,13 +50,14 @@ function viewportStyle(height: number | null, top: number | null): CSSProperties
 }
 
 function handlers(
-  activeId: MeasurementId | null,
-  go: (id: MeasurementId) => void,
-  setActive: (id: MeasurementId | null) => void,
+  order: readonly MeasurementPointId[],
+  activeId: MeasurementPointId | null,
+  go: (id: MeasurementPointId) => void,
+  setActive: (id: MeasurementPointId | null) => void,
 ) {
   function leave(): void {
     if (activeId === null) return;
-    const row = `${activeId}-field`;
+    const row = fieldRowId(activeId);
     // The list is laid out again only once focus mode is off, so commit that first.
     flushSync(() => {
       setActive(null);
@@ -61,8 +69,8 @@ function handlers(
     element?.scrollIntoView({ block: 'center' });
   }
 
-  function stepOn(from: MeasurementId, direction: 1 | -1): void {
-    const next = stepFrom(from, direction);
+  function stepOn(from: MeasurementPointId, direction: 1 | -1): void {
+    const next = stepFrom(order, from, direction);
     if (next === null) leave();
     else go(next);
   }
@@ -70,13 +78,13 @@ function handlers(
   const events: SceneEvents = {
     onKeyDown(event) {
       if (activeId === null || !isOn(event.currentTarget)) return;
-      const id = measurementOf(event.target);
+      const id = measurementOf(order, event.target);
       if (event.key === 'Escape') {
         event.preventDefault();
         leave();
       } else if (event.key === 'Enter' && id !== null) {
         /* Return moves on from the field it was pressed in, and never submits
-           thirteen fields with twelve of them out of sight. */
+           the whole form with every other field out of sight. */
         event.preventDefault();
         stepOn(id, 1);
       }
@@ -84,7 +92,7 @@ function handlers(
     /* Whatever field the keyboard lands in — Tab, a phone's next-field arrow —
        becomes the one shown, so the caret is never in a field nobody can see. */
     onFocus(event) {
-      const id = measurementOf(event.target);
+      const id = measurementOf(order, event.target);
       if (activeId === null || id === null || id === activeId) return;
       if (isOn(event.currentTarget)) setActive(id);
     },
@@ -118,16 +126,18 @@ function handlers(
  * in the field that is shown, and places the sheet where the keyboard leaves room.
  */
 export function useFocusMode(
-  activeId: MeasurementId | null,
-  go: (id: MeasurementId) => void,
-  setActive: (id: MeasurementId | null) => void,
+  order: readonly MeasurementPointId[],
+  activeId: MeasurementPointId | null,
+  go: (id: MeasurementPointId) => void,
+  setActive: (id: MeasurementPointId | null) => void,
 ): FocusMode {
   const height = useVisibleHeight();
   const top = useVisibleTop();
-  const { leave, step, events } = handlers(activeId, go, setActive);
+  const { leave, step, events } = handlers(order, activeId, go, setActive);
 
   return {
     activeId,
+    order,
     step,
     leave,
     sceneProps: {

@@ -9,6 +9,25 @@ export const ROUTES = {
   forgotPassword: '/forgot-password',
   /** §34 — the measurement studio, usable without buying anything. */
   stitched: '/stitched',
+  /**
+   * §34 — the studio opened on one garment style, as a product's fork opens it.
+   * A style id is letters, digits and underscores (`garmentStyleIdSchema`), so it
+   * needs no escaping.
+   */
+  stitchedFor: (garmentStyle: string) => `/stitched?style=${garmentStyle}`,
+  /**
+   * §34 — the studio at any address it reads: a style, a way of measuring, both
+   * or neither. Named rather than positional, so a style can never be passed as a
+   * source, and built with `URLSearchParams`, so nothing relies on a caller's
+   * value needing no escaping.
+   */
+  stitchedWith: (query: { readonly style: string | null; readonly source: string | null }) => {
+    const params = new URLSearchParams();
+    if (query.style !== null) params.set('style', query.style);
+    if (query.source !== null) params.set('source', query.source);
+    const search = params.toString();
+    return search === '' ? '/stitched' : `/stitched?${search}`;
+  },
   catalogue: {
     list: '/catalogue',
     detail: (slug: string) => `/catalogue/${slug}`,
@@ -39,6 +58,10 @@ export const ROUTES = {
      * request can only start there — and `apiRequest` is `server-only`.
      */
     products: '/api/products',
+    /** §34.4 `validate`, for the studio's review before a save. Stores nothing. */
+    measurementCheck: '/api/made-to-measure/check',
+    /** §34.4 `saveProfile` — each save a new version, never an overwrite (D6). */
+    measurementProfiles: '/api/made-to-measure/profiles',
     /** §16 — GET the summary, POST to add a line. */
     bag: '/api/bag',
     /** PATCH the quantity. D6: removal is its own path, never a DELETE. */

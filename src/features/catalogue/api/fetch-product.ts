@@ -33,7 +33,12 @@ export function fetchProduct(
     path: ENDPOINTS.catalogue.product,
     schema: productDetailSchema,
     searchParams: { slug: trimmed, locale },
-    next: { revalidate: CATALOGUE_REVALIDATE_SECONDS, tags: ['catalogue', `catalogue:${locale}`] },
+    /* `made-to-measure` too: the product carries its stitching offer by value, so
+       an edit to an offer has to reach this read as well as the studio's. */
+    next: {
+      revalidate: CATALOGUE_REVALIDATE_SECONDS,
+      tags: ['catalogue', `catalogue:${locale}`, 'made-to-measure'],
+    },
   }).then((result) => {
     if (result.ok) return ok(result.value);
     if (result.error.kind === 'NOT_FOUND') return ok(null);

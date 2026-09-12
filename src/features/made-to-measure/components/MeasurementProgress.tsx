@@ -9,9 +9,10 @@ import { formatNumber, formatTemplate } from '@/lib/utils/format';
 /**
  * How much of the set is taken.
  *
- * Thirteen fields is a lot to face, and the count is what turns it from a wall
- * into a task with an end. A measurement counts only once it holds a figure the
- * bounds accept, so this and the validation cannot disagree.
+ * A long form is a lot to face, and the count is what turns it from a wall into
+ * a task with an end. It counts the REQUIRED measurements only — an optional one
+ * left empty is not work outstanding — and a measurement counts only once it
+ * holds a figure the bounds accept, so this and the validation cannot disagree.
  */
 export function MeasurementProgress({
   done,
@@ -25,6 +26,9 @@ export function MeasurementProgress({
   readonly locale: Locale;
 }) {
   const t = messages.madeToMeasure;
+
+  // A list with nothing required has no progress to show, and 0 of 0 is NaN%.
+  if (total === 0) return null;
 
   return (
     <div className="min-w-40 flex-1">

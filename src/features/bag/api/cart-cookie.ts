@@ -2,10 +2,10 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 
-import { clientEnv } from '@/config/env.client';
 import type { ApiError } from '@/lib/api/errors';
 import { ok, type Result } from '@/lib/result';
 import type { CartId } from '@/lib/domain/ids';
+import { capabilityCookieOptions } from '@/lib/utils/cookies';
 
 import { createCart } from './bag-server';
 
@@ -45,14 +45,7 @@ export async function readCartId(): Promise<CartId | null> {
 async function writeCartId(cartId: CartId): Promise<void> {
   const store = await cookies();
 
-  store.set(COOKIE_NAME, cartId, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    // Local development is plain HTTP; anything else must not send this in clear.
-    secure: clientEnv.NEXT_PUBLIC_APP_URL.startsWith('https://'),
-    maxAge: COOKIE_MAX_AGE_SECONDS,
-  });
+  store.set(COOKIE_NAME, cartId, capabilityCookieOptions(COOKIE_MAX_AGE_SECONDS));
 }
 
 export async function clearCartId(): Promise<void> {

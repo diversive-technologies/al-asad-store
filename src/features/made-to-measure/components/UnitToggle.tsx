@@ -1,9 +1,15 @@
 'use client';
 
 import type { Messages } from '@/i18n/messages/en';
-import { cn } from '@/lib/utils/cn';
 
 import { UNITS, type Unit } from '../lib/units';
+import { SegmentedChoice } from './SegmentedChoice';
+
+export interface UnitToggleProps {
+  readonly unit: Unit;
+  readonly onChange: (next: Unit) => void;
+  readonly messages: Messages;
+}
 
 /**
  * Inches or centimetres.
@@ -12,46 +18,17 @@ import { UNITS, type Unit } from '../lib/units';
  * way — so the toggle converts every field that is already filled rather than
  * clearing them.
  */
-export function UnitToggle({
-  unit,
-  onChange,
-  messages,
-}: {
-  readonly unit: Unit;
-  readonly onChange: (next: Unit) => void;
-  readonly messages: Messages;
-}) {
+export function UnitToggle({ unit, onChange, messages }: UnitToggleProps) {
   const t = messages.madeToMeasure;
   const label: Readonly<Record<Unit, string>> = { IN: t.unitInches, CM: t.unitCentimetres };
 
   return (
-    <fieldset>
-      <legend className="text-fg-muted mb-1.5 text-xs">{t.unitLabel}</legend>
-      <div className="border-border rounded-pill inline-flex border p-0.5">
-        {UNITS.map((option) => (
-          <label
-            key={option}
-            className={cn(
-              'rounded-pill cursor-pointer px-3 py-1 text-xs transition-colors duration-200',
-              'has-[:focus-visible]:ring-accent-400 has-[:focus-visible]:ring-2',
-              'motion-reduce:transition-none',
-              option === unit ? 'mm-unit-on' : 'text-fg-muted hover:text-fg',
-            )}
-          >
-            <input
-              type="radio"
-              name="measurement-unit"
-              value={option}
-              checked={option === unit}
-              onChange={() => {
-                onChange(option);
-              }}
-              className="sr-only"
-            />
-            {label[option]}
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <SegmentedChoice
+      legend={t.unitLabel}
+      name="measurement-unit"
+      options={UNITS.map((option) => ({ value: option, label: label[option] }))}
+      value={unit}
+      onChange={onChange}
+    />
   );
 }

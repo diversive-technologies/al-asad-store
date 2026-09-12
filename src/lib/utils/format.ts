@@ -85,6 +85,14 @@ export function formatPlural(
 }
 
 /**
+ * I18N-06 — a list of names joined the way the language joins them, never with
+ * a comma and an English "and" written into the code.
+ */
+export function formatList(items: readonly string[], locale: Locale): string {
+  return new Intl.ListFormat(tagFor(locale), { type: 'conjunction' }).format(items);
+}
+
+/**
  * I18N-06 — THE placeholder substitution, so a parameterised message is filled
  * in exactly one place.
  *

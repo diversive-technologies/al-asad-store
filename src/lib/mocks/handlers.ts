@@ -23,6 +23,8 @@ import {
   requestPasswordReset,
 } from './auth-db';
 import { findOrder, placeOrder, quoteFor } from './checkout-db';
+import { madeToMeasureHandlers } from './made-to-measure-handlers';
+import { measurementCopyFor } from './measurement-copy-db';
 import {
   findRecordByCode,
   findRecordsByIds,
@@ -252,6 +254,14 @@ export const handlers = [
 
     return HttpResponse.json(outcome);
   }),
+
+  // §34 module 18 — `made-to-measure-handlers.ts`.
+  ...madeToMeasureHandlers,
+
+  /* §22 — the words, by locale, for every style at once (§34.3). */
+  http.get(`*${ENDPOINTS.localisation.measurementCopy}`, ({ request }) =>
+    HttpResponse.json(measurementCopyFor(localeOf(request))),
+  ),
 
   http.post(`*${ENDPOINTS.newsletter.subscribe}`, () =>
     HttpResponse.json(NEWSLETTER_SUBSCRIPTION, { status: 201 }),

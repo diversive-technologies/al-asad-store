@@ -1,16 +1,17 @@
 /**
  * §34.6 — the garment flats themselves.
  *
- * Split from `garments.ts` because they are a different KIND of thing: this file
- * is picture data, that one is the measurement model. Nothing here imports from
- * it beyond the garment id, so the dependency runs one way.
+ * PICTURE DATA, and the frontend's own: under D5's product-not-client exception
+ * these drawings are the product's domain, while the measurement list drawn on
+ * them is served content. A served list names a drawing by id, and its shapes are
+ * in that drawing's viewBox; an id not listed here is a contract violation.
  *
  * ## The drawings are patterns, not pictures
  *
  * Every silhouette is authored the way a pattern sheet is: the shoulder seam,
  * the armhole, the side seam and the hem are each a segment a tailor would
- * recognise, and every annotation in `garments.ts` lands on the seam it is taken
- * from. A drawing that merely suggests a kameez sends the tape to the wrong
+ * recognise, and every shape in the measurement list lands on the seam it is
+ * taken from. A drawing that merely suggests a kameez sends the tape to the wrong
  * place, which is worse than no drawing — the customer trusts it.
  *
  * Pure: no React, no DOM (PD-02). Coordinates are each garment’s own drawing
@@ -18,16 +19,50 @@
  * on the side it is sewn on — so these stay as authored.
  */
 
-import type { GarmentId } from './garments';
+import { kameezVaried } from './kameez-variants';
+
+export const DRAWING_IDS = ['KAMEEZ', 'SHALWAR', 'WAISTCOAT'] as const;
+export type DrawingId = (typeof DRAWING_IDS)[number];
+
+/** A ring in the drawing's own coordinates. */
+export interface EmblemRing {
+  readonly cx: number;
+  readonly cy: number;
+  readonly rx: number;
+  readonly ry: number;
+}
 
 export interface GarmentDrawing {
-  readonly id: GarmentId;
+  readonly id: DrawingId;
   readonly width: number;
   readonly height: number;
   /** The silhouette, stroked. */
   readonly outline: readonly string[];
   /** Collars, plackets, cuffs, seams — everything that makes it read as a garment. */
   readonly detail: readonly string[];
+  /**
+   * The one ring this garment wears off the studio, on the homepage. Declared
+   * here as part of the picture rather than borrowed from a measurement: the
+   * measurement list is served content, and a homepage emblem should neither make
+   * a backend read nor move because a tailor reordered a form.
+   */
+  readonly emblem: EmblemRing;
+  /**
+   * The parts that follow the customer's finishing choices (§34.5 `options[]`):
+   * given the drawing variants the choices name, the strokes to add. With none
+   * named it draws the garment's default — see `detailOf`.
+   */
+  readonly varied?: (variants: ReadonlySet<string>) => readonly string[];
+}
+
+const NO_VARIANTS: ReadonlySet<string> = new Set();
+
+/** Every detail stroke of a drawing, as the given variants leave it. */
+export function detailOf(
+  drawing: GarmentDrawing,
+  variants: ReadonlySet<string> = NO_VARIANTS,
+): readonly string[] {
+  return drawing.varied === undefined ? drawing.detail : [...drawing.detail, ...drawing.varied(variants)];
 }
 
 /**
@@ -51,25 +86,20 @@ const KAMEEZ: GarmentDrawing = {
       'C112,31 104,32 100,32 Z',
   ],
   detail: [
-    // Band collar — standing, not a lapel, and drawn as TWO halves meeting at
-    // the centre front, because that is where a kameez collar opens. One
-    // continuous arc over a dipped neckline closes into a lens and reads as a
-    // ring resting on the shoulders rather than as a collar.
-    'M84,29 L85,21 C90,18 96,17 100,17 L100,31',
-    'M116,29 L115,21 C110,18 104,17 100,17 L100,31',
     // Placket, closed, with its buttons.
     'M94,31 L94,96 L106,96 L106,31',
     'M100,44 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0',
     'M100,57 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0',
     'M100,70 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0',
     'M100,83 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0',
-    // Cuff seams, parallel to the cuff edge rather than horizontal.
-    'M33,136 L50,146',
-    'M167,136 L150,146',
     // Side slits, drawn just inside the side seam.
     'M63,194 L60,232',
     'M137,194 L140,232',
   ],
+  // The neck and the sleeve ends follow the customer's choices.
+  varied: kameezVaried,
+  // Round the chest, an inch below the underarm.
+  emblem: { cx: 100, cy: 90, rx: 37, ry: 9 },
 };
 
 /**
@@ -115,7 +145,8 @@ const SHALWAR: GarmentDrawing = {
     'M97,38 C95,50 93,58 92,68',
     'M103,38 C105,50 107,58 108,68',
     // The gathers falling out of the band. Without them the belt reads as a
-    // stiff trouser waistband and gets measured stretched flat.
+    // stiff trouser waistband, which a nala shalwar's is not: its nefa gathers on
+    // the cord, and is measured loosened and spread flat.
     'M36,38 C35,48 34,58 33,68',
     'M50,38 C49,48 48,58 47,70',
     'M64,38 C63,48 62,58 61,70',
@@ -135,6 +166,8 @@ const SHALWAR: GarmentDrawing = {
     'M23,232 L51,232',
     'M149,232 L177,232',
   ],
+  // Round the waistband.
+  emblem: { cx: 100, cy: 29, rx: 82, ry: 9 },
 };
 
 /**
@@ -170,9 +203,11 @@ const WAISTCOAT: GarmentDrawing = {
     'M64,136 L82,134',
     'M118,134 L136,136',
   ],
+  // Round the chest, just below the armholes.
+  emblem: { cx: 100, cy: 94, rx: 53, ry: 10 },
 };
 
-export const DRAWINGS: Readonly<Record<GarmentId, GarmentDrawing>> = {
+export const DRAWINGS: Readonly<Record<DrawingId, GarmentDrawing>> = {
   KAMEEZ,
   SHALWAR,
   WAISTCOAT,

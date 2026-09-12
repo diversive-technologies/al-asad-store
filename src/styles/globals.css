@@ -2142,7 +2142,7 @@ ellipse.gf-mark--active {
 /*
  * A11Y-01 — the marks are real buttons over the drawing, not clickable paths.
  * The hit area is 2.25rem, which clears a touch target while the dot it draws
- * stays small enough that thirteen of them do not read as a rash.
+ * stays small enough that a dozen of them do not read as a rash.
  */
 .gf-hotspot {
   position: absolute;
@@ -2162,8 +2162,10 @@ ellipse.gf-mark--active {
   transform: translate(-50%, -50%);
 }
 
+/* The store's own ring. Gold on the stage's light ground measures about 1.7:1,
+   under the 3:1 a focus indicator needs (A11Y-07). */
 .gf-hotspot:focus-visible {
-  outline: 2px solid var(--color-accent-400);
+  outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
 }
 
@@ -2206,9 +2208,9 @@ ellipse.gf-mark--active {
   border-radius: var(--radius-pill);
   background-color: var(--color-accent-500);
   color: var(--color-on-accent);
-  font-size: 0.625rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  /* Sentence case, as served: the labels carry protected terms — "Hem (Ghera)",
+     "Sleeve opening (Mohri)" — and I18N-09 keeps those out of re-casing. */
+  font-size: 0.6875rem;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -2243,10 +2245,175 @@ ellipse.gf-mark--active {
 }
 
 /* The radio inside is `sr-only`, so the ring has to be borrowed onto the label
-   that is actually visible. */
+   that is actually visible — the store's ring, as on every other control. */
 .mm-tab:has(:focus-visible) {
-  outline: 2px solid var(--color-accent-400);
+  outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
+}
+
+/*
+ * Which style is being measured for. Between the lead and the form, because the
+ * style decides which fields the form asks for.
+ *
+ * An underlined strip, deliberately NOT the garment tabs' pills: those change
+ * which drawing is shown, this changes which fields are asked for, and the same
+ * pill for both put "Waistcoat" beside "Waistcoat suit" as if they were one
+ * control. The current style is marked by weight, colour and a jade rule — jade
+ * because the rule has to carry the state at 3:1, which gold on this ground does
+ * not. Links, so the global focus ring applies as it is.
+ */
+.mm-styles {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-block-start: 2rem;
+}
+
+.mm-style-list {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1.5rem;
+  border-block-end: 1px solid var(--color-border);
+}
+
+.mm-style {
+  display: block;
+  /* A 2px rule sits on the strip's own 1px line rather than below it. */
+  margin-block-end: -1px;
+  padding-block: 0.6rem;
+  border-block-end: 2px solid transparent;
+  font-size: 0.875rem;
+  color: var(--color-fg-muted);
+  transition:
+    color 200ms ease,
+    border-color 200ms ease,
+    opacity 200ms ease;
+}
+
+.mm-style:hover {
+  color: var(--color-fg);
+}
+
+.mm-style[aria-current='page'] {
+  border-block-end-color: var(--color-brand-500);
+  color: var(--color-fg);
+  font-weight: 500;
+}
+
+/* The next list is on its way: the tap was heard. */
+.mm-style:has([data-pending]) {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-style {
+    transition: none;
+  }
+}
+
+/*
+ * The tailor's card path: the customer's own photo of the card can take the
+ * drawing's place. The wrapper takes the frame's role in the stage — it grows,
+ * and may shrink below its content — so the drawing inside it, or the photo,
+ * sizes exactly as the bare frame did.
+ */
+.mm-card-note {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  inline-size: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/*
+ * A figure the tailor's rules ask about. Quiet by construction: the words are the
+ * page's own ink, and the only mark is the studio's gold tape, unrolled down the
+ * reading-start edge. Gold as TEXT measures 2.29:1, so it never carries a word.
+ */
+.mm-field-note {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-block-start: 0.5rem;
+  padding-inline-start: 0.75rem;
+}
+
+/* The same tape as the fork and the bag nudge, stood on its end — one dash, one
+   place (`--measure-dash`, beside `measure-line`). */
+.mm-field-note::before {
+  content: '';
+  position: absolute;
+  inset-block: 0.125rem;
+  inset-inline-start: 0;
+  inline-size: 1px;
+  background-image: linear-gradient(to bottom, var(--measure-dash));
+  background-size: 1px var(--measure-period);
+  background-repeat: repeat-y;
+}
+
+/* What the field is DESCRIBED by — the words alone, never the two buttons. */
+.mm-field-note-words {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mm-field-note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.mm-field-note-action {
+  color: var(--color-fg);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  min-block-size: 2.25rem;
+  cursor: pointer;
+}
+
+.mm-review-kept {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-fg-muted);
+}
+
+/* The photo keeps a floor, so a phone with its keyboard up still shows a card
+   large enough to copy from; pressed, it doubles in width and the frame pans. */
+.mm-card-note-frame {
+  flex: 1 1 0;
+  min-block-size: 10rem;
+  inline-size: 100%;
+  overflow: auto;
+  border-radius: var(--radius-card);
+}
+
+.mm-card-note-zoom {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  cursor: zoom-in;
+}
+
+.mm-card-note-frame[data-zoomed] .mm-card-note-zoom {
+  inline-size: 200%;
+  block-size: auto;
+  cursor: zoom-out;
+}
+
+.mm-card-note-photo {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+
+.mm-card-note-frame[data-zoomed] .mm-card-note-photo {
+  block-size: auto;
 }
 
 .mm-scene-note {
@@ -2355,9 +2522,146 @@ ellipse.gf-mark--active {
   }
 }
 
+/* The selected value of a segmented choice. Gold alone measures about 2.3:1 on the
+   light surface, under the 3:1 a state indicator needs (A11Y-07), so it carries a
+   boundary in its own ink as well. */
 .mm-unit-on {
   background-color: var(--color-accent-500);
   color: var(--color-on-accent);
+  box-shadow: inset 0 0 0 1px var(--color-on-accent);
+}
+
+/*
+ * The review before a save, and the confirmation after it — every figure twice,
+ * as typed and as it will be kept. The kept column carries the weight, in the
+ * foreground and in tabular figures, because it is the number the cloth is cut
+ * to; the typed one stays quiet beside it.
+ */
+.mm-review {
+  container: mm-review / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-block-start: 2.5rem;
+}
+
+.mm-review-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.mm-review-scroll {
+  overflow-x: auto;
+}
+
+/* One table per garment, so each would size its own columns and the kept figures
+   would sit at a different offset in each. A FIXED layout with the widths set here
+   lines every garment's columns up as one. */
+.mm-review-table {
+  inline-size: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mm-review-table thead th:nth-child(1) {
+  inline-size: 34%;
+}
+
+.mm-review-table thead th:nth-child(2),
+.mm-review-table thead th:nth-child(3) {
+  inline-size: 26%;
+}
+
+.mm-review-table caption {
+  padding-block-end: 0.4rem;
+  text-align: start;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-fg-muted);
+}
+
+.mm-review-table :is(th, td) {
+  padding-block: 0.55rem;
+  padding-inline-end: 0.75rem;
+  border-block-end: 1px solid var(--color-border);
+  text-align: start;
+  vertical-align: baseline;
+}
+
+.mm-review-table thead th {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--color-fg-muted);
+}
+
+.mm-review-table tbody th {
+  font-weight: 400;
+  color: var(--color-fg);
+}
+
+.mm-review-table td {
+  white-space: nowrap;
+  color: var(--color-fg-muted);
+}
+
+.mm-review-table .mm-review-recorded {
+  font-weight: 500;
+  color: var(--color-fg);
+}
+
+.mm-review-change {
+  padding-block: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-fg-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.mm-review-change:hover:not(:disabled) {
+  color: var(--color-fg);
+}
+
+.mm-review-change:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/*
+ * On a narrow panel four columns leave the measurement's name a few characters
+ * wide. The typed figure — the quieter one — moves under the name instead, and
+ * its column goes. Both copies are in the markup; exactly one is ever displayed,
+ * so a screen reader meets it once. A CONTAINER query, because what decides it is
+ * the panel's width, not the screen's.
+ */
+.mm-review-typed-inline {
+  display: none;
+}
+
+@container mm-review (max-width: 26rem) {
+  .mm-review-table .mm-review-typed {
+    display: none;
+  }
+
+  .mm-review-table thead th:nth-child(1) {
+    inline-size: 46%;
+  }
+
+  .mm-review-table thead th:nth-child(3) {
+    inline-size: 34%;
+  }
+
+  .mm-review-typed-inline {
+    display: block;
+    margin-block-start: 0.15rem;
+    font-size: 0.75rem;
+    color: var(--color-fg-muted);
+    white-space: nowrap;
+  }
 }
 
 @media (min-width: 64rem) {
@@ -2465,7 +2769,17 @@ ellipse.gf-mark--active {
      the tape goes; the mark's shape and the "across → around" readout carry the
      doubling, so the generic line under the drawing is spare too. */
   .mm-scene[data-focused]
-    :is(.mm-crumbs, .mm-title, .mm-lead, .mm-tabs, .mm-scene-name, .mm-scene-how),
+    :is(
+      .mm-crumbs,
+      .mm-title,
+      .mm-lead,
+      .mm-styles,
+      .mm-tabs,
+      .mm-scene-name,
+      .mm-scene-how,
+      .mm-choices,
+      .mm-card-note-controls
+    ),
   .mm-scene[data-focused] form > :not(fieldset, .mm-stepper),
   .mm-scene[data-focused] .mm-scene-caption:not(:has(.mm-scene-readout)) {
     display: none;
@@ -2494,6 +2808,13 @@ ellipse.gf-mark--active {
     clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
+  }
+
+  /* A row that is not the active one is hidden but still in the tab order, so its
+     note's buttons would be reachable by Shift+Tab and invisible — the trap the
+     finishing choices had. The note's words stay for the screen reader. */
+  .mm-scene[data-focused] .mm-field:not([data-active]) .mm-field-note-actions {
+    display: none;
   }
 
   .mm-scene[data-focused] .mm-stepper {
@@ -2548,13 +2869,23 @@ ellipse.gf-mark--active {
  * reason: a dashed border's rhythm belongs to the browser and its phase cannot be
  * moved, and the phase is the one authored moment these surfaces get.
  */
+/*
+ * THE STUDIO'S TAPE, as paint: 4 on, 3.5 off — `ellipse.gf-mark`'s own
+ * `stroke-dasharray`, in px. Every surface that draws it reads these, so the
+ * buy-box fork, the bag nudge and the note under a field cannot drift apart
+ * (PD-01). Unlayered, beside the utility that first used it.
+ */
+:root {
+  --measure-period: 7.5px;
+  --measure-dash: var(--color-accent-500) 0 4px, transparent 4px var(--measure-period);
+}
+
 @utility measure-line {
   display: block;
   block-size: 1px;
   inline-size: 100%;
-  /* 4 on, 3.5 off - `ellipse.gf-mark`'s own `stroke-dasharray`, in px. */
-  background-image: linear-gradient(to right, var(--color-accent-500) 0 4px, transparent 4px 7.5px);
-  background-size: 7.5px 1px;
+  background-image: linear-gradient(to right, var(--measure-dash));
+  background-size: var(--measure-period) 1px;
   background-repeat: repeat-x;
   /*
    * Two dash periods - `@keyframes gf-tape`'s own `-15`. It travels toward the

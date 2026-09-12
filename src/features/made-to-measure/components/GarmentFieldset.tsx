@@ -1,82 +1,75 @@
 'use client';
 
-import type { UseFormReturn } from 'react-hook-form';
+import type { ReactNode } from 'react';
 
-import type { Locale } from '@/i18n/locales';
-import type { Messages } from '@/i18n/messages/en';
-import { formatNumber, formatTemplate } from '@/lib/utils/format';
+import { useMessages } from '@/i18n/use-messages';
+import type { MeasurementPointId } from '@/lib/domain/ids';
+import { formatTemplate } from '@/lib/utils/format';
 
-import {
-  enteredFromStored,
-  measurementsFor,
-  type GarmentId,
-  type MeasurementId,
-} from '../lib/garments';
-import { fromMm, type Unit } from '../lib/units';
-import type { MeasurementEntry } from '../schemas/measurement.schema';
-import { MeasurementField } from './MeasurementField';
+import type { UseMeasurementFormResult } from '../hooks/use-measurement-form';
+import type { StudioPiece, StudioPoint } from '../lib/studio-set';
+import { unitSuffix } from '../lib/units';
+import { MeasurementField, type FieldStatus } from './MeasurementField';
+
+export interface GarmentFieldsetProps {
+  readonly piece: StudioPiece;
+  /** This piece's points as asked, in the served order. */
+  readonly points: readonly StudioPoint[];
+  readonly measuring: UseMeasurementFormResult;
+  readonly activeId: MeasurementPointId | null;
+  readonly onActivate: (id: MeasurementPointId) => void;
+  /** What the server said about each field — see `formView`. */
+  readonly statusOf: (id: MeasurementPointId) => FieldStatus;
+  /** The garment's finishing choices, drawn under its legend and above its fields. */
+  readonly children?: ReactNode;
+}
 
 /**
  * One garment's measurements, grouped under its own legend.
  *
- * The grouping is not decoration: thirteen fields in one list gives no clue
- * which garment to fetch off the shelf next, and a `<fieldset>` is what tells a
- * screen reader the same thing the heading tells everyone else (A11Y-11).
+ * The grouping is not decoration: every field in one list gives no clue which
+ * garment to fetch off the shelf next, and a `<fieldset>` is what tells a screen
+ * reader the same thing the heading tells everyone else (A11Y-11). The legend is
+ * the served garment name, shown as written — I18N-09 keeps a protected term out
+ * of re-casing, so it is not set in capitals.
  */
 export function GarmentFieldset({
-  garment,
-  form,
-  unit,
-  unitSuffix,
+  piece,
+  points,
+  measuring,
   activeId,
   onActivate,
-  messages,
-  locale,
-}: {
-  readonly garment: GarmentId;
-  readonly form: UseFormReturn<MeasurementEntry>;
-  readonly unit: Unit;
-  readonly unitSuffix: string;
-  readonly activeId: MeasurementId | null;
-  readonly onActivate: (id: MeasurementId) => void;
-  readonly messages: Messages;
-  readonly locale: Locale;
-}) {
-  const t = messages.madeToMeasure;
+  statusOf,
+  children,
+}: GarmentFieldsetProps) {
+  const t = useMessages().madeToMeasure;
+  const suffix = unitSuffix(measuring.unit, t);
 
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="text-fg-muted border-border mb-3 w-full border-b pb-2 text-xs tracking-[0.18em] uppercase">
-        {t.garments[garment]}
+      <legend className="text-fg-muted border-border mb-3 w-full border-b pb-2 text-xs font-medium">
+        {piece.label}
       </legend>
 
-      {measurementsFor(garment).map((measurement) => (
+      {children}
+
+      {points.map((point) => (
         <MeasurementField
-          key={measurement.id}
-          id={measurement.id}
-          label={t.points[measurement.id].label}
-          instruction={t.points[measurement.id].instruction}
-          unitSuffix={unitSuffix}
-          /* The bounds shown are the ENTERED figure, so a ring's stored
-             circumference is halved back before it reaches the customer. */
-          error={
-            form.formState.errors[measurement.id] === undefined
-              ? undefined
-              : formatTemplate(t.outOfRange, {
-                  min: formatNumber(
-                    fromMm(enteredFromStored(measurement, measurement.minMm), unit),
-                    locale,
-                  ),
-                  max: formatNumber(
-                    fromMm(enteredFromStored(measurement, measurement.maxMm), unit),
-                    locale,
-                  ),
-                })
-          }
-          isActive={measurement.id === activeId}
-          registration={form.register(measurement.id)}
+          key={point.id}
+          id={point.id}
+          text={{
+            /* I18N-06 — one parameterised message, never a label plus a suffix. */
+            label: point.required
+              ? point.label
+              : formatTemplate(t.optionalLabel, { label: point.label }),
+            instruction: point.instruction,
+            unitSuffix: suffix,
+          }}
+          status={statusOf(point.id)}
+          isActive={point.id === activeId}
+          registration={measuring.form.register(point.id)}
           onActivate={() => {
-            onActivate(measurement.id);
+            onActivate(point.id);
           }}
         />
       ))}

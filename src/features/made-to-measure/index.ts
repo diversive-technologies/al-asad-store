@@ -1,11 +1,15 @@
 /**
- * §34 Made-to-Measure.
+ * §34 Made-to-Measure — the SERVER-facing barrel.
  *
- * One barrel is enough: nothing here reaches `next/headers`, so a Client
- * Component can import it without the build failure STRUCT-06 exists to prevent.
+ * `StitchedScreen` and the profile calls read and write the backend through
+ * `apiRequest`, which is server-only, so a Client Component must not import this
+ * file. The static, client-safe surface is `contract.ts` (STRUCT-06).
  */
-export { MeasurementStudio } from './components/MeasurementStudio';
-export { GARMENTS, MEASUREMENTS, measurementsFor } from './lib/garments';
-export type { GarmentId, Measurement, MeasurementId } from './lib/garments';
-export { DEFAULT_UNIT, fromMm, toMm, UNITS } from './lib/units';
-export type { Unit } from './lib/units';
+export { StitchedScreen } from './components/StitchedScreen';
+export { StudioSkeleton } from './components/StudioSkeleton';
+export { requestedSource, requestedStyle } from './lib/studio-params';
+
+// §34.4 `validate` and `saveProfile`, for the BFF routes.
+export { checkMeasurements } from './api/profile-server';
+export { saveForCustomer } from './api/save-for-customer';
+export { measurementSubmissionSchema } from './schemas/profile.schema';

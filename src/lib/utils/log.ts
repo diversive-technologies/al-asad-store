@@ -29,3 +29,13 @@ export function logApiError(context: string, error: ApiError): void {
     }
   }
 }
+
+/**
+ * ERR-10 — a problem found in content that PARSED but cannot be used as it
+ * stands: a served mark that falls off its drawing, a point with no wording.
+ * Logged once by the boundary that decided what to render instead. `detail`
+ * names ids and reasons only — never a customer's data (SEC-10).
+ */
+export function logContentIssue(context: string, detail: string): void {
+  console.error(`[${context}] ${detail}`);
+}

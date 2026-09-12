@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { fabricIdSchema, pieceIdSchema, productIdSchema, sizeIdSchema } from '@/lib/domain/ids';
+import { styleOfferSchema, type StyleOffer } from '@/lib/domain/style-offer';
 
 import { fabricCalculatorOfferSchema } from './fabric-calculator.schema';
 import { productPricingSchema, productTypeSchema } from './product-card.schema';
@@ -108,14 +109,14 @@ export type ModelInfo = z.infer<typeof modelInfoSchema>;
  * and an interface that inferred it from the pieces would be a second
  * implementation of it (DATA-13).
  *
- * The lead time travels with the offer because it is the one fact that makes the
- * offer worth taking, and it is the workshop's number, not the storefront's.
+ * It is the studio's own style offer (A2-4) — the style this product is cut as,
+ * which decides the list the fork opens, and that style's lead time — so ONE
+ * schema, in the domain layer, defines both. The value is carried here, and the
+ * read is tagged so an edit to the offer invalidates it (`fetch-product.ts`).
  */
-export const stitchingOfferSchema = z.object({
-  leadTimeDays: z.number().int().positive(),
-});
+export const stitchingOfferSchema = styleOfferSchema;
 
-export type StitchingOffer = z.infer<typeof stitchingOfferSchema>;
+export type StitchingOffer = StyleOffer;
 
 const productDetailShape = z.object({
   id: productIdSchema,

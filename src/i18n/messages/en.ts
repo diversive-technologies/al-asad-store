@@ -435,103 +435,147 @@ export const en = {
     photoEmpty: 'Please choose a photo first.',
   },
   /**
-   * §34 Made-to-Measure. The customer measures a GARMENT they already own, so
-   * every instruction says what to do with a piece of cloth on a table — not
-   * what to do with their own body. §34.6 keeps the wording beside the field as
-   * well as on the drawing, because the drawing is an enhancement and not
-   * everyone can see it.
+   * §34 Made-to-Measure — the studio's own interface copy.
+   *
+   * The names of the styles and garments, and every point's label and
+   * instruction, are NOT here: the measurement list is served content, and its
+   * words come from Localisation by id (§34.3), so a point the tailor adds needs
+   * no release. See `measurement-copy.schema.ts`.
    */
   madeToMeasure: {
     pageTitle: 'Stitched to your size',
     pageLead:
-      'Measure a kameez you already own, and we will cut your next one to match. It is easier than measuring yourself, and it copies a fit you have already approved.',
+      'Measure clothes you already own, laid flat. It is easier than measuring yourself, and it copies a fit you have already approved.',
     figureHint:
       'Choose a measurement below, or tap a mark on the drawing, and we will show you where the tape goes.',
     garmentLabel: 'Garment',
-    garments: {
-      KAMEEZ: 'Kameez',
-      SHALWAR: 'Shalwar',
-      WAISTCOAT: 'Waistcoat',
-    },
+    styleLabel: 'What are you having stitched?',
+    styleHint: 'Switching keeps the figures you have already typed.',
+    styleNow: '{style}: {count} measurements to take.',
+    styleNowPath: '{style}, {path}: {count} measurements to take.',
+    styleFallback:
+      'We do not stitch that style at the moment, so these are the measurements for {style}.',
+    unavailable:
+      'The measuring guide could not be loaded. You can try again, or shop in standard sizes meanwhile.',
+    browseStandard: 'Shop standard sizes',
+    pageLeadCard: 'Copy the figures from your tailor’s card or note, exactly as they are written.',
+    sourceLabel: 'How are you measuring?',
+    sourceGarment: 'Copy a garment I own',
+    sourceCard: 'Copy my tailor’s card',
+    sourceHint: 'Figures typed on one stay there; they are not copied to the other.',
+    sourceFallback: '“{requested}” is not offered for this style yet, so this is “{served}”.',
+    cardHint: 'Type each figure exactly as the card writes it — 19½ as 19.5. We do any doubling.',
+    halfWidthHint: 'Measure half the width, as the line shows. We double it.',
+    readoutHalf: '{half} half → {whole} whole',
+    readoutHalfTyped: '{value} half',
+    noteChoose: 'Choose a photo of your card',
+    noteReplace: 'Choose another photo',
+    notePrivacy: 'The photo stays on this device. It is never sent to us.',
+    noteViewLabel: 'Show',
+    noteViewNote: 'Your card',
+    noteViewDrawing: 'Drawing',
+    noteAlt: 'Your tailor’s card',
+    noteUnreadable:
+      'This photo cannot be shown here. Try a JPEG or PNG — a screenshot of it works too.',
+    noteZoomIn: 'Enlarge the photo',
     ringHint: 'Measure straight across the garment laid flat. We double it.',
     spanHint: 'Measure in a straight line, without pulling the tape tight.',
+    fullGirthHint: 'Read the whole length of the tape. Do not double it.',
     unitLabel: 'Measure in',
     unitInches: 'Inches',
     unitCentimetres: 'Centimetres',
     unitShortInches: 'in',
     unitShortCentimetres: 'cm',
-    dragHint: 'Tap a mark',
     readout: '{value} {unit}',
     readoutRing: '{across} across → {around} around',
-    progress: '{done} of {total} measured',
+    readoutAround: '{value} around',
+    readoutAcross: '{value} across',
+    progress: '{done} of {total} required measurements taken',
+    optionalLabel: '{label} (optional)',
+    choicesHint:
+      'Choose how the garment you are measuring is finished. The measurements below follow your choices, and anything you have typed is kept.',
+    choicesHintCard:
+      'Choose how your garment is to be finished. It does not change what the card asks for.',
     errorSummaryTitle: 'Check these measurements',
-    outOfRange: 'Enter a value between {min} and {max}.',
+    outOfRange: 'Enter a value between {min} and {max} {unit}.',
     cutNotice:
-      'Cloth is cut to these numbers, so a stitched order cannot be returned or exchanged. We will show you every measurement again before you pay.',
-    saveCta: 'Save my measurements',
-    savedNotice: 'Measurements saved. You can use them on anything we stitch.',
+      'When you order stitching, the cloth is cut to these numbers, so a stitched order cannot be returned or exchanged.',
+    saveCta: 'Check my measurements',
+    checking: 'Checking…',
+    storeUnreachable:
+      'We could not reach the store. Your figures are still here — please try again.',
+    checkStale:
+      'The measuring guide has changed since you opened this page. The figures you typed will stay.',
+    loadNewGuide: 'Load the new guide',
+    findingRequired: 'This measurement is needed.',
+    findingUnreadable: 'Type the figure in numbers, such as 19.5.',
+    findingOrder: 'This does not agree with the {related}. Measure this again, and the {related} too.',
+    findingOrderBelow:
+      'This came out smaller than the {related}, which cannot be right. Measure this again, and the {related} too.',
+    findingOrderAbove:
+      'This came out larger than the {related}, which cannot be right. Measure this again, and the {related} too.',
+    findingDeviation: 'This is unusual beside your other figures. Measure it again.',
+    findingOrderCard: 'This does not agree with the {related}. Check both against the card.',
+    findingOrderBelowCard:
+      'This came out smaller than the {related}, which cannot be right. Check both against the card.',
+    findingOrderAboveCard:
+      'This came out larger than the {related}, which cannot be right. Check both against the card.',
+    findingDeviationCard:
+      'This is unusual beside your other figures. Check it against the card.',
+    noteSmaller:
+      'This is smaller than usual beside your {related}. Cloth cut too small cannot be let out.',
+    noteLarger: 'This is larger than usual beside your {related}.',
+    noteUnusual: 'This is unusual beside your other figures.',
+    noteSmallerCard:
+      'This is smaller than usual beside the {related} on the card. Cloth cut too small cannot be let out.',
+    noteLargerCard: 'This is larger than usual beside the {related} on the card.',
+    noteUnusualCard: 'This is unusual beside the card’s other figures.',
+    noteAsk: 'Measure it again, or tell us to keep your number.',
+    noteAskCard: 'Check it against the card, or tell us to keep the card’s figure.',
+    noteMeasureAgain: 'Measure again',
+    noteCheckCard: 'Check the card again',
+    noteKeep: 'Keep my number',
+    noteKeepCard: 'Keep the card’s figure',
+    noteKept: 'You are keeping this number. We note that you checked it.',
+    noteKeptCard:
+      'You are keeping the card’s figure. We note that you checked it against the card.',
+    noteSummaryTitle: 'Worth a second look',
+    noteSummaryLead: 'Each of these has a note under it. Measure it again, or keep your number.',
+    noteSummaryLeadCard:
+      'Each of these has a note under it. Check it against the card, or keep the card’s figure.',
+    noteSummaryDone: 'Every note is answered. Check your measurements again to see the review.',
+    findingLooksWhole:
+      'This looks like the whole way round, but this one is measured across the garment laid flat — half of it. Measure across instead.',
+    findingLooksWholeCard:
+      'This looks like a whole figure, but we read this one off the card as half. If your card gives the whole, halve it here.',
+    findingLooksHalf:
+      'This looks like half a figure, but this one is measured whole. Check the tape again.',
+    findingLooksHalfCard:
+      'This looks like half a figure, but we read this one off the card as a whole. If your card gives half, double it here.',
+    reviewTitle: 'Check them before we save them',
+    reviewLead:
+      'Each figure as you typed it, and as it will be kept. The kept figure is the one a tailor works from.',
+    reviewColumnPoint: 'Measurement',
+    reviewColumnTyped: 'As you typed it',
+    reviewColumnRecorded: 'As it will be kept',
+    reviewChange: 'Change',
+    reviewChangeLabel: 'Change {label}',
+    reviewKeptLead: 'Figures you chose to keep after a note are marked below.',
+    reviewKept: 'You checked this and kept it.',
+    saveProfileCta: 'Save my measurements',
+    saving: 'Saving…',
+    backToForm: 'Change something',
+    savedTitle: 'Your measurements are saved',
+    savedFirst: 'We have your {style} measurements.',
+    savedReplaced: 'These replace the {style} measurements you saved before.',
+    savedAccount: 'They are kept with your account.',
+    savedDevice: 'They are saved for this browser only, and are not linked to an account.',
+    savedOnward: 'Browse the collection',
+    measureAgain: 'Change and save again',
     stepPrevious: 'Previous',
     stepNext: 'Next',
     stepDone: 'Done',
     stepPosition: '{current} of {total}',
-    points: {
-      kameezShoulder: {
-        label: 'Shoulder',
-        instruction:
-          'Lay the kameez flat, face up. Measure across the back, from one shoulder seam to the other.',
-      },
-      kameezChest: {
-        label: 'Chest',
-        instruction:
-          'Measure straight across the chest, an inch below the armhole, with the kameez flat.',
-      },
-      kameezLength: {
-        label: 'Kameez length',
-        instruction: 'From the highest point of the shoulder, straight down to the hem.',
-      },
-      kameezSleeve: {
-        label: 'Sleeve length',
-        instruction:
-          'From the shoulder seam, along the top of the sleeve, to the outer edge of the cuff.',
-      },
-      kameezCuff: {
-        label: 'Cuff',
-        instruction: 'Measure across the cuff opening with it fastened.',
-      },
-      kameezBottom: {
-        label: 'Bottom',
-        instruction: 'Measure across the hem at its widest, with the kameez lying flat.',
-      },
-      shalwarWaist: {
-        label: 'Waist',
-        instruction: 'Measure across the waistband without stretching it, with the shalwar flat.',
-      },
-      shalwarLength: {
-        label: 'Shalwar length',
-        instruction: 'From the top of the waistband, straight down to the hem.',
-      },
-      shalwarThigh: {
-        label: 'Thigh',
-        instruction: 'Measure across one leg at its widest, just below the crotch seam.',
-      },
-      shalwarPaincha: {
-        label: 'Paincha',
-        instruction: 'Measure across the opening at the ankle.',
-      },
-      waistcoatShoulder: {
-        label: 'Shoulder',
-        instruction: 'Across the back, from one shoulder seam to the other.',
-      },
-      waistcoatChest: {
-        label: 'Chest',
-        instruction:
-          'Measure across the chest just below the armholes, with the waistcoat fastened and flat.',
-      },
-      waistcoatLength: {
-        label: 'Waistcoat length',
-        instruction: 'From the highest point of the shoulder, straight down to the hem.',
-      },
-    },
   },
   errors: {
     network: 'We could not reach the store. Please try again.',

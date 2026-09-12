@@ -1,10 +1,13 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 
-import { Field } from '@/components/ui/field';
+import { Field, type FieldAria } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils/cn';
+
+import { fieldNoteId, fieldRowId } from '../lib/field-row';
 
 /** How long after a press the focus it causes still counts as the press's own. */
 const PRESS_WINDOW_MS = 1000;
@@ -47,25 +50,42 @@ function spendPress(): boolean {
   return fromPress;
 }
 
-export interface MeasurementFieldProps {
-  readonly id: string;
+/** What the server said about this field: a refusal, a quiet note, or neither. */
+export interface FieldStatus {
+  readonly error: string | undefined;
+  readonly note: ReactNode | undefined;
+}
+
+export interface MeasurementFieldText {
   readonly label: string;
   /** Where the tape goes, in words. §34.6: the figure is an enhancement, and a
    *  customer who cannot see it must still be able to complete the form. */
   readonly instruction: string;
   readonly unitSuffix: string;
-  readonly error: string | undefined;
+}
+
+export interface MeasurementFieldProps {
+  readonly id: string;
+  readonly text: MeasurementFieldText;
+  readonly status: FieldStatus;
   readonly isActive: boolean;
   readonly registration: UseFormRegisterReturn;
   readonly onActivate: () => void;
 }
 
+/* The note describes the field as much as the hint does, so the input names it —
+   but never as an error: `aria-invalid` stays the refusal's alone. */
+function describedBy(aria: FieldAria, id: string, hasNote: boolean): string | undefined {
+  const ids = [aria['aria-describedby'], hasNote ? fieldNoteId(id) : undefined].filter(
+    (value): value is string => value !== undefined,
+  );
+  return ids.length === 0 ? undefined : ids.join(' ');
+}
+
 export function MeasurementField({
   id,
-  label,
-  instruction,
-  unitSuffix,
-  error,
+  text,
+  status,
   isActive,
   registration,
   onActivate,
@@ -80,7 +100,7 @@ export function MeasurementField({
    */
   return (
     <div
-      id={`${id}-field`}
+      id={fieldRowId(id)}
       /* Focusable from script only, so leaving focus mode can hand focus back to
          this ROW: its input would reopen the keyboard, and focus mode with it. */
       tabIndex={-1}
@@ -94,24 +114,17 @@ export function MeasurementField({
         /*
          * The other half of the sync: the field says which measurement the
          * figure is showing, so the two never disagree about where you are.
-         *
-         * A tint and nothing else. An accent border down one edge was a THIRD
-         * marker for one state, on top of this and the input's own focus ring —
-         * and the input is always focused when a field is active, because
-         * clicking the figure calls `setFocus`. Tint mixed from the brand token
-         * rather than the 50 step: `brand-50` is a near-white jade, so at any
-         * useful opacity it reads as a hot bar over a dark surface while staying
-         * invisible over a light one.
          */
         isActive ? 'bg-brand-500/10' : 'bg-transparent',
       )}
     >
-      <Field id={id} label={label} hint={instruction} error={error}>
+      <Field id={id} label={text.label} hint={text.instruction} error={status.error}>
         {(aria) => (
           <div className="relative">
             <Input
               {...aria}
               {...registration}
+              aria-describedby={describedBy(aria, id, status.note !== undefined)}
               onFocus={() => {
                 if (!spendPress()) onActivate();
               }}
@@ -127,11 +140,13 @@ export function MeasurementField({
               aria-hidden="true"
               className="text-fg-muted pointer-events-none absolute inset-y-0 end-3 grid place-items-center text-xs"
             >
-              {unitSuffix}
+              {text.unitSuffix}
             </span>
           </div>
         )}
       </Field>
+
+      {status.note}
     </div>
   );
 }
