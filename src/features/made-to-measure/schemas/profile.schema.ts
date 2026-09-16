@@ -59,19 +59,17 @@ export const measurementSubmissionSchema = z.object({
     .array(typedPointEntrySchema)
     .min(1)
     .max(64)
-    .refine(
-      (entries) => new Set(entries.map((entry) => entry.pointId)).size === entries.length,
-      { error: 'A point is sent twice.' },
-    ),
+    .refine((entries) => new Set(entries.map((entry) => entry.pointId)).size === entries.length, {
+      error: 'A point is sent twice.',
+    }),
   /* Every choice in play, defaults included, so the server asks for exactly the
      points the page asked for — a cuff only with a cuff. */
   preferences: z
     .array(preferenceSchema)
     .max(32)
-    .refine(
-      (choices) => new Set(choices.map((choice) => choice.group)).size === choices.length,
-      { error: 'A choice is sent twice.' },
-    ),
+    .refine((choices) => new Set(choices.map((choice) => choice.group)).size === choices.length, {
+      error: 'A choice is sent twice.',
+    }),
   /* Each figure the customer chose to keep against a rule that asked about it
      (A2-5). One answer per rule and point: a second would say nothing new, and
      the server counts an answer only against a finding it actually raised. */
@@ -79,35 +77,35 @@ export const measurementSubmissionSchema = z.object({
     .array(acknowledgementSchema)
     .max(64)
     .refine(
-      (kept) =>
-        new Set(kept.map((row) => `${row.ruleId}|${row.pointId}`)).size === kept.length,
+      (kept) => new Set(kept.map((row) => `${row.ruleId}|${row.pointId}`)).size === kept.length,
       { error: 'A finding is answered twice.' },
     ),
 });
 
-export const findingSchema = z.object({
-  /** Null for a finding about the whole list, such as a version no longer current. */
-  pointId: measurementPointIdSchema.nullable(),
-  /** The rule that found it, for a rule; null for a range or a missing figure. */
-  ruleId: ruleIdSchema.nullable(),
-  severity: z.enum(['REFUSED', 'CONFIRM']),
-  reason: z.enum([
-    'OUT_OF_RANGE',
-    'UNREADABLE',
-    'REQUIRED',
-    'ORDER',
-    'DEVIATION',
-    'UNKNOWN_POINT',
-    'POINT_NOT_ASKED',
-    'OPTION_UNKNOWN',
-    'OPTION_NOT_APPLICABLE',
-    'SET_VERSION_UNKNOWN',
-    'SET_VERSION_SUPERSEDED',
-  ]),
-  relatedPoints: z.array(measurementPointIdSchema),
-  direction: z.enum(['ABOVE', 'BELOW']).nullable(),
-  expectedMm: z.number().int().positive().nullable(),
-})
+export const findingSchema = z
+  .object({
+    /** Null for a finding about the whole list, such as a version no longer current. */
+    pointId: measurementPointIdSchema.nullable(),
+    /** The rule that found it, for a rule; null for a range or a missing figure. */
+    ruleId: ruleIdSchema.nullable(),
+    severity: z.enum(['REFUSED', 'CONFIRM']),
+    reason: z.enum([
+      'OUT_OF_RANGE',
+      'UNREADABLE',
+      'REQUIRED',
+      'ORDER',
+      'DEVIATION',
+      'UNKNOWN_POINT',
+      'POINT_NOT_ASKED',
+      'OPTION_UNKNOWN',
+      'OPTION_NOT_APPLICABLE',
+      'SET_VERSION_UNKNOWN',
+      'SET_VERSION_SUPERSEDED',
+    ]),
+    relatedPoints: z.array(measurementPointIdSchema),
+    direction: z.enum(['ABOVE', 'BELOW']).nullable(),
+    expectedMm: z.number().int().positive().nullable(),
+  })
   /* A confirmation is answered by keeping a figure against a rule, on a field, so
      one naming neither would stop every check with nothing to press. */
   .refine(
@@ -160,6 +158,20 @@ export const measurementProfileSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 
+/**
+ * What a READ of the profiles answers: the CURRENT profile for each style this
+ * owner has saved — the one no later save has superseded.
+ *
+ * Superseded versions are kept (D6) and deliberately NOT served. Nothing reads a
+ * previous version back yet, and putting a customer's older figures on the wire
+ * for a screen that does not show them is a cost with no reader. They are in the
+ * store when something needs them.
+ *
+ * SEC-02 — a ceiling, because the length of a served list is untrusted input. It
+ * is well above the styles the workshop offers.
+ */
+export const measurementProfilesSchema = z.array(measurementProfileSchema).max(32);
+
 export const saveOutcomeSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('SAVED'), profile: measurementProfileSchema }),
   z.object({ kind: z.literal('REJECTED'), findings: z.array(findingSchema).min(1) }),
@@ -174,4 +186,5 @@ export type MeasurementSubmission = z.infer<typeof measurementSubmissionSchema>;
 export type Finding = z.infer<typeof findingSchema>;
 export type MeasurementCheck = z.infer<typeof measurementCheckSchema>;
 export type MeasurementProfile = z.infer<typeof measurementProfileSchema>;
+export type MeasurementProfiles = z.infer<typeof measurementProfilesSchema>;
 export type SaveOutcome = z.infer<typeof saveOutcomeSchema>;

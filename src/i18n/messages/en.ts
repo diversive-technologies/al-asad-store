@@ -500,6 +500,18 @@ export const en = {
     outOfRange: 'Enter a value between {min} and {max} {unit}.',
     cutNotice:
       'When you order stitching, the cloth is cut to these numbers, so a stitched order cannot be returned or exchanged.',
+    /* A2-8 — measurements this customer has already saved, OFFERED rather than
+       applied. Nothing says "we have filled these in for you", because nothing is
+       filled in until the button is pressed: cloth is cut from these figures. */
+    reuseTitle: 'You have measurements saved',
+    reuseFrom: 'Saved on {date}, from your {style}.',
+    reuseBorrowed:
+      'Some of these were taken for a different garment. Every measurement is taken the same way, so they fit here too.',
+    reuseCta: 'Use my saved measurements',
+    reuseFilled:
+      '{count} measurements filled in from your saved {style}. Look at each one before you save.',
+    reuseSetAside:
+      'We could not carry over {points}. The range for that measurement has changed since you saved it, so please take it again.',
     saveCta: 'Check my measurements',
     checking: 'Checking…',
     storeUnreachable:
@@ -509,7 +521,8 @@ export const en = {
     loadNewGuide: 'Load the new guide',
     findingRequired: 'This measurement is needed.',
     findingUnreadable: 'Type the figure in numbers, such as 19.5.',
-    findingOrder: 'This does not agree with the {related}. Measure this again, and the {related} too.',
+    findingOrder:
+      'This does not agree with the {related}. Measure this again, and the {related} too.',
     findingOrderBelow:
       'This came out smaller than the {related}, which cannot be right. Measure this again, and the {related} too.',
     findingOrderAbove:
@@ -520,8 +533,7 @@ export const en = {
       'This came out smaller than the {related}, which cannot be right. Check both against the card.',
     findingOrderAboveCard:
       'This came out larger than the {related}, which cannot be right. Check both against the card.',
-    findingDeviationCard:
-      'This is unusual beside your other figures. Check it against the card.',
+    findingDeviationCard: 'This is unusual beside your other figures. Check it against the card.',
     noteSmaller:
       'This is smaller than usual beside your {related}. Cloth cut too small cannot be let out.',
     noteLarger: 'This is larger than usual beside your {related}.',

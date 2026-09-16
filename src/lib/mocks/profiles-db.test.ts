@@ -5,6 +5,7 @@ import { deriveMm } from './profile-rules';
 import { isMalformed } from './profile-submission';
 import {
   checkSubmission,
+  currentProfilesFor,
   isKnownOwner,
   issueDeviceToken,
   profileOwnerOf,
@@ -43,6 +44,29 @@ function submission(
     source: 'GARMENT_COPY',
     version: 1,
     entries,
+    preferences: [],
+    acknowledgedFindings: [],
+    ...overrides,
+  };
+}
+
+/* The same eight measurements off a tailor's card: its own point ids, and the
+   teera written as half the shoulder. */
+function cardSubmission(overrides: Partial<SubmissionRow> = {}): SubmissionRow {
+  return {
+    garmentStyle: 'KAMEEZ_SHALWAR',
+    source: 'TAILOR_CARD',
+    version: 1,
+    entries: [
+      { pointId: 'kameezCardLength', raw: '40', unit: 'IN' },
+      { pointId: 'kameezCardSleeve', raw: '24', unit: 'IN' },
+      { pointId: 'kameezCardTeera', raw: '9', unit: 'IN' },
+      { pointId: 'kameezCardNeck', raw: '15.5', unit: 'IN' },
+      { pointId: 'kameezCardChest', raw: '21', unit: 'IN' },
+      { pointId: 'kameezCardGhera', raw: '22', unit: 'IN' },
+      { pointId: 'shalwarCardLength', raw: '40', unit: 'IN' },
+      { pointId: 'shalwarCardPoncha', raw: '7.5', unit: 'IN' },
+    ],
     preferences: [],
     acknowledgedFindings: [],
     ...overrides,
@@ -276,6 +300,88 @@ describe('the finishing choices (A2-7, A2-8)', () => {
     const twice = [...plainSleeve, { group: 'sleeveFinish', value: 'CUFF' }];
     expect(isMalformed(submission({}, { preferences: twice }))).toBe(true);
     expect(isMalformed(submission())).toBe(false);
+  });
+});
+
+describe('reading a saved profile back', () => {
+  it('answers with the CURRENT version for each style, and none of the superseded ones', () => {
+    const owner = device(issueDeviceToken());
+    saveProfile(owner, submission());
+    /* The LENGTH, because no tailor's rule is written against it: a second save
+       that tripped a note would be refused, and this test is about versions. */
+    saveProfile(owner, submission({ kameezLength: { raw: '42', unit: 'IN' } }));
+
+    const current = currentProfilesFor(owner);
+    expect(current).toHaveLength(1);
+    expect(current[0]?.version).toBe(2);
+    expect(current[0]?.values.find((value) => value.pointId === 'kameezLength')?.enteredValue).toBe(
+      '42',
+    );
+  });
+
+  it('keeps one current profile per style, side by side', () => {
+    const owner = device(issueDeviceToken());
+    saveProfile(owner, submission());
+    // A kurta is one garment: sending a shalwar's figures to it would be refused.
+    saveProfile(
+      owner,
+      submission({ shalwarLength: null, shalwarPaincha: null }, { garmentStyle: 'KURTA' }),
+    );
+
+    expect(
+      currentProfilesFor(owner)
+        .map((profile) => profile.garmentStyle)
+        .sort(),
+    ).toEqual(['KAMEEZ_SHALWAR', 'KURTA']);
+  });
+
+  it('answers for one owner only, and never tells them who they are', () => {
+    const mine = device(issueDeviceToken());
+    const theirs = device(issueDeviceToken());
+    saveProfile(mine, submission());
+
+    expect(currentProfilesFor(theirs)).toEqual([]);
+    // The projection carries no owner key and no supersession bookkeeping.
+    const profile = currentProfilesFor(mine)[0];
+    expect(profile).toBeDefined();
+    expect(profile).not.toHaveProperty('ownerKey');
+    expect(profile).not.toHaveProperty('supersededBy');
+  });
+});
+
+describe('the two ways of measuring are kept apart', () => {
+  /* A card's points carry their own ids, so a card profile can only ever answer a
+     card list. Superseding across the paths therefore did not replace one set of
+     figures with another, it HID the first: the guest who copied a garment and
+     then tried their tailor's card lost the garment figures from every page that
+     could have offered them, including the waistcoat suit, which has no card list
+     to switch to. */
+  it('keeps a garment copy and a tailor card as two current profiles, not one', () => {
+    const owner = device(issueDeviceToken());
+    saveProfile(owner, submission());
+    saveProfile(owner, cardSubmission());
+
+    const current = currentProfilesFor(owner);
+    expect(
+      current
+        .map((profile) => `${profile.garmentStyle}/${profile.source} v${profile.version}`)
+        .sort(),
+    ).toEqual(['KAMEEZ_SHALWAR/GARMENT_COPY v1', 'KAMEEZ_SHALWAR/TAILOR_CARD v1']);
+  });
+
+  it('counts versions per path, so a save on one never renumbers the other', () => {
+    const owner = device(issueDeviceToken());
+    saveProfile(owner, submission());
+    saveProfile(owner, cardSubmission());
+    saveProfile(owner, submission({ kameezLength: { raw: '42', unit: 'IN' } }));
+
+    const current = currentProfilesFor(owner);
+    const garment = current.find((profile) => profile.source === 'GARMENT_COPY');
+    const card = current.find((profile) => profile.source === 'TAILOR_CARD');
+    expect(garment?.version).toBe(2);
+    expect(card?.version).toBe(1);
+    // The first garment save is superseded; the card save is untouched by it.
+    expect(current).toHaveLength(2);
   });
 });
 

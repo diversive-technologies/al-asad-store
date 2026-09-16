@@ -10,19 +10,24 @@ import { useFieldNotes } from '../hooks/use-field-notes';
 import { useFocusMode } from '../hooks/use-focus-mode';
 import { useMeasurementForm } from '../hooks/use-measurement-form';
 import { useProfileSave } from '../hooks/use-profile-save';
+import { useSavedMeasurements } from '../hooks/use-saved-measurements';
 import { useStudioChoices } from '../hooks/use-studio-choices';
 import { useStudioSelection } from '../hooks/use-studio-selection';
 import { fieldRowId } from '../lib/field-row';
 import { measuringOrder } from '../lib/measurement-set';
 import type { StudioSet, StyleChoice } from '../lib/studio-set';
 import { keyOf, type FindingsSink } from '../lib/studio-step';
+import type { MeasurementProfiles } from '../schemas/profile.schema';
 import { MeasurementPanel } from './MeasurementPanel';
 import { MeasurementStage } from './MeasurementStage';
+import { SavedMeasurements } from './SavedMeasurements';
 import { studioFlow } from './studio-flow';
 
 export interface MeasurementStudioProps {
   readonly studio: StudioSet;
   readonly choice: StyleChoice;
+  /** What this customer has already saved — empty for anyone who has saved nothing. */
+  readonly profiles: MeasurementProfiles;
   readonly locale: Locale;
 }
 
@@ -39,7 +44,7 @@ export interface MeasurementStudioProps {
  * is never counted, stepped to or sent with a plain sleeve; a unit switch alone
  * sees the whole served list, so a figure set aside stays one its field accepts.
  */
-export function MeasurementStudio({ studio, choice, locale }: MeasurementStudioProps) {
+export function MeasurementStudio({ studio, choice, profiles, locale }: MeasurementStudioProps) {
   const choices = useStudioChoices(studio);
   const asked = choices.asked;
   // Held here, above every switch of style or path, until the page closes.
@@ -62,6 +67,10 @@ export function MeasurementStudio({ studio, choice, locale }: MeasurementStudioP
     acknowledged: () => notes.acknowledged(),
   };
   const saving = useProfileSave(asked, choices.preferences, sink);
+  /* Matched against the SERVED list rather than the asked one, so a figure a
+     finishing choice has set aside is still carried and is there when the choice
+     brings its field back. */
+  const saved = useSavedMeasurements({ studio, profiles, measuring, choices });
   const selection = useStudioSelection(asked, (id) => {
     measuring.form.setFocus(id);
   });
@@ -108,6 +117,18 @@ export function MeasurementStudio({ studio, choice, locale }: MeasurementStudioP
         choice={choice}
         flow={flow}
         saving={saving}
+        saved={
+          saved.offer === null ? null : (
+            <SavedMeasurements
+              offer={saved.offer}
+              taken={saved.taken}
+              onTake={saved.take}
+              studio={studio}
+              styles={choice.options}
+              locale={locale}
+            />
+          )
+        }
         onChange={change}
         locale={locale}
       />

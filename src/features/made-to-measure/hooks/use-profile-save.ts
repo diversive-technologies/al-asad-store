@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useRouter } from 'next/navigation';
+
 import type { StudioSet } from '../lib/studio-set';
 import {
   keyOf,
@@ -12,11 +14,7 @@ import {
   type StudioStep,
 } from '../lib/studio-step';
 import { splitOf } from '../lib/verdicts';
-import type {
-  MeasurementSubmission,
-  Preference,
-  TypedPointEntry,
-} from '../schemas/profile.schema';
+import type { MeasurementSubmission, Preference, TypedPointEntry } from '../schemas/profile.schema';
 import { useProfileRequests } from './use-profile-requests';
 
 export interface UseProfileSaveResult {
@@ -47,6 +45,7 @@ export function useProfileSave(
   preferences: readonly Preference[],
   sink: FindingsSink,
 ): UseProfileSaveResult {
+  const router = useRouter();
   const key = keyOf(studio, preferences);
   const [shown, setShown] = useState<{ key: string; step: StudioStep['kind'] }>({
     key,
@@ -98,7 +97,15 @@ export function useProfileSave(
       },
       onSuccess: (result) => {
         if (!isCurrent(sent)) return;
-        if (result.kind === 'SAVED') return setShown({ key: sentKey(sent), step: 'SAVED' });
+        if (result.kind === 'SAVED') {
+          /* The page was rendered with what was on file BEFORE this save, and the
+             studio stays mounted afterwards. Left alone, the offer of saved
+             measurements would go on naming the version this one just superseded,
+             and taking it would put the older figures back over the new ones. The
+             figures on screen are the form's and survive the refresh. */
+          router.refresh();
+          return setShown({ key: sentKey(sent), step: 'SAVED' });
+        }
         // A changed list stays on the review, which says so and offers the new one.
         if (result.verdict.kind === 'STALE') return;
         setShown({ key: sentKey(sent), step: 'EDITING' });

@@ -76,6 +76,15 @@ export interface StyleChoice {
   readonly requestedSource: CaptureSource | null;
 }
 
+/**
+ * A style's name as the chooser shows it, or an empty string where this language
+ * has none — a style with no wording is left out of the chooser and reported
+ * rather than taking the page down, so the name can genuinely be missing.
+ */
+export function styleLabelOf(styles: readonly StyleOption[], garmentStyle: GarmentStyleId): string {
+  return styles.find((style) => style.garmentStyle === garmentStyle)?.label ?? '';
+}
+
 /** A list's identity on screen: the style, and the way it is measured. */
 export function listIdOf(list: { readonly garmentStyle: string; readonly source: string }): string {
   return `${list.garmentStyle}/${list.source}`;

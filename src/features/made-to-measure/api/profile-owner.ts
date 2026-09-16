@@ -56,6 +56,27 @@ export async function resolveProfileOwner(): Promise<Result<ResolvedOwner, ApiEr
   return mintDeviceOwner();
 }
 
+/**
+ * Whoever is asking, for a READ — and nothing is minted.
+ *
+ * `resolveProfileOwner` mints a device token when a browser has none, which is
+ * right for a save (the figures need an owner to belong to) and wrong for a read:
+ * every anonymous visit to the studio would take a token from the backend and
+ * then have nothing to do with it. A browser with no cookie has saved nothing, so
+ * the honest answer is that there is no owner to ask about.
+ */
+export async function readProfileOwner(): Promise<ProfileOwner | null> {
+  const session = await readSession();
+  if (session !== null) {
+    const key = session.email.length > 0 ? session.email : session.mobile;
+    return { keptWith: 'ACCOUNT', key };
+  }
+
+  const store = await cookies();
+  const existing = deviceTokenShape.safeParse(store.get(DEVICE_COOKIE)?.value);
+  return existing.success ? { keptWith: 'DEVICE', key: existing.data } : null;
+}
+
 /** A new device owner, on a token the backend minted — remembered only once it saves. */
 export async function mintDeviceOwner(): Promise<Result<ResolvedOwner, ApiError>> {
   const minted = await requestDeviceToken();

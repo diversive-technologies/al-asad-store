@@ -7,6 +7,7 @@ import { measurementSetFor, STYLE_OFFERS } from './measurement-sets-db';
 import { isMalformed, readSubmission } from './profile-submission';
 import {
   checkSubmission,
+  currentProfilesFor,
   isKnownOwner,
   issueDeviceToken,
   profileOwnerOf,
@@ -54,6 +55,18 @@ export const madeToMeasureHandlers = [
   http.post(`*${ENDPOINTS.madeToMeasure.deviceTokens}`, () =>
     HttpResponse.json({ token: issueDeviceToken() }, { status: 201 }),
   ),
+
+  /*
+   * A2-8 — reading a saved profile back. The owner arrives in the same header the
+   * save uses, so a read can no more name another owner's profiles than a write
+   * can. A device token the module no longer knows is a 401, exactly as it is on
+   * a save; the reader treats that as owning nothing, because it does.
+   */
+  http.get(`*${ENDPOINTS.madeToMeasure.profiles}`, ({ request }) => {
+    const owner = profileOwnerOf(request.headers.get(API_HEADERS.measurementOwner));
+    if (owner === null || !isKnownOwner(owner)) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json(currentProfilesFor(owner));
+  }),
 
   /*
    * §34.4 `saveProfile` — always a NEW version. The owner arrives in a header the

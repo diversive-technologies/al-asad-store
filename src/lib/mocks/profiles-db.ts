@@ -72,8 +72,7 @@ interface ProfileRecord {
 export type SavedProfileRow = Omit<ProfileRecord, 'ownerKey' | 'supersededBy'>;
 
 export type SaveOutcomeRow =
-  | { kind: 'SAVED'; profile: SavedProfileRow }
-  | { kind: 'REJECTED'; findings: FindingRow[] };
+  { kind: 'SAVED'; profile: SavedProfileRow } | { kind: 'REJECTED'; findings: FindingRow[] };
 
 /** Where a style's versions for one path come from — the served lists, or a test's own. */
 export type SetsFor = (garmentStyle: string, source: SourceRow) => readonly SetRow[];
@@ -121,12 +120,7 @@ export function checkSubmission(
       ruleSetVersion: ruleSet.version,
     };
   }
-  const checked = checkEntries(
-    list.set,
-    submission.entries,
-    submission.preferences,
-    ruleSet.rows,
-  );
+  const checked = checkEntries(list.set, submission.entries, submission.preferences, ruleSet.rows);
   /* The server is the one judge of what counts as kept: a note the customer
      answered leaves the way clear and is echoed back, and anything that answers
      no finding of ours is simply not counted. */
@@ -201,7 +195,14 @@ export function saveProfile(
     return { kind: 'REJECTED', findings: settled.outstanding };
   }
 
-  const mine = profilesFor(owner, submission.garmentStyle);
+  /* Per (owner, style, PATH). A2-3 makes a list's identity (style, source,
+     version), and the two paths' points carry different ids — a card's chest is
+     `kameezCardChest`, never `kameezChest`. Superseding across them therefore
+     did not replace one set of figures with another: it HID the first, because
+     nothing that reads a profile back can match a card's points to a garment's
+     list. A customer who copied a garment and then tried their tailor's card
+     lost the first set from every page that could have offered it. */
+  const mine = onPath(owner, submission.garmentStyle, list.set.source);
   const record: ProfileRecord = {
     id: crypto.randomUUID(),
     ownerKey: ownerKeyOf(owner),
@@ -226,6 +227,27 @@ export function saveProfile(
   if (current !== undefined) current.supersededBy = record.id;
   PROFILES.push(record);
   return { kind: 'SAVED', profile: projection(record) };
+}
+
+/** One owner's versions of one style, taken the same WAY — what a save supersedes. */
+function onPath(owner: ProfileOwnerRow, garmentStyle: string, source: SourceRow) {
+  return profilesFor(owner, garmentStyle).filter((profile) => profile.source === source);
+}
+
+/**
+ * The CURRENT profile for every (style, capture path) one owner has saved — what
+ * no later save on that path has superseded, projected as the page may see it.
+ *
+ * One per PATH and not one per style, because the two paths do not describe the
+ * same thing in a way anything can read back: a card list's points carry their own
+ * ids, so a card profile can only ever answer a card list. Keeping just one per
+ * style would leave the other path's figures on file and unreachable.
+ */
+export function currentProfilesFor(owner: ProfileOwnerRow): SavedProfileRow[] {
+  const key = ownerKeyOf(owner);
+  return PROFILES.filter(
+    (profile) => profile.ownerKey === key && profile.supersededBy === null,
+  ).map(projection);
 }
 
 /** Every version one owner has saved for one style, oldest first. */

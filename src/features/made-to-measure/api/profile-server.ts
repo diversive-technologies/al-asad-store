@@ -9,8 +9,10 @@ import type { Result } from '@/lib/result';
 import {
   deviceTokenSchema,
   measurementCheckSchema,
+  measurementProfilesSchema,
   saveOutcomeSchema,
   type MeasurementCheck,
+  type MeasurementProfiles,
   type MeasurementSubmission,
   type SaveOutcome,
 } from '../schemas/profile.schema';
@@ -40,6 +42,23 @@ export function checkMeasurements(
     method: 'POST',
     body: submission,
     schema: measurementCheckSchema,
+    next: { revalidate: 0 },
+  });
+}
+
+/**
+ * A2-8 — what this owner has saved: one current profile per style.
+ *
+ * DATA-09 — uncacheable, and not only because it is per-customer. Next's data
+ * cache is keyed on the request, and the owner travels in a HEADER, so a cached
+ * entry would be shared between customers. `revalidate: 0` is the only safe
+ * setting for any read that carries a credential.
+ */
+export function fetchProfiles(owner: ProfileOwner): Promise<Result<MeasurementProfiles, ApiError>> {
+  return apiRequest({
+    path: ENDPOINTS.madeToMeasure.profiles,
+    headers: { [API_HEADERS.measurementOwner]: `${owner.keptWith}:${owner.key}` },
+    schema: measurementProfilesSchema,
     next: { revalidate: 0 },
   });
 }

@@ -15,6 +15,10 @@ client's written list arrives; the machinery around them is built.
 The 3D experiment is kept, unmerged, on branch `3d-model` at `62363d3`. Nothing
 is pushed: `main` is ahead of `origin/main`.
 
+Phase 1 of the account plan is done: a saved measurement profile can be READ back,
+and the studio offers it — including across garment styles, since every style is
+composed from the same point rows. See "plan Phase 1: reading a profile back".
+
 A by-hand pass over every use case on a desktop and a phone (`TESTING-USE-CASES.md`)
 then found five layout faults, led by a product page that was 81px wider than every
 phone screen. All five are fixed — see "Phone layout" below. The test log carries the
@@ -1614,6 +1618,105 @@ until the written list arrives. The machinery around them is built and tested; w
 it is filled with is ours, and a demo should say so. They are GARMENT figures — a kameez chest carries ease a body chest does
 not — and ADULT figures, which is why a boy's kurta carries no stitching offer.
 
+## Account and tailored-from-a-product — plan Phase 1: reading a profile back
+
+The plan is `.claude/working-docs/account-and-tailored-plan.md` (16 September 2026),
+covering a customer profile page and a "get it tailored" entry on every adult
+garment. Seven phases; this is the first, and it exists alone because **nothing
+could read a saved profile back** — the feature had three POSTs and no GET, so the
+profile page had nothing to show, "reuse if saved" had nothing to reuse, and a bag
+line would have had nothing to reference.
+
+- **The read is on the SERVER, and there is no new BFF.** `/stitched` is
+  server-rendered, so `StitchedScreen` reads the profiles beside the studio's own
+  load. A BFF exists where a request can only start in the browser; this one
+  cannot, so adding a browser-facing surface would have been a credential-bearing
+  route with no caller. `fetchProfiles` carries the owner in the same header the
+  save uses, at `revalidate: 0` — the owner is a HEADER and Next's data cache is
+  keyed on the request, so any cached read would be one customer's profiles served
+  to another.
+- **A read does not mint an owner.** `resolveProfileOwner` takes a device token
+  from the backend when a browser has none, which is right for a save and wrong
+  for a read: every anonymous visit to the studio would take a token and do
+  nothing with it. `readProfileOwner` answers null instead, and a browser with no
+  cookie has saved nothing.
+- **An unreadable profile is not a broken page.** `savedProfilesFor` answers with
+  a LIST rather than a `Result`: a customer who has never saved and a customer
+  whose read failed see the same page, the one they came for. A device token the
+  module no longer knows owns nothing and is not logged; anything else is logged
+  once (ERR-10).
+- **Reuse across garment styles is a LOOKUP, not a mapping**, and that is a fact of
+  the served lists rather than a convenience taken in code: every style is composed
+  from the same point rows, so `kameezChest` in a waistcoat suit IS `kameezChest`
+  in a kameez shalwar — same bounds, same half-or-whole convention, same basis.
+  Someone who has measured a kameez shalwar has already given eleven of a waistcoat
+  suit's fourteen. The tailor's-card lists are the exception and the reason the
+  matching is by point id: their points carry their own ids, so a card figure
+  answers a card list and never a garment one.
+- **It is an OFFER.** A band above the fields says what is on file and when it was
+  saved; nothing reaches a field until the button is pressed, and afterwards the
+  same section says how many figures landed and asks the customer to look at each
+  one. Cloth is cut from these figures.
+- A figure the point no longer ACCEPTS is set aside and named rather than dropped,
+  because a field that stayed empty for no stated reason is worse than one that
+  says why. A figure for a garment this list does not measure is simply not
+  offered — that is not a problem the customer can act on.
+
+**The phase's review** (four lenses — security and data, correctness, the rulebook,
+the customer — each finding then put to an independent skeptic; 9 of 39 stood)
+found five real defects, all fixed:
+
+- **A save on one capture path HID the other path's figures.** Supersession ran on
+  (owner, style) and ignored the path, but the two paths' points carry different
+  ids, so the survivor could not answer the other list at all. A guest who copied a
+  garment and then tried their tailor's card lost the garment figures from every
+  page that could have offered them — and the waistcoat suit, which serves no card
+  list, went permanently silent with no strip to switch to. The skeptic ran the
+  mock to prove it. Supersession and the version counter are per (owner, style,
+  PATH) now, which is what A2-3 already said a list's identity is. **The plan had
+  named this exact question and told Phase 1 to decide it before reading anything
+  back; the first answer was wrong, and written into a comment whose premise its
+  own sibling file contradicted.**
+- **Taking the offer left the fields red.** `form.setValue` fires no change event,
+  and `reValidateMode: 'onChange'` runs off the input's own event, so a failed
+  check's errors survived the fill: eight fields filled with valid figures, all
+  eight still red, the summary still listing them, beside a status line saying they
+  had just been filled. `judgeAgain()` re-judges, guarded by `isSubmitted` so the
+  form still does not scold anyone who has not asked.
+- **A taken figure lost the unit it was typed in.** The studio converts from what
+  was TYPED, and a figure it places itself was not typed — so the next switch
+  converted a conversion: 24 in came back as 24.02, and that is what the review
+  showed and the server would have recorded. `remember()` seeds the same ref the
+  unit switch keeps, so a placed figure behaves exactly as a typed one.
+- **The band was not hidden in phone focus mode** — the third time furniture has
+  been added to the panel and missed that list, after the finishing choices in
+  Phase 5 and the note actions in Phase 6. It sat inside the one-field sheet with a
+  live button in its tab order.
+- **The offer outlived the save it was read before.** The page is rendered with
+  what was on file, and the studio stays mounted; after saving and pressing "Change
+  and save again" the band went on naming the version just superseded, and taking
+  it would have put the older figures back over the new ones. A successful save
+  refreshes.
+
+Verified: typecheck, lint, **448 tests** and the production build pass. Measured in
+the running store rather than eyeballed — a profile saved through the BFF, then the
+band reading "Saved on 16 September 2026, from your Kameez shalwar"; a browser with
+no cookie sees nothing; pressing it fills 8 of 8 exactly as typed with the status
+"8 measurements filled in from your saved Kameez shalwar. Look at each one before
+you save."; on the **waistcoat suit** the band adds "Some of these were taken for a
+different garment", pressing fills 8 of its 14 and the progress reads "8 of 11
+required measurements taken" with only the three waistcoat points left; with the
+form switched to centimetres first, 21 in arrives as 53.3 and the whole set returns
+to inches with **zero drift**; after the fixes, saving on BOTH paths leaves all four
+lists still offering, a check-then-take leaves **0 invalid fields** with the red
+summary gone, focus mode hides the band at `display: none`, and a save then a fresh
+press offers the NEW figure rather than the superseded one. In Urdu at 375px the
+band and its status read right to left with 0 elements past the viewport.
+
+**Phases 2 to 7 are not started.** The profile page, the wishlist moving to the
+account, the address book, order history, the made-to-measure bag line with its
+stitching charge, and the product entry with the card mark are all still to come.
+
 ## Phone layout — the five faults the by-hand pass found
 
 `TESTING-USE-CASES.md` is the log: thirteen use cases on a desktop and a phone, the
@@ -2365,6 +2468,49 @@ out, and `/order/AA100001` still renders on a fresh load.
   **When feedback repeats after a fix, the fix addressed the wrong thing — go
   back and measure the proportions before touching the drawing again.**
 
+- **A GET must not create the thing it reads.** The save path mints a device token
+  when a browser has none, which is right for a write and wrong for a read —
+  reusing it would have taken a token from the backend on every anonymous visit to
+  the studio and done nothing with it. A browser with no cookie owns nothing, and
+  that is an answer.
+- **Superseding across two lists that share no point ids HIDES figures rather than
+  replacing them.** A tailor's card and a copied garment are two ways of measuring
+  one garment, so superseding across them reads as obviously right — and is wrong
+  the moment anything reads a profile BACK, because the card's points carry their
+  own ids and can only answer a card list. The figures stay on file and stop being
+  reachable from anywhere. Two things generalise: a supersession rule has to be
+  keyed on the same identity the READ matches on, and the plan's own open question
+  (“decide this before anything reads versions back”) was the warning.
+- **`form.setValue` does not re-validate, and `reValidateMode: 'onChange'` will not
+  save you.** That mode fires from the input's own change event, which a
+  programmatic write never dispatches, so every error from an earlier submit
+  survives a fill — eight fields holding good figures, all eight red, beside a
+  status line saying they had just been filled. Re-judge explicitly, and guard it
+  on `formState.isSubmitted` so a form that has not been asked to check still does
+  not scold.
+- **A figure the app PUTS in a field was not typed, and anything that converts
+  “from what was typed” has to be told.** The studio's unit switch converts from the
+  original every time, which is what keeps 18.25 in from drifting; a restored
+  figure written straight into the field is read as freshly typed in whatever unit
+  is showing, so the next switch converts a conversion (24 → 61 → 24.02). Seed the
+  record at the moment of placing, with the original figure and its original unit.
+- **Anything added to the studio's panel has to be added to the focus-mode hide
+  list — this is the third time.** The finishing choices missed it in Phase 5, the
+  field-note actions in Phase 6, and the saved-measurements band now. On a phone
+  the sheet is one field over the drawing, so furniture left in it steals the
+  drawing's room and leaves a button in the sheet's tab order. A new block in
+  `MeasurementPanel` needs an `mm-` class and a line in that `:is(...)`.
+- **A server-rendered snapshot goes stale the moment the page mutates what it read.**
+  The studio is rendered with the profiles on file and stays mounted across a save,
+  so the offer went on naming the version that save had just superseded — and
+  taking it would have put the older figures back over the newer ones. A mutation
+  that changes what the page was rendered from needs a `router.refresh()`.
+- **Port 3000 may belong to a different project.** `preview_start` refused with
+  “in use by node.exe (not a preview server)”, and the PID's command line showed a
+  `next` server from another repository entirely — the operator's, running at the
+  same time. Read the command line before assuming it is a stale copy of this one;
+  `"autoPort": true` in `.claude/launch.json` takes a free port instead of fighting
+  for that one.
 - **A grid that declares columns only at a breakpoint has an AUTO track below it,
   and an auto track is sized to its contents.** `grid lg:grid-cols-2` looks like it
   says "one column, then two"; it says "a column as wide as whatever is in it, then

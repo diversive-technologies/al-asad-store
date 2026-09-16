@@ -18,6 +18,7 @@ import {
 import type { MeasurementPoint } from '../schemas/measurement-set.schema';
 import type { Finding, TypedPointEntry } from '../schemas/profile.schema';
 import { useServerFindings } from './use-server-findings';
+import type { PlacedFigure } from './use-unit-conversion';
 import { useSummarySubmit } from './use-summary-submit';
 import { useUnitConversion } from './use-unit-conversion';
 
@@ -35,11 +36,18 @@ export interface UseMeasurementFormResult {
   readonly summaryRef: RefObject<HTMLDivElement | null>;
   readonly submit: (event: FormEvent<HTMLFormElement>, onValid: () => Promise<void>) => void;
   readonly typedEntries: () => readonly TypedPointEntry[];
+  /** Records figures the studio put in fields — see `useUnitConversion`. */
+  readonly remember: (figures: readonly PlacedFigure[]) => void;
+  /**
+   * Judges the fields again, but only once a check has been asked for.
+   *
+   * The form does not scold before then, so an unguarded re-judge would paint
+   * every empty required field red for someone who has not asked yet. The unit
+   * switch guards the same way, for the same reason.
+   */
+  readonly judgeAgain: () => void;
   /** Places the server's refusals on their fields, and lands focus on the summary. */
-  readonly showFindings: (
-    findings: readonly Finding[],
-    sent: readonly TypedPointEntry[],
-  ) => void;
+  readonly showFindings: (findings: readonly Finding[], sent: readonly TypedPointEntry[]) => void;
 }
 
 /**
@@ -74,7 +82,12 @@ export function useMeasurementForm(
   /* `useWatch` rather than `form.watch()`: the latter returns a fresh function
      each render, which makes React Compiler skip memoising the component. */
   const values = useWatch({ control: form.control });
-  const { changeUnit, typedEntries } = useUnitConversion(form, { points, served }, unit, setUnit);
+  const { changeUnit, typedEntries, remember } = useUnitConversion(
+    form,
+    { points, served },
+    unit,
+    setUnit,
+  );
   const findings = useServerFindings(form, points, values, unit);
 
   /* A server finding shows while it still stands (`useServerFindings`); one whose
@@ -113,6 +126,10 @@ export function useMeasurementForm(
     summaryRef,
     submit,
     typedEntries,
+    remember,
+    judgeAgain: () => {
+      if (form.formState.isSubmitted) void form.trigger();
+    },
     /* Only a refusal asks for the summary. Armed with nothing on screen, the
        one-shot flag would spend itself on the next range error instead, and
        focus would jump away mid-typing. */

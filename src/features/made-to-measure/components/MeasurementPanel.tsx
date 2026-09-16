@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react';
+
 import type { Locale } from '@/i18n/locales';
 import type { MeasurementPointId } from '@/lib/domain/ids';
 
 import type { UseProfileSaveResult } from '../hooks/use-profile-save';
-import type { StudioSet, StyleChoice } from '../lib/studio-set';
+import { styleLabelOf, type StudioSet, type StyleChoice } from '../lib/studio-set';
 import { MeasurementFormBody } from './MeasurementFormBody';
 import { MeasurementReview } from './MeasurementReview';
 import { MeasurementSaved } from './MeasurementSaved';
@@ -14,6 +16,15 @@ export interface MeasurementPanelProps {
   readonly choice: StyleChoice;
   readonly flow: StudioFlow;
   readonly saving: UseProfileSaveResult;
+  /**
+   * The offer of measurements already saved, or nothing.
+   *
+   * A SLOT rather than a prop bundle: what can be offered depends on the form and
+   * the finishing choices, which are the studio's to hold, and the panel's part in
+   * it is only where on the page it goes — above the fields, and only while they
+   * are the thing on screen.
+   */
+  readonly saved: ReactNode;
   /** From the review back to the fields — to one of them, or to the first. */
   readonly onChange: (id: MeasurementPointId | null) => void;
   readonly locale: Locale;
@@ -32,6 +43,7 @@ export function MeasurementPanel({
   choice,
   flow,
   saving,
+  saved,
   onChange,
   locale,
 }: MeasurementPanelProps) {
@@ -56,10 +68,7 @@ export function MeasurementPanel({
           <MeasurementSaved
             profile={step.profile}
             /* The saved profile's own style, by the name the chooser gives it. */
-            styleLabel={
-              choice.options.find((style) => style.garmentStyle === step.profile.garmentStyle)
-                ?.label ?? ''
-            }
+            styleLabel={styleLabelOf(choice.options, step.profile.garmentStyle)}
             onMeasureAgain={() => {
               onChange(null);
             }}
@@ -67,6 +76,7 @@ export function MeasurementPanel({
         ) : null}
 
         <div hidden={step.kind !== 'EDITING'}>
+          {saved}
           <MeasurementFormBody
             studio={studio}
             flow={flow}

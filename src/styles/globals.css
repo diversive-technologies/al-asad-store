@@ -2853,7 +2853,8 @@ ellipse.gf-mark--active {
       .mm-scene-name,
       .mm-scene-how,
       .mm-choices,
-      .mm-card-note-controls
+      .mm-card-note-controls,
+      .mm-saved
     ),
   .mm-scene[data-focused] form > :not(fieldset, .mm-stepper),
   .mm-scene[data-focused] .mm-scene-caption:not(:has(.mm-scene-readout)) {
