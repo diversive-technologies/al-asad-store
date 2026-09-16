@@ -108,6 +108,36 @@ export const checkoutFormSchema = z.object({
 
 export type CheckoutFormInput = z.infer<typeof checkoutFormSchema>;
 
+/**
+ * §28.3's order history — one row per order, and no more than a row.
+ *
+ * Deliberately NOT `orderSchema`. A list needs enough to recognise an order and
+ * follow it; the order page already holds every snapshotted line and piece, and
+ * shipping all of them to draw a date and a total would put a customer's whole
+ * purchase history on the wire for a summary.
+ *
+ * It is a LIST and not tracking. Order tracking is out of the MVP by operator
+ * decision, so nothing here carries a status, and no wording implies one.
+ */
+export const accountOrderSchema = z.object({
+  orderNumber: z.string().min(1),
+  placedAt: z.iso.datetime(),
+  totalMinor: z.number().int().nonnegative(),
+  /** How many PRODUCTS, because that is what "and 2 more" counts. */
+  lineCount: z.number().int().nonnegative(),
+  /** The first line's name AS IT WAS — what makes an order recognisable. */
+  firstItem: z.string(),
+});
+
+export const accountOrdersSchema = z.object({
+  /* SEC-02 — a served list is untrusted input however friendly the sender
+     looks. Far above any real history, and the point is that it is bounded. */
+  orders: z.array(accountOrderSchema).max(500),
+});
+
+export type AccountOrder = z.infer<typeof accountOrderSchema>;
+export type AccountOrders = z.infer<typeof accountOrdersSchema>;
+
 /** A line as it was at placement — §6.5 requires snapshots, not references. */
 export const orderLineSchema = z.object({
   productId: productIdSchema,

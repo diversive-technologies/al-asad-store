@@ -182,6 +182,12 @@ export const ENDPOINTS = {
     /** Which address checkout should offer first. Its own path, because choosing
         a default is an event about the BOOK rather than an edit to one address. */
     addressDefault: '/api/v1/account/addresses/default',
+    /**
+     * §28.3's order history — a LIST, not tracking. A reduced projection: enough
+     * to recognise an order and follow it to `/order/{number}`, which is the
+     * page that already holds the whole thing.
+     */
+    orders: '/api/v1/account/orders',
   },
   /** Section 11 Identity and Access. */
   auth: {

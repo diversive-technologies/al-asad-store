@@ -1,4 +1,5 @@
 import { readCartId } from '@/features/bag';
+import { currentAccountKey } from '@/features/auth/server';
 import { placeOrder } from '@/features/checkout';
 import { placeOrderRequestSchema } from '@/features/checkout/contract';
 import { getLocale } from '@/i18n';
@@ -30,7 +31,15 @@ export async function POST(request: Request): Promise<Response> {
   const parsed = placeOrderRequestSchema.safeParse(body);
   if (!parsed.success) return new Response(null, { status: 400 });
 
-  const result = await placeOrder(cartId, parsed.data, await getLocale());
+  /* §28.3 — WHOSE order it is, from the session on this side and never from the
+     body. A guest places one too (§28.2) and it carries no customer (§6.5); it is
+     found by its number instead. */
+  const result = await placeOrder(
+    cartId,
+    parsed.data,
+    await getLocale(),
+    await currentAccountKey(),
+  );
 
   if (!result.ok) {
     logApiError('api:checkout:place', result.error); // ERR-10

@@ -7,10 +7,10 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-16, on `main`, with account plan phases 1 to 4 done — a
+Last updated: 2026-09-16, on `main`, with account plan phases 1 to 5 done — a
 saved profile read back into the studio, `/account`, the saved items moved off the
-browser and onto the account, and an address book offered at checkout — and with
-all six Made-to-Measure plan phases done
+browser and onto the account, an address book offered at checkout, and an order
+history — and with all six Made-to-Measure plan phases done
 — the client's order, the list served as content, a real save with a review, the
 tailor's-card path, finishing choices that decide what is asked, and the tailor's
 rules as rows. Every rule row, bound and card convention is FIXTURE until the
@@ -1793,8 +1793,87 @@ captions and the saved-on line in Urdu and nothing past the viewport; the header
 menu reads "Your account", "Saved items", "Sign out"; and the studio's save
 confirmation offers "See your saved measurements".
 
-**Phases 5 to 7 are not started.** Order history, the made-to-measure bag line with its
-stitching charge, and the product entry with the card mark are all still to come.
+**Phases 6 and 7 are not started.** The made-to-measure bag line with its stitching
+charge, and the product entry with the card mark, are still to come.
+
+## Account and tailored-from-a-product — plan Phase 5: order history
+
+**A customer can find what they bought**, and the thing that had to change first
+is that an order did not record WHO placed it: `OrderPayload` carried a contact
+block and no customer, and `contactEmail` was accepted and dropped.
+
+- **The order now carries `accountKey: string | null`** — §6.5's nullable
+  customer, exactly. It arrives as the HEADER the BFF attached from the session
+  and never from the body, so a browser cannot file an order under somebody
+  else's account and then read it back from their history.
+- **A guest's order belongs to nobody, and is found by its NUMBER** (§28.3). It
+  never appears in anyone's history — including that person's, if they sign in
+  later — and its own page still answers, because the number is what addresses
+  it. The account page says so rather than showing a guest an empty list.
+- **A REDUCED projection**, `accountOrderSchema`: number, date, total, how many
+  pieces, and the first line's name as it was. Not `orderSchema` — the order's
+  own page already holds every snapshotted line and piece, and shipping all of
+  them to draw a date and a total would put a customer's whole purchase history
+  on the wire for a summary.
+- **A LIST, not tracking.** Order tracking is out of the MVP by operator
+  decision, so no row carries a status and no sentence implies one. The list
+  points at `/order/{number}`, which already exists and is already bookmarkable.
+- **Server-rendered**, so `/account` still ships no JavaScript of its own —
+  checked rather than assumed: the page renders zero `<script>` elements inside
+  `main`.
+
+Verified: typecheck, lint, **473 tests** (3 new) and the production build pass.
+Driven in the running store as a guest and as a customer: a signed-in order
+appears as "AA100001 · 16 September 2026 · Plain Waistcoat Suit and 1 more ·
+Rs 7,248" with a View link to its own page; a guest sees the explanation instead
+of an empty list; a guest's order placed first stayed out of the signed-in
+customer's history while `/order/AA100001` still answered 200; and in Urdu at
+375px the section is `dir="rtl"` with no sideways scroll.
+
+**A defect found by reading the rendered text, not the code:** the item summary
+came out as "Plain Waistcoat Suitand 1 more". A margin separates two inline boxes
+on screen and NOT in the text, so there was nothing between them for a screen
+reader or for `innerText`. This is the second time in two phases — the address
+book's "Default" mark did the same thing beside a recipient's name. The fix that
+followed it, a literal `{' '}`, was itself replaced by the review: the phrase is
+one parameterised message now, because a component that joins a name to a
+fragment has decided the language's word order.
+
+**The phase's review** (three lenses, every finding put to an independent
+skeptic; 5 of 16 stood, and they were four distinct defects):
+
+- **"and 1 more" counted UNITS, so one garment bought three times read as three
+  garments.** The commonest order there is — the same thing, more than once —
+  came out naming products nobody bought. The row counts PRODUCTS now, which is
+  what the phrase says, and a test pins a three-of-one order at a line count of
+  one.
+- **The summary was a sentence assembled in TSX** (I18N-06): the product name,
+  then a literal space, then "and 2 more". The word order was fixed in the
+  component, so no translator could ever put the count first however their
+  language reads — and the literal space was itself the tell, added a few hours
+  earlier to fix "Suitand 1 more". It is ONE parameterised message carrying both
+  the item and the count now.
+- **"Newest first" was not guaranteed.** `placedAt` is a millisecond stamp; two
+  orders can share one, and a stable sort then leaves them in insertion order,
+  which is oldest first. The order NUMBER breaks the tie, being monotonic by
+  construction — and the test asserts the numbers rather than the clock, so it
+  cannot start failing on a faster machine.
+- **A failed read was shown to the customer and never logged** (ERR-10). The
+  `Result` stops in that component, so it is the boundary that has to log it.
+  Verified against a real failure rather than a simulated one: when MSW died
+  mid-session the page said "We could not reach your orders just now" and the
+  server log carried `[account:orders] NETWORK: The store could not be reached.`
+
+Eleven further claims were refuted by their skeptics, including that a 501st
+order would make a history permanently unreadable (the store is in memory and
+dies with the dev server), that the place route's missing origin check is new
+(it is the pre-existing SEC-08 gap this file already records, and the change
+makes a forged order attributable rather than anonymous), and three MOD-03
+ceiling claims counted against raw lines rather than code.
+
+Re-verified after the fixes: an order of two different products reads "Plain
+Waistcoat Suit and 1 more", the regression smoke is green, and typecheck, lint,
+**474 tests** and the production build pass.
 
 ## Account and tailored-from-a-product — plan Phase 4: the address book
 
@@ -2146,8 +2225,9 @@ tray's X being the X, which then closes the tray.
   on the sign-in screen. Passwords are compared in plaintext there because §11's
   adaptive hashing is the Java module's job, and imitating it would suggest that
   file is a security boundary. It is not.
-- **No order history.** `/account` holds the customer's details, their addresses,
-  their saved items and their measurements; the order list is plan phase 5.
+- **No order TRACKING**, and the order history says nothing that implies one:
+  `/account` lists what a signed-in customer has bought and links to each order's
+  own page, which is all a mock with no fulfilment can honestly offer.
 - **The wishlist has a PAGE now, at `/wishlist`**, reached from the account
   menu — the heart used to save into a list with nowhere to open it. It renders
   the same `ProductCard` as the catalogue, so the heart, the quick add and the
@@ -2991,6 +3071,13 @@ out, and `/order/AA100001` still renders on a fresh load.
   written at the same time as the intention and outlived it by minutes. When a
   comment states a property, the next thing to write is the check, not the next
   comment.
+- **A MARGIN IS NOT A SPACE, and `innerText` is where you see it.** Two inline
+  boxes separated only by `ms-2` have no character between them, so a screen
+  reader and every text probe read "Ali Razaطے شدہ" and "Plain Waistcoat Suitand
+  1 more" while the screen looked correct. It is worse in Urdu, where a Latin
+  name butts straight into Nastaliq. Put a real space in the markup (`{' '}`) and
+  keep the margin for the gap. Twice in two phases; read the rendered TEXT, not
+  the screenshot, whenever two runs of text sit side by side.
 - **A bound added for SEC-02 becomes a usability rule the moment a real value
   can reach it.** Capping the address line at 200 characters was defensible as
   "untrusted input has a length", and an ordinary Pakistani address with

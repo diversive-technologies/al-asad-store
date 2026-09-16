@@ -212,6 +212,15 @@ export function quoteFor(
 export interface OrderPayload {
   id: string;
   orderNumber: string;
+  /**
+   * Whose order it is, or null for a guest — §6.5's `customer_id` is nullable
+   * for exactly this reason, and §28.2 makes guest checkout Release 1 scope.
+   *
+   * It arrives as a HEADER the BFF attached from the session, never from the
+   * body: an order that named its own customer would let any browser file an
+   * order under anyone's account and read it back from their history.
+   */
+  accountKey: string | null;
   state: string;
   paymentState: string;
   placedAt: string;
@@ -259,7 +268,12 @@ const ORDERS = new Map<string, OrderPayload>();
 let orderSequence = 0;
 
 /** §7.2 — placing an order. The steps below are that transaction, in order. */
-export function placeOrder(cartId: string, input: PlaceInput, locale: Locale): PlaceOutcome {
+export function placeOrder(
+  cartId: string,
+  input: PlaceInput,
+  locale: Locale,
+  accountKey: string | null = null,
+): PlaceOutcome {
   const bag = summaryFor(cartId, locale);
   if (bag === null || bag.lines.length === 0) return { kind: 'NOT_FOUND' };
 
@@ -312,6 +326,7 @@ export function placeOrder(cartId: string, input: PlaceInput, locale: Locale): P
   const order: OrderPayload = {
     id: `c1d2e3f4-0001-4c8a-8f21-${String(orderSequence).padStart(12, '0')}`,
     orderNumber,
+    accountKey,
     // Step 6 — the payment record's initial state, which differs per method and
     // is the ONLY place that difference is expressed.
     state: method.orderState,
@@ -362,6 +377,62 @@ export function placeOrder(cartId: string, input: PlaceInput, locale: Locale): P
 /** §28.3 tracks a guest order by number and mobile. */
 export function findOrder(orderNumber: string): OrderPayload | null {
   return ORDERS.get(orderNumber.trim().toUpperCase()) ?? null;
+}
+
+export interface AccountOrderRow {
+  orderNumber: string;
+  placedAt: string;
+  totalMinor: number;
+  /**
+   * How many PRODUCTS the order holds, not how many units.
+   *
+   * The row reads "Plain Waistcoat Suit and 2 more", and counting units made
+   * that sentence lie about the commonest case there is: one garment bought
+   * three times came out as "and 2 more", which names two garments nobody
+   * ordered. What the phrase counts has to be what it says.
+   */
+  lineCount: number;
+  /** The first line's name AS IT WAS, which is what makes an order recognisable. */
+  firstItem: string;
+}
+
+/**
+ * §28.3 — what one customer has bought, newest first.
+ *
+ * A REDUCED projection rather than the orders themselves: a list needs enough to
+ * recognise an order and follow it, and shipping every snapshotted line and
+ * piece to draw four lines of summary would put a customer's whole purchase
+ * history on the wire to render a date and a total.
+ *
+ * An empty account key matches nothing. A guest's orders carry null and are
+ * found by their number (§28.3), which is the only thing that addresses them.
+ */
+export function ordersFor(accountKey: string): AccountOrderRow[] {
+  if (accountKey.length === 0) return [];
+
+  return (
+    [...ORDERS.values()]
+      .filter((order) => order.accountKey === accountKey)
+      /*
+       * The order NUMBER breaks the tie, and it has to: `placedAt` is a
+       * millisecond stamp, two orders can carry the same one, and a stable sort
+       * then leaves them in insertion order — which is oldest first, the reverse
+       * of what this function promises. The number is monotonic by construction,
+       * so it orders them even when the clock does not.
+       */
+      .sort(
+        (one, other) =>
+          other.placedAt.localeCompare(one.placedAt) ||
+          other.orderNumber.localeCompare(one.orderNumber),
+      )
+      .map((order) => ({
+        orderNumber: order.orderNumber,
+        placedAt: order.placedAt,
+        totalMinor: order.totals.totalMinor,
+        lineCount: order.lines.length,
+        firstItem: order.lines[0]?.productName ?? '',
+      }))
+  );
 }
 
 /** Test seam. */

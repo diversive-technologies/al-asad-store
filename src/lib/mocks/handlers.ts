@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { serverEnv } from '@/config/env.server';
 import { DEFAULT_LOCALE, isLocale, type Locale } from '@/i18n/locales';
 import { ENDPOINTS } from '@/lib/api/endpoints';
+import { API_HEADERS } from '@/lib/api/headers';
 
 import {
   addItem,
@@ -421,10 +422,15 @@ export const handlers = [
    */
   http.post(`*${ENDPOINTS.checkout.place(':cartId')}`, async ({ params, request }) => {
     const body: unknown = await request.clone().json();
+    /* Whose order it is comes from the HEADER the BFF attached from the
+       session, never from the body — the same rule a measurement save follows.
+       No header is a GUEST, which §6.5 models as a null customer. */
+    const accountKey = request.headers.get(API_HEADERS.accountKey);
     const outcome = placeOrder(
       String(params.cartId),
       body as Parameters<typeof placeOrder>[1],
       localeOf(request),
+      accountKey === null || accountKey.length === 0 ? null : accountKey,
     );
 
     if (outcome.kind === 'NOT_FOUND') return new HttpResponse(null, { status: 404 });

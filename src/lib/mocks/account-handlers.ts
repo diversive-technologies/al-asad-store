@@ -4,6 +4,7 @@ import { ENDPOINTS } from '@/lib/api/endpoints';
 import { API_HEADERS } from '@/lib/api/headers';
 import { addressDetailSchema } from '@/lib/domain/address';
 
+import { ordersFor } from './checkout-db';
 import {
   addressesFor,
   makeDefault,
@@ -135,6 +136,15 @@ export const accountHandlers = [
     const list = removeAddress(accountKey, addressId);
     if (list === null) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json({ addresses: list });
+  }),
+
+  /* §28.3 — what this customer has bought. A guest's orders are not here: they
+     carry no account and are found by their number, which is what addresses
+     them. */
+  http.get(`*${ENDPOINTS.account.orders}`, ({ request }) => {
+    const accountKey = accountKeyOf(request);
+    if (accountKey === null) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json({ orders: ordersFor(accountKey) });
   }),
 
   /* Choosing the default — an event about the book, not an edit to one row. */

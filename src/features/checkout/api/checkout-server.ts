@@ -4,13 +4,16 @@ import type { Locale } from '@/i18n/locales';
 import { apiRequest } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
+import { API_HEADERS } from '@/lib/api/headers';
 import type { CartId } from '@/lib/domain/ids';
 import type { Result } from '@/lib/result';
 
 import {
+  accountOrdersSchema,
   checkoutQuoteSchema,
   orderSchema,
   placeOrderResultSchema,
+  type AccountOrders,
   type CheckoutQuote,
   type Order,
   type PlaceOrderRequest,
@@ -52,13 +55,34 @@ export function placeOrder(
   cartId: CartId,
   request: PlaceOrderRequest,
   locale: Locale,
+  accountKey: string | null,
 ): Promise<Result<PlaceOrderResult, ApiError>> {
   return apiRequest({
     path: ENDPOINTS.checkout.place(cartId),
     schema: placeOrderResultSchema,
     method: 'POST',
     body: request,
+    /* WHOSE order it is, from the session on this side. §6.5 makes the customer
+       nullable and §28.2 makes guest checkout scope, so no header is a guest
+       rather than a refusal. */
+    headers: accountKey === null ? {} : { [API_HEADERS.accountKey]: accountKey },
     searchParams: { locale },
+    next: { revalidate: 0 },
+  });
+}
+
+/**
+ * §28.3 — the orders this customer has placed, newest first.
+ *
+ * DATA-09 — uncacheable: the owner travels in a header and Next's data cache is
+ * keyed on the request, so a cached entry would be one customer's history served
+ * to another.
+ */
+export function fetchAccountOrders(accountKey: string): Promise<Result<AccountOrders, ApiError>> {
+  return apiRequest({
+    path: ENDPOINTS.account.orders,
+    schema: accountOrdersSchema,
+    headers: { [API_HEADERS.accountKey]: accountKey },
     next: { revalidate: 0 },
   });
 }

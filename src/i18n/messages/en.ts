@@ -319,6 +319,18 @@ export const en = {
       one: '{count} more figure is on file that the guide no longer asks for.',
       other: '{count} more figures are on file that the guide no longer asks for.',
     },
+    ordersHeading: 'Your orders',
+    ordersEmpty: 'You have not placed an order yet.',
+    ordersUnavailable:
+      'We could not reach your orders just now. Anything you have ordered is still on file — please try again in a moment.',
+    /* §28.3 — a guest order carries no customer, so it is found by its number.
+       Nothing here promises tracking: there is none, and saying so would be a
+       promise nothing behind it can keep. */
+    ordersGuestBody:
+      'Orders you place while signed in are listed here. An order placed as a guest is kept against its order number instead — the number on your confirmation is how you return to it.',
+    /* I18N-06 — the whole phrase, so a translation can put the count first. */
+    ordersMoreItems: { one: '{item} and {count} more', other: '{item} and {count} more' },
+    ordersView: 'View',
     addressesHeading: 'Your addresses',
     addressesLead:
       'An address saved here is offered at checkout. Signing in is a placeholder while real accounts are built, so please do not save a real address yet.',

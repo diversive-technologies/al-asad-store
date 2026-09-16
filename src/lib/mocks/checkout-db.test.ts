@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { addItem, createCart, resetCarts, summaryFor } from './bag-db';
+import { addItem, createCart, resetCarts, summaryFor, updateQuantity } from './bag-db';
 import { allocatedQuantity, reservedQuantity, resetReservations } from './bag-reservations';
 import { CATALOGUE } from './catalogue-db';
-import { placeOrder, quoteFor, resetOrders, type PlaceInput } from './checkout-db';
+import { ordersFor, placeOrder, quoteFor, resetOrders, type PlaceInput } from './checkout-db';
 import { onHandFor, toProductDetail } from './product-detail-db';
 
 /**
@@ -66,6 +66,57 @@ beforeEach(() => {
   resetCarts();
   resetReservations();
   resetOrders();
+});
+
+describe('§28.3 order history', () => {
+  it('lists the orders one account placed, newest first', () => {
+    for (let index = 0; index < 3; index += 1) {
+      const cart = stockedCart();
+      placeOrder(cart.cartId, inputFor(cart.cartId), 'en', 'customer@example.com');
+    }
+
+    const history = ordersFor('customer@example.com');
+    /*
+     * Asserted on the NUMBERS rather than on the clock. `placedAt` is a
+     * millisecond stamp and three placements can share one, in which case a
+     * stable sort would leave them in insertion order — oldest first, the
+     * reverse of the promise. The order number breaks that tie, so this holds
+     * however fast the machine is.
+     */
+    expect(history.map((order) => order.orderNumber)).toEqual(['AA100003', 'AA100002', 'AA100001']);
+    expect(history[0]?.firstItem.length).toBeGreaterThan(0);
+    expect(history[0]?.totalMinor).toBeGreaterThan(0);
+  });
+
+  it('counts PRODUCTS and not units, because that is what the row says', () => {
+    const account = 'counts@example.com';
+    const cart = stockedCart();
+    // The same garment, three times: one product, not three.
+    updateQuantity(cart.cartId, at(summaryFor(cart.cartId, 'en')?.lines ?? [], 0).id, 3, 'en');
+    placeOrder(cart.cartId, inputFor(cart.cartId), 'en', account);
+
+    const history = ordersFor(account);
+    expect(history[0]?.lineCount).toBe(1);
+  });
+
+  it('one account cannot see the orders of another', () => {
+    const mine = stockedCart();
+    placeOrder(mine.cartId, inputFor(mine.cartId), 'en', 'mine@example.com');
+
+    expect(ordersFor('mine@example.com')).toHaveLength(1);
+    expect(ordersFor('other@example.com')).toHaveLength(0);
+  });
+
+  it("a GUEST's order belongs to nobody and is found by its number", () => {
+    const guest = stockedCart();
+    const outcome = placeOrder(guest.cartId, inputFor(guest.cartId), 'en');
+
+    expect(outcome.kind).toBe('PLACED');
+    // §6.5: a guest order has a null customer. It is still an order.
+    expect(ordersFor('')).toHaveLength(0);
+    expect(ordersFor('customer@example.com')).toHaveLength(0);
+    if (outcome.kind === 'PLACED') expect(outcome.order.accountKey).toBeNull();
+  });
 });
 
 describe('§17 quote', () => {
