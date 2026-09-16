@@ -38,6 +38,7 @@ export const en = {
     retry: 'Try again',
     viewAll: 'View all',
     submit: 'Submit',
+    cancel: 'Cancel',
   },
   product: {
     /* §34 — the made-to-measure fork under Add to bag. Drawn only when the
@@ -318,6 +319,39 @@ export const en = {
       one: '{count} more figure is on file that the guide no longer asks for.',
       other: '{count} more figures are on file that the guide no longer asks for.',
     },
+    addressesHeading: 'Your addresses',
+    addressesLead:
+      'An address saved here is offered at checkout. Signing in is a placeholder while real accounts are built, so please do not save a real address yet.',
+    addressesEmpty: 'You have not saved an address yet.',
+    addressesUnavailable:
+      'We could not reach your saved addresses just now. Anything you have saved is still on file — please try again in a moment.',
+    addressesFull: 'You have saved as many addresses as we keep. Remove one to add another.',
+    addressGone: 'That address is no longer in your book. It may have been removed in another tab.',
+    addressesSignedOut: 'Your session has ended. Please sign in again to change your addresses.',
+    addressSavedStatus: 'Address saved.',
+    addressRemovedStatus: 'Address removed.',
+    addressDefaultStatus: 'Default address changed.',
+    addressesGuestHeading: 'Sign in to save an address',
+    addressesGuestBody:
+      'A saved address belongs to your account, so it is there the next time you order. You can still check out without one.',
+    addressesManage: 'Manage addresses',
+    addressDefaultLead: 'Your next order goes here unless you choose otherwise.',
+    addressDefaultMark: 'Default',
+    addressAddCta: 'Add an address',
+    addressAddHeading: 'Add an address',
+    addressEditHeading: 'Edit this address',
+    addressAdd: 'Save address',
+    addressSaveChanges: 'Save changes',
+    addressEdit: 'Edit',
+    addressMakeDefault: 'Make default',
+    addressRemove: 'Remove',
+    recipientLabel: 'Who receives it',
+    recipientHint: 'The name the courier will ask for.',
+    addressUseSaved: 'Use a saved address',
+    addressPickerHint:
+      'Choosing one fills the fields below. You can change them for this order without changing what is saved.',
+    addressSaveOffer: 'Save this address for next time',
+    addressSaved: 'Saved to your addresses.',
     savedItemsHeading: 'Your saved items',
     savedItemsGuest:
       'A saved list belongs to an account, so there is nothing kept here yet. Sign in, and the heart on any product will keep it with you.',

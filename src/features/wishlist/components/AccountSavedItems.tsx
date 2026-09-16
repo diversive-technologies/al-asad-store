@@ -1,9 +1,10 @@
 import { ButtonLink } from '@/components/ui/button';
 import { ROUTES } from '@/config/routes';
+import { currentAccountKey } from '@/features/auth/server';
 import { getLocale, getMessages } from '@/i18n';
 import { formatPlural } from '@/lib/utils/format';
 
-import { currentAccountKey, fetchSavedItems } from '../api/saved-items-server';
+import { fetchSavedItems } from '../api/saved-items-server';
 
 /**
  * §28.3 — the saved-items section of the account.

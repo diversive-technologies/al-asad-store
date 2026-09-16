@@ -7,9 +7,10 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-16, on `main`, with account plan phases 1 to 3 done — a
-saved profile read back into the studio, `/account`, and the saved items moved off
-the browser and onto the account — and with all six Made-to-Measure plan phases done
+Last updated: 2026-09-16, on `main`, with account plan phases 1 to 4 done — a
+saved profile read back into the studio, `/account`, the saved items moved off the
+browser and onto the account, and an address book offered at checkout — and with
+all six Made-to-Measure plan phases done
 — the client's order, the list served as content, a real save with a review, the
 tailor's-card path, finishing choices that decide what is asked, and the tailor's
 rules as rows. Every rule row, bound and card convention is FIXTURE until the
@@ -1792,9 +1793,158 @@ captions and the saved-on line in Urdu and nothing past the viewport; the header
 menu reads "Your account", "Saved items", "Sign out"; and the studio's save
 confirmation offers "See your saved measurements".
 
-**Phases 4 to 7 are not started.** The address book, order history, the
-made-to-measure bag line with its stitching charge, and the product entry with the
-card mark are all still to come.
+**Phases 5 to 7 are not started.** Order history, the made-to-measure bag line with its
+stitching charge, and the product entry with the card mark are all still to come.
+
+## Account and tailored-from-a-product — plan Phase 4: the address book
+
+**An address is typed once and reused.** §28.3 lists "saved addresses" in Release 1
+scope and the architecture then says almost nothing else about them — five
+mentions in 1,752 lines, no domain model, no owning module, no default, no
+identity, no market rules. So **ten things were decided**, and they are decisions
+rather than readings:
+
+| Question the document does not answer | What was decided |
+| --- | --- |
+| Whose | ACCOUNT only. §2.1 puts saved addresses on the Customer row and not the Visitor's; a guest types one at checkout (§28.2). |
+| What an address IS | Recipient name and mobile as well as line and city — §6.5 snapshots all four onto the order, and filling checkout has to fill all four. No email: the order does not record one, and an email belongs to a person rather than a place. No postcode: this market's addresses have none. |
+| The fields' rules | Once, in `lib/domain/address.ts`, composed by checkout under its own field names. |
+| How many | Twenty, stated on the wire and again in the mock. |
+| A default | Exactly one while any exist, and it is an append-only EVENT rather than a column — the latest event still pointing at a live address, falling back to the first. |
+| What identifies one | A stable id. Editing appends the next VERSION and marks the one before `supersededBy`. |
+| Removing | A POST to `/removal` recording `removedAt` (D6). The last survivor is promoted if the default goes. |
+| Where it is managed | Its own page, `/account/addresses`, so `/account` stays a read with no JavaScript. |
+| When an order's address is saved | AFTER placement. §7.2 has no address step and its own rule keeps non-critical work outside the commit. |
+| Which module owns it | Nobody, in §5.1's eighteen rows. It joins `ENDPOINTS.account` beside the saved items, whose own comment already said the addresses would. |
+
+- **A mutable `isDefault` would have been the first field in the mock layer
+  overwritten in place.** It is a `DefaultEvent` instead, so "they changed their
+  default on Tuesday" survives, and the invariant holds with no repair step and
+  no write on a read.
+- **Book order is by FIRST save, not by latest version** — and that was a real
+  defect the tests caught: correcting a typo in the first address sent it to the
+  bottom of the list, because the new version was appended last. A customer who
+  fixed a spelling would have watched their book re-order itself.
+- **One definition of the four fields**, which is the plan's "nothing is validated
+  twice" taken literally. It TIGHTENED checkout: `contactName` and `addressLine`
+  had no upper bound at all, and now carry 80 and 200 (SEC-02 — the length of a
+  free-text field is untrusted input). Nothing a person would type is refused.
+- **`CheckoutFields` was 268 lines against MOD-03's 250 HARD ceiling before this
+  phase**, so the picker could not be added to it. The contact and address
+  fieldsets moved into their own components and now go through `Field`, which is
+  where FORM-05's label, `aria-invalid` and `aria-describedby` were written out
+  by hand five times. The file is 171 lines and the rendered markup is unchanged.
+- **Which saved address is MARKED at checkout is derived, not remembered**: edit
+  a filled field and the radio clears, because at that moment the form no longer
+  holds that address (STATE-02). A radio still claiming it would be the interface
+  saying the order goes somewhere it does not.
+- **`currentAccountKey` moved into `features/auth`**, behind a NEW `server.ts`
+  barrel. It cannot go on `index.ts`: that barrel is imported by Client
+  Components for `useSession`, and a `server-only` module reached through it
+  fails the build outright. Three features want the rule now and the wishlist's
+  copy is gone (PD-01).
+
+Verified: typecheck, lint, **470 tests** (11 new) and the production build pass,
+with `/account/addresses`, `/api/addresses`, `/api/addresses/removal` and
+`/api/addresses/default` in the build output.
+
+**Driven in the running store, as a guest and as a customer.** A guest: `/account`
+says a saved address belongs to an account, `/account/addresses` offers sign-in
+and draws no form, checkout is the page it always was — five fields, five
+fieldsets, no picker — and an order placed through the restructured form came
+back as AA100001 with no save offer on it. A customer: an empty book, then one
+address saved and marked Default with no "Make default" on it; a second added and
+not default; chosen, and the mark moved with exactly one carrying it; the first
+one corrected, which kept its place and its contents; `/account` showing the
+default and a way to manage; checkout offering both with the default pre-filled
+into all four fields; choosing the other filling them; editing a field clearing
+the radio; an order placed to that edited address offering to save it, saving it,
+and then NOT offering again on a reload. Removing the default promoted the last
+survivor. Directly against the routes: another origin 403 on GET and POST, a
+guest 401 on all three, a six-character line 400, a mobile that is not this
+market's 400, a body with no address 400, a non-UUID id 400, an unknown id 404 on
+all three paths, GET on `/removal` 405, and a second account seeing an empty
+book. In Urdu at 375px both pages are `dir="rtl"` with no sideways scroll, the
+form's four fields are 16px (the iOS zoom rule), and the unreadable state was
+seen for real when MSW died mid-session.
+
+**The phase's review** (three lenses — correctness and security, the rulebook,
+the customer and the plan — with every finding put to an independent skeptic; 18
+of 22 stood, and they were nine distinct defects seen from more than one side):
+
+- **Editing a second address wrote the first one's values over it**, and it took
+  two clicks. `AddressForm` hands `initial` to React Hook Form as
+  `defaultValues`, which is read once at mount, and both branches of the
+  screen's ternary render the same element at the same position — so pressing
+  Edit on another card reconciled the form in place and left the previous
+  address's four values in the fields, under a heading that reads identically
+  for either target. Saving then superseded the second address with the first's
+  details: the book showed two identical entries and the real one survived only
+  in history, which nothing reads back. The form is KEYED on what it is editing.
+- **The picker overwrote an address the customer had already typed.** The
+  component's own comment promised it would fill "only into an untouched form"
+  and nothing implemented that. The book arrives a round trip after the fields
+  are usable, so somebody sending a gift who starts typing their aunt's address
+  straight away had all four fields replaced by their own default a second
+  later, silently — and there was a second, deterministic path: changing the
+  delivery option or ticking the gift box re-keys the quote, which unmounts the
+  whole form subtree and re-armed the one-shot latch. It now fills only while
+  all four fields are still empty, and the latch is spent the moment the book
+  LANDS rather than when it fills, so a remount cannot re-apply it.
+- **Checkout never actually composed the shared rules.** The domain module was
+  written, two comments claimed checkout validated against it, and
+  `checkout.schema.ts` was never touched — so the rules were duplicated and had
+  already drifted within one phase, in the direction that hurts: checkout
+  accepted an address the book would then refuse, and the customer met that
+  refusal only after the order was placed. Checkout composes `ADDRESS_RULES` now,
+  and the mock parses inbound addresses with `addressDetailSchema` instead of a
+  hand-written second copy of the bounds.
+- **The maximums then had to move.** At 200 characters a perfectly ordinary
+  descriptive address — landmarks, which is how an address works here — was
+  refused with "Please enter your address", the same sentence that means "you
+  left this empty". The bounds exist for SEC-02 and not to discipline anybody,
+  so they sit above what a person writes: 300 and 120. A 252-character address
+  now goes through checkout and into the book, which is the check that proves
+  the two agree.
+- **"Save this address for next time" swallowed every refusal.** The hook
+  carries `failure` precisely so a page can put one into words and this surface
+  never read it, so a customer whose book was full pressed it, the button span
+  for a moment, and nothing changed or was said. It was also drawn before the
+  book had been READ — and that page is bookmarkable, so a cold load is a
+  first-class path — which invited saving a second copy of an address already on
+  file. It waits for the book and reports a refusal now.
+- **No synchronous latch on any change.** `isChanging` only becomes true after a
+  re-render, so a double tap sent two saves and the mock mints a fresh id per
+  save: the book ended up holding the same address twice. The latch is in the
+  HOOK rather than in each caller, so every surface gets it.
+- **"That address is no longer in your book" was printed above the card it was
+  about**, with Edit, Make default and Remove all still offered and all still
+  failing, because the mutation had no `onError` and `refetchOnWindowFocus` is
+  off globally. Any refusal now asks the server again.
+- **Nothing successful was announced and every change dropped focus to the
+  body.** A removed card unmounts and the form closes on save, so the control
+  that was pressed stops existing; the card's buttons also DISABLED on busy,
+  which is the same defect the studio's Check and Save buttons were fixed for.
+  They carry `aria-busy` now, a `role="status"` line says what happened, and
+  focus is put on "Add an address", the one control that is always there.
+- **A session that had ENDED was reported as a passing network problem** and the
+  customer was told to try again in a moment, which could never work. The
+  refusal mapping is one pure function taking the ERROR UNION rather than a
+  string, so a new kind fails the build instead of falling through to the wrong
+  sentence.
+
+Four further claims were refuted by their skeptics: the 20-address ceiling
+existing in the contract and again in the mock (deliberate — the mock stands in
+for Java), a two-line `detailOf` in two components, import order in four files,
+and that removing an address should be confirmed.
+
+Re-verified after the fixes, in the running store: pressing Edit on a second
+address while the form is open now shows THAT address; a default filled into an
+empty form, the customer's own edit over it survived, and a re-quote did not put
+the default back; removing an address announced "Address removed." and left
+focus on "Add an address"; and a 252-character descriptive line went through
+checkout, was offered for saving, and was saved. typecheck, lint, **470 tests**
+and the production build pass.
 
 ## Account and tailored-from-a-product — plan Phase 3: the wishlist, moved to the account
 
@@ -1996,9 +2146,8 @@ tray's X being the X, which then closes the tray.
   on the sign-in screen. Passwords are compared in plaintext there because §11's
   adaptive hashing is the Java module's job, and imitating it would suggest that
   file is a security boundary. It is not.
-- **No address book and no order history.** `/account` holds the customer's
-  details, their saved items and their measurements; the other two are plan
-  phases 4 and 5.
+- **No order history.** `/account` holds the customer's details, their addresses,
+  their saved items and their measurements; the order list is plan phase 5.
 - **The wishlist has a PAGE now, at `/wishlist`**, reached from the account
   menu — the heart used to save into a list with nowhere to open it. It renders
   the same `ProductCard` as the catalogue, so the heart, the quick add and the
@@ -2827,6 +2976,27 @@ out, and `/order/AA100001` still renders on a fresh load.
   `revalidate: 300` on the read: swapped mock rows showed at once after a
   restart. That is what makes "edit the mock and restart" a usable check here.
 
+- **`defaultValues` is read ONCE, so a form reused for a different record shows
+  the previous one.** React Hook Form evaluates `defaultValues` at mount and
+  never again; a form rendered at the same position for two different targets is
+  reconciled in place, so switching what is being edited leaves the old values in
+  the fields under a heading that looks right. Saving then writes one record over
+  another. Give such a form a `key` that is the thing it edits — or drive it with
+  `values` rather than `defaultValues`. Found by a reviewer, not by using the
+  page, because it needs two records and a second press of Edit.
+- **A comment that describes a guard is not a guard.** Three separate claims in
+  this feature's own doc comments — "only into an untouched form", "checkout
+  validates against these rules", "a book cannot come to hold an address checkout
+  would refuse" — were written while the code did none of them. The prose was
+  written at the same time as the intention and outlived it by minutes. When a
+  comment states a property, the next thing to write is the check, not the next
+  comment.
+- **A bound added for SEC-02 becomes a usability rule the moment a real value
+  can reach it.** Capping the address line at 200 characters was defensible as
+  "untrusted input has a length", and an ordinary Pakistani address with
+  landmarks is 250 — so a real customer met a refusal whose one message says
+  "you left this empty". Put the ceiling where nothing a person writes can reach
+  it, or give the length its own sentence.
 - **A schema test that leaves a field out tests the wrong thing.** The form's
   schema refuses `undefined`, but a form never holds it — a field shows `''` — so a
   fixture without the optional fields failed for a reason no customer can meet.

@@ -171,6 +171,17 @@ export const ENDPOINTS = {
     savedItems: '/api/v1/account/saved-items',
     /** D6 — a removal is RECORDED at its own path; there is no DELETE. */
     savedItemRemoval: '/api/v1/account/saved-items/removal',
+    /**
+     * §28.3's saved addresses. GET reads the book; POST saves one, or revises
+     * one when the body names an id — a revision being the next VERSION of that
+     * address rather than an overwrite (D6).
+     */
+    addresses: '/api/v1/account/addresses',
+    /** D6 — a removal is RECORDED; the address and its date stay on file. */
+    addressRemoval: '/api/v1/account/addresses/removal',
+    /** Which address checkout should offer first. Its own path, because choosing
+        a default is an event about the BOOK rather than an edit to one address. */
+    addressDefault: '/api/v1/account/addresses/default',
   },
   /** Section 11 Identity and Access. */
   auth: {

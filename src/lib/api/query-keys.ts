@@ -54,6 +54,18 @@ export const queryKeys = {
       [...queryKeys.wishlist.all, 'saved-items', accountKey] as const,
   },
   /**
+   * §28.3's account, beyond its saved items.
+   *
+   * Keyed by the account for the reason the saved items are: signing out and in
+   * again as somebody else is a soft navigation the query cache survives, and
+   * an address book is exactly the thing that must not be shown to the wrong
+   * person out of a cache.
+   */
+  account: {
+    all: ['account'] as const,
+    addresses: (accountKey: string) => [...queryKeys.account.all, 'addresses', accountKey] as const,
+  },
+  /**
    * §16 — the bag is ONE server-owned object, so it is one key.
    *
    * Deliberately not keyed by cart id: the id lives in an httpOnly cookie the

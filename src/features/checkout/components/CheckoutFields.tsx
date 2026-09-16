@@ -5,9 +5,12 @@ import type { UseFormReturn } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { formatMoneyMinor, formatTemplate } from '@/lib/utils/format';
+import { formatMoneyMinor } from '@/lib/utils/format';
 
 import type { CheckoutFormInput, CheckoutQuote } from '../schemas/checkout.schema';
+import { CheckoutAddressFields } from './CheckoutAddressFields';
+import { CheckoutContactFields } from './CheckoutContactFields';
+import { CheckoutSavedAddress } from './CheckoutSavedAddress';
 
 export interface CheckoutFieldsProps {
   form: UseFormReturn<CheckoutFormInput>;
@@ -44,113 +47,14 @@ export function CheckoutFields({
 
   return (
     <div className="flex flex-col gap-8">
-      <fieldset className="flex flex-col gap-4">
-        <legend className="text-fg mb-2 text-lg font-medium">{t.contactHeading}</legend>
+      {/* §28.3 — a signed-in customer's saved addresses, above the fields they
+          fill. Nothing is drawn for a guest, so guest checkout (§28.2) is the
+          page it always was. */}
+      <CheckoutSavedAddress form={form} messages={messages} />
 
-        {/* FORM-05: labelled, with `aria-invalid` and `aria-describedby` wired. */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="contactName" className="text-fg text-sm">
-            {t.nameLabel}
-          </label>
-          <Input
-            id="contactName"
-            autoComplete="name"
-            aria-invalid={errors.contactName !== undefined}
-            aria-describedby={errors.contactName === undefined ? undefined : 'contactName-error'}
-            {...register('contactName')}
-          />
-          {errors.contactName === undefined ? null : (
-            <p id="contactName-error" role="alert" className="text-danger-500 text-xs">
-              {t.nameInvalid}
-            </p>
-          )}
-        </div>
+      <CheckoutContactFields form={form} messages={messages} mobileExample={mobileExample} />
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="contactMobile" className="text-fg text-sm">
-            {t.mobileLabel}
-          </label>
-          <Input
-            id="contactMobile"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            // D5: the example comes from the client profile, beside the pattern
-            // that validates it, so the two cannot drift.
-            placeholder={mobileExample}
-            aria-invalid={errors.contactMobile !== undefined}
-            aria-describedby={
-              errors.contactMobile === undefined ? undefined : 'contactMobile-error'
-            }
-            {...register('contactMobile')}
-          />
-          {errors.contactMobile === undefined ? null : (
-            <p id="contactMobile-error" role="alert" className="text-danger-500 text-xs">
-              {formatTemplate(t.mobileInvalid, { example: mobileExample })}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="contactEmail" className="text-fg text-sm">
-            {t.emailLabel}
-          </label>
-          <Input
-            id="contactEmail"
-            type="email"
-            autoComplete="email"
-            aria-invalid={errors.contactEmail !== undefined}
-            aria-describedby={errors.contactEmail === undefined ? undefined : 'contactEmail-error'}
-            {...register('contactEmail')}
-          />
-          {errors.contactEmail === undefined ? null : (
-            <p id="contactEmail-error" role="alert" className="text-danger-500 text-xs">
-              {t.emailInvalid}
-            </p>
-          )}
-        </div>
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-4">
-        <legend className="text-fg mb-2 text-lg font-medium">{t.addressHeading}</legend>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="addressLine" className="text-fg text-sm">
-            {t.addressLabel}
-          </label>
-          <Input
-            id="addressLine"
-            autoComplete="street-address"
-            placeholder={t.addressPlaceholder}
-            aria-invalid={errors.addressLine !== undefined}
-            aria-describedby={errors.addressLine === undefined ? undefined : 'addressLine-error'}
-            {...register('addressLine')}
-          />
-          {errors.addressLine === undefined ? null : (
-            <p id="addressLine-error" role="alert" className="text-danger-500 text-xs">
-              {t.addressInvalid}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="addressCity" className="text-fg text-sm">
-            {t.cityLabel}
-          </label>
-          <Input
-            id="addressCity"
-            autoComplete="address-level2"
-            aria-invalid={errors.addressCity !== undefined}
-            aria-describedby={errors.addressCity === undefined ? undefined : 'addressCity-error'}
-            {...register('addressCity')}
-          />
-          {errors.addressCity === undefined ? null : (
-            <p id="addressCity-error" role="alert" className="text-danger-500 text-xs">
-              {t.cityInvalid}
-            </p>
-          )}
-        </div>
-      </fieldset>
+      <CheckoutAddressFields form={form} messages={messages} />
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-fg mb-2 text-lg font-medium">{t.deliveryHeading}</legend>

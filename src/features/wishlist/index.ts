@@ -9,12 +9,7 @@
  */
 export { AccountSavedItems } from './components/AccountSavedItems';
 export { WishlistScreen, type WishlistScreenProps } from './components/WishlistScreen';
-export {
-  currentAccountKey,
-  fetchSavedItems,
-  removeItems,
-  saveItems,
-} from './api/saved-items-server';
+export { fetchSavedItems, removeItems, saveItems } from './api/saved-items-server';
 export {
   savedItemsChangeSchema,
   savedItemsSchema,

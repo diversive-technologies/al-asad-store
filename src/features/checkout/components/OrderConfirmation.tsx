@@ -1,4 +1,5 @@
 import { ButtonLink } from '@/components/ui/button';
+import { SaveAddressOffer } from '@/features/addresses/contract';
 import { ROUTES } from '@/config/routes';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
@@ -23,7 +24,9 @@ export interface OrderConfirmationProps {
  * does say is what is already true — the order exists, here is its number, and
  * here is what was bought.
  *
- * A Server Component. Only the mark at the top animates, and it does so in CSS.
+ * It is rendered by `OrderScreen`, which reads the order in the browser, so it
+ * is part of that client subtree. Nothing here holds state of its own: the mark
+ * at the top animates in CSS and the one control is a leaf of its own.
  */
 export function OrderConfirmation({ order, locale, messages }: OrderConfirmationProps) {
   const t = messages.order;
@@ -46,6 +49,24 @@ export function OrderConfirmation({ order, locale, messages }: OrderConfirmation
           <p className="text-fg-muted text-sm">{order.deliveryCity}</p>
           <p className="text-fg-muted text-sm">{order.contactMobile}</p>
           <p className="text-fg-muted mt-2 text-sm">{order.deliveryLabel}</p>
+
+          {/*
+           * §28.3 — offered AFTER the order, never during it: §7.2 has no address
+           * step and its own rule keeps non-critical work outside the commit.
+           *
+           * The rename is §6.5's: an order snapshots `delivery_address` and
+           * `delivery_city` beside its contact block, and a saved address calls
+           * the same four fields by its own names.
+           */}
+          <SaveAddressOffer
+            messages={messages}
+            address={{
+              recipientName: order.contactName,
+              recipientMobile: order.contactMobile,
+              line: order.deliveryAddress,
+              city: order.deliveryCity,
+            }}
+          />
         </div>
 
         <div>

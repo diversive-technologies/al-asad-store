@@ -1,6 +1,5 @@
 import 'server-only';
 
-import { accountKeyOf, readSession } from '@/features/auth';
 import { apiRequest } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
@@ -25,12 +24,6 @@ function withAccount<T>(
   call: (headers: Record<string, string>) => Promise<Result<T, ApiError>>,
 ): Promise<Result<T, ApiError>> {
   return call({ [API_HEADERS.accountKey]: accountKey });
-}
-
-/** The signed-in customer's account key, or null for a guest. */
-export async function currentAccountKey(): Promise<string | null> {
-  const session = await readSession();
-  return session === null ? null : accountKeyOf(session);
 }
 
 export function fetchSavedItems(accountKey: string): Promise<Result<SavedItems, ApiError>> {

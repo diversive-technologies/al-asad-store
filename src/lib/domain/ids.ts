@@ -84,3 +84,8 @@ export const ruleIdSchema = z
 
 export type ProfileId = Brand<string, 'ProfileId'>;
 export const profileIdSchema = z.uuid().transform((value) => value as ProfileId);
+
+/* A saved address keeps ONE id across every correction to it, so a revision is
+   the next version of that address rather than a different address. */
+export type AddressId = Brand<string, 'AddressId'>;
+export const addressIdSchema = z.uuid().transform((value) => value as AddressId);

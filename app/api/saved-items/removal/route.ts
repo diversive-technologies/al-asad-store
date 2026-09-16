@@ -1,4 +1,5 @@
-import { currentAccountKey, removeItems, savedItemsChangeSchema } from '@/features/wishlist';
+import { currentAccountKey } from '@/features/auth/server';
+import { removeItems, savedItemsChangeSchema } from '@/features/wishlist';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';

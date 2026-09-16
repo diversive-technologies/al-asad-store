@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { CLIENT } from '@/config/client';
+import { ADDRESS_RULES } from '@/lib/domain/address';
 import { orderIdSchema, productIdSchema } from '@/lib/domain/ids';
 
 /**
@@ -84,17 +84,22 @@ export type CheckoutQuote = z.infer<typeof checkoutQuoteSchema>;
  * way has a null `customer_id` (§6.5).
  */
 export const checkoutFormSchema = z.object({
-  contactName: z.string().trim().min(2),
   /*
-   * D5 — the national mobile format is client configuration, not a domain
-   * constant. `CLIENT.market.mobile` is the one place it is written, so a
-   * deployment in another market changes a regex rather than a component.
+   * The four delivery fields COMPOSE `lib/domain/address.ts`, which the saved
+   * address book validates against too. Written out here as well, they drifted
+   * within one phase: the book bounded the free-text fields and checkout did
+   * not, so checkout accepted a line the book would then refuse to save — and
+   * the customer met that refusal only after the order was placed.
+   *
+   * D5 lives on the other side of that import: the national mobile format is
+   * `CLIENT.market.mobile`, so another market changes a regex, not a component.
    */
-  contactMobile: z.string().trim().regex(CLIENT.market.mobile.pattern),
+  contactName: ADDRESS_RULES.name,
+  contactMobile: ADDRESS_RULES.mobile,
   /** Optional: this market reaches customers by mobile, not by email. */
   contactEmail: z.union([z.email(), z.literal('')]),
-  addressLine: z.string().trim().min(6),
-  addressCity: z.string().trim().min(2),
+  addressLine: ADDRESS_RULES.line,
+  addressCity: ADDRESS_RULES.city,
   deliveryOptionId: z.string().min(1),
   paymentMethodId: z.string().min(1),
   isGift: z.boolean(),

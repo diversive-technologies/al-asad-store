@@ -62,6 +62,12 @@ export const ROUTES = {
     savedItems: '/api/saved-items',
     /** D6 — POST records that an item was removed; nothing is destroyed. */
     savedItemRemoval: '/api/saved-items/removal',
+    /** §28.3's address book. GET reads it; POST saves or revises one. */
+    addresses: '/api/addresses',
+    /** D6 — POST records that an address was removed; nothing is destroyed. */
+    addressRemoval: '/api/addresses/removal',
+    /** POST chooses which address checkout offers first. */
+    addressDefault: '/api/addresses/default',
     /** §34.4 `validate`, for the studio's review before a save. Stores nothing. */
     measurementCheck: '/api/made-to-measure/check',
     /** §34.4 `saveProfile` — each save a new version, never an overwrite (D6). */
@@ -94,6 +100,8 @@ export const ROUTES = {
   wishlist: '/wishlist',
   /** §28.3's account area. A guest has one too — measurements save before anyone signs in. */
   account: '/account',
+  /** §28.3's address book, managed on its own page so `/account` stays a read. */
+  accountAddresses: '/account/addresses',
   checkout: '/checkout',
   /** §28.3 — the order number is the address, so it can be shared and returned to. */
   orderConfirmation: (orderNumber: string) => `/order/${orderNumber}`,
