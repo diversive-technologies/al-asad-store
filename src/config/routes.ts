@@ -58,6 +58,10 @@ export const ROUTES = {
      * request can only start there — and `apiRequest` is `server-only`.
      */
     products: '/api/products',
+    /** §28.3's saved items, for the account that owns them. GET reads, POST adds. */
+    savedItems: '/api/saved-items',
+    /** D6 — POST records that an item was removed; nothing is destroyed. */
+    savedItemRemoval: '/api/saved-items/removal',
     /** §34.4 `validate`, for the studio's review before a save. Stores nothing. */
     measurementCheck: '/api/made-to-measure/check',
     /** §34.4 `saveProfile` — each save a new version, never an overwrite (D6). */

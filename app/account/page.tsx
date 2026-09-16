@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ROUTES } from '@/config/routes';
 import { AccountIdentity, readSession } from '@/features/auth';
 import { AccountMeasurements } from '@/features/made-to-measure';
+import { AccountSavedItems } from '@/features/wishlist';
 import { getMessages } from '@/i18n';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -18,9 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
  * The account area (§28.3), for a customer or a guest.
  *
  * STRUCT-02: the route composes and does not implement. Each section comes from
- * the feature that owns its data — identity from `auth`, measurements from
- * `made-to-measure` — so neither knows about the other and the page knows about
- * neither's internals (MOD-01).
+ * the feature that owns its data — identity from `auth`, saved items from
+ * `wishlist`, measurements from `made-to-measure` — so none of them knows about
+ * the others and the page knows about none of their internals (MOD-01).
  *
  * A GUEST gets the page too, reduced: measurements save against a device token
  * before anyone signs in, so a page that refused them would hide a customer's own
@@ -49,6 +50,7 @@ export default async function AccountPage() {
 
       <main className="max-w-3xl">
         <AccountIdentity session={session} messages={messages} />
+        <AccountSavedItems />
         <AccountMeasurements isSignedIn={session !== null} />
       </main>
     </div>

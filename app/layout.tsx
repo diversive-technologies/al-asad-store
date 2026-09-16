@@ -9,6 +9,7 @@ import { CLIENT } from '@/config/client';
 import { fontVariables } from '@/config/fonts';
 import { SITE } from '@/config/site';
 import { BagPanel, BagProvider, BagTrigger } from '@/features/bag/contract';
+import { SavedItemsProvider } from '@/features/wishlist/contract';
 import { HeaderSearch } from '@/features/catalogue';
 import { AccountMenu, readSession, SessionProvider } from '@/features/auth';
 import { LocaleSwitcher } from '@/features/localisation';
@@ -107,44 +108,51 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                  * contents are server state and stay in TanStack Query (STATE-02).
                  */}
                 <BagProvider>
-                  <SkipLink label={messages.nav.skipToContent} targetId={MAIN_CONTENT_ID} />
+                  {/*
+                   * §28.3 — mounted once, and above the routes, because the list a
+                   * customer built before signing in has to be handed to their
+                   * account wherever they land afterwards. It renders nothing.
+                   */}
+                  <SavedItemsProvider>
+                    <SkipLink label={messages.nav.skipToContent} targetId={MAIN_CONTENT_ID} />
 
-                  <Header
-                    messages={messages}
-                    /*
-                     * Derived, not flagged: a client with one language has nothing
-                     * to switch to, and a separate flag could contradict LOCALES.
-                     */
-                    localeSwitcher={
-                      /* D5: two conditions, and they mean different things. More
+                    <Header
+                      messages={messages}
+                      /*
+                       * Derived, not flagged: a client with one language has nothing
+                       * to switch to, and a separate flag could contradict LOCALES.
+                       */
+                      localeSwitcher={
+                        /* D5: two conditions, and they mean different things. More
                      than one locale must EXIST, and the client must want the
                      control offered — see `features.languageSwitcher`. */
-                      LOCALES.length > 1 && CLIENT.features.languageSwitcher ? (
-                        <LocaleSwitcher currentLocale={locale} />
-                      ) : null
-                    }
-                    search={<HeaderSearch locale={locale} messages={messages} />}
-                    bagTrigger={<BagTrigger messages={messages} />}
-                    accountMenu={<AccountMenu messages={messages} />}
-                  />
+                        LOCALES.length > 1 && CLIENT.features.languageSwitcher ? (
+                          <LocaleSwitcher currentLocale={locale} />
+                        ) : null
+                      }
+                      search={<HeaderSearch locale={locale} messages={messages} />}
+                      bagTrigger={<BagTrigger messages={messages} />}
+                      accountMenu={<AccountMenu messages={messages} />}
+                    />
 
-                  {/*
-                   * The bar is fixed, so it occupies no layout space. Padding here
-                   * clears it for every page by default; a full-bleed section such
-                   * as the hero opts out with a matching negative margin.
-                   */}
-                  <main id={MAIN_CONTENT_ID} className="pt-header flex-1">
-                    {children}
-                  </main>
+                    {/*
+                     * The bar is fixed, so it occupies no layout space. Padding here
+                     * clears it for every page by default; a full-bleed section such
+                     * as the hero opts out with a matching negative margin.
+                     */}
+                    <main id={MAIN_CONTENT_ID} className="pt-header flex-1">
+                      {children}
+                    </main>
 
-                  <Footer
-                    messages={messages}
-                    /* D5: an optional feature, so the slot is empty when it is off. */
-                    newsletter={CLIENT.features.newsletter ? <NewsletterForm /> : null}
-                  />
+                    <Footer
+                      messages={messages}
+                      /* D5: an optional feature, so the slot is empty when it is off. */
+                      newsletter={CLIENT.features.newsletter ? <NewsletterForm /> : null}
+                    />
 
-                  {/* Mounted once, above the routes: one dialog, one top layer. */}
-                  <BagPanel locale={locale} messages={messages} />
+                    {/* Mounted once, above the routes: one dialog, one top layer. */}
+                    <BagPanel locale={locale} messages={messages} />
+                  </SavedItemsProvider>
                 </BagProvider>
               </SessionProvider>
             </MessagesProvider>

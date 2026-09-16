@@ -3,7 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
-import { readSession } from '@/features/auth';
+import { accountKeyOf, readSession } from '@/features/auth';
 import type { ApiError } from '@/lib/api/errors';
 import { ok, type Result } from '@/lib/result';
 import { capabilityCookieOptions } from '@/lib/utils/cookies';
@@ -43,8 +43,10 @@ const deviceTokenShape = z.uuid();
 export async function resolveProfileOwner(): Promise<Result<ResolvedOwner, ApiError>> {
   const session = await readSession();
   if (session !== null) {
-    const key = session.email.length > 0 ? session.email : session.mobile;
-    return ok({ owner: { keptWith: 'ACCOUNT', key }, isNewDevice: false });
+    return ok({
+      owner: { keptWith: 'ACCOUNT', key: accountKeyOf(session) },
+      isNewDevice: false,
+    });
   }
 
   const store = await cookies();
@@ -68,8 +70,7 @@ export async function resolveProfileOwner(): Promise<Result<ResolvedOwner, ApiEr
 export async function readProfileOwner(): Promise<ProfileOwner | null> {
   const session = await readSession();
   if (session !== null) {
-    const key = session.email.length > 0 ? session.email : session.mobile;
-    return { keptWith: 'ACCOUNT', key };
+    return { keptWith: 'ACCOUNT', key: accountKeyOf(session) };
   }
 
   const store = await cookies();

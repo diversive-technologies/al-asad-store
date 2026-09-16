@@ -23,6 +23,7 @@ import {
   requestPasswordReset,
 } from './auth-db';
 import { findOrder, placeOrder, quoteFor } from './checkout-db';
+import { accountHandlers } from './account-handlers';
 import { madeToMeasureHandlers } from './made-to-measure-handlers';
 import { measurementCopyFor } from './measurement-copy-db';
 import {
@@ -257,6 +258,9 @@ export const handlers = [
 
   // §34 module 18 — `made-to-measure-handlers.ts`.
   ...madeToMeasureHandlers,
+
+  // §28.3's account — `account-handlers.ts`.
+  ...accountHandlers,
 
   /* §22 — the words, by locale, for every style at once (§34.3). */
   http.get(`*${ENDPOINTS.localisation.measurementCopy}`, ({ request }) =>

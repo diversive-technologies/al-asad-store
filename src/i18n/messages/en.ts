@@ -301,7 +301,7 @@ export const en = {
       'Signing in is a placeholder while real accounts are built, so please do not put real personal details in here yet.',
     guestHeading: 'You are not signed in',
     guestBody:
-      'You can still use the shop, and anything below is kept on this browser. Signing in does not move it across yet.',
+      'You can still use the shop. Your measurements are kept on this browser, and signing in does not move them across yet.',
     measurementsHeading: 'Your measurements',
     measurementsEmpty: 'You have not saved any measurements yet.',
     measurementsEmptyCta: 'Take your measurements',
@@ -318,6 +318,12 @@ export const en = {
       one: '{count} more figure is on file that the guide no longer asks for.',
       other: '{count} more figures are on file that the guide no longer asks for.',
     },
+    savedItemsHeading: 'Your saved items',
+    savedItemsGuest:
+      'A saved list belongs to an account, so there is nothing kept here yet. Sign in, and the heart on any product will keep it with you.',
+    savedItemsUnavailable:
+      'We could not reach your saved items just now. Anything you have saved is still on file — please try again in a moment.',
+    openSavedItems: 'See your saved items',
   },
   /** §28.3's saved items. */
   wishlist: {
@@ -333,6 +339,11 @@ export const en = {
       other: '{count} saved items are no longer available and are not shown.',
     },
     unreachable: 'We could not load your saved items. Please try again.',
+    /* What this browser was holding, now kept with the account instead. */
+    carried: {
+      one: '{count} item you saved on this browser is now kept with your account.',
+      other: '{count} items you saved on this browser are now kept with your account.',
+    },
     navLabel: 'Saved items',
   },
   catalogue: {
@@ -355,6 +366,7 @@ export const en = {
     quickView: 'Quick view',
     /* §28.1's card actions. */
     wishlistAdd: 'Save to wishlist',
+    wishlistChangeFailed: 'We could not change your saved items. Please try again.',
     wishlistRemove: 'Remove from wishlist',
     quickAddOpen: 'Choose a size',
     quickAddClose: 'Close sizes',

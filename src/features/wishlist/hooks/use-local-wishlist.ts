@@ -20,45 +20,28 @@ function read(): string[] {
   }
 }
 
-export interface Wishlist {
-  /**
-   * Every saved id, in the order they were saved.
-   *
-   * The order is the customer's, not the catalogue's, and the page that renders
-   * this list preserves it — re-sorting would quietly discard the one piece of
-   * meaning the list carries beyond its membership.
-   *
-   * Empty on the first render, always: the ids are read in an effect so that
-   * the server render and the first client render agree, which is what
-   * hydration requires. A consumer must therefore treat "empty" as "not known
-   * yet" until `isReady`.
-   */
-  ids: readonly string[];
-  /**
-   * False until `localStorage` has been read, so an empty list can be told
-   * apart from an unread one. Without it the saved-items page would flash
-   * "nothing saved" on every load before showing the items.
-   */
-  isReady: boolean;
-  isSaved: (productId: string) => boolean;
-  toggle: (productId: string) => void;
+export interface LocalWishlist {
+  /** In the order they were saved — the customer's order, not the catalogue's. */
+  readonly ids: readonly string[];
+  /** False until `localStorage` has been read, so empty and unread are distinct. */
+  readonly isReady: boolean;
+  readonly toggle: (productId: string) => void;
+  /** Emptied once the list has been carried into an account (D6 lives there). */
+  readonly clear: () => void;
 }
 
 /**
- * The saved-items list, held in this browser.
+ * The saved list held in THIS browser.
  *
- * **This is an interim, and it is worth being precise about why.** A real
- * wishlist belongs to a CUSTOMER (§28.3) and therefore needs the account system
- * that D3 defers to M6 — so today there is nobody to attach it to. Rather than
- * leave the heart inert, it persists locally: the customer gets the affordance
- * and their choices survive a reload, on one device.
+ * It is no longer where a signed-in customer's list lives — that is the account
+ * now — but it keeps two jobs. It is what a browser hands over when its customer
+ * signs in, so a list built before the account existed is not lost. And it is
+ * what would hold a guest's list, if a guest were offered the heart.
  *
- * What that means, stated rather than discovered later: it does not follow them
- * to a phone, and it is not visible to the operator. When M6 lands, this hook
- * is replaced by a server-backed list and the components above it do not
- * change — which is the point of the shape it already has.
+ * Nothing is deleted from the account by `clear`: it empties this BROWSER once
+ * its contents have been saved somewhere that outlives it.
  */
-export function useWishlist(): Wishlist {
+export function useLocalWishlist(): LocalWishlist {
   const [ids, setIds] = useState<readonly string[]>([]);
   const [isReady, setIsReady] = useState(false);
 
@@ -84,8 +67,6 @@ export function useWishlist(): Wishlist {
     };
   }, []);
 
-  const isSaved = useCallback((productId: string) => ids.includes(productId), [ids]);
-
   const toggle = useCallback((productId: string) => {
     const next = read().includes(productId)
       ? read().filter((id) => id !== productId)
@@ -96,5 +77,10 @@ export function useWishlist(): Wishlist {
     window.dispatchEvent(new Event(CHANGE_EVENT));
   }, []);
 
-  return { ids, isReady, isSaved, toggle };
+  const clear = useCallback(() => {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new Event(CHANGE_EVENT));
+  }, []);
+
+  return { ids, isReady, toggle, clear };
 }

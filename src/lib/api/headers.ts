@@ -13,4 +13,15 @@ export const API_HEADERS = {
    * customer from it.
    */
   measurementOwner: 'x-measurement-owner',
+  /**
+   * §28.3 — which ACCOUNT a saved item belongs to, attached by the BFF from the
+   * session and never taken from the request body.
+   *
+   * Its own header rather than `measurementOwner`, because it carries a different
+   * thing: a measurement profile can belong to a device as well as an account,
+   * and a saved list only ever belongs to an account — a guest's stays in their
+   * own browser. A header that could say `DEVICE:` here would be a shape the
+   * store has no answer for.
+   */
+  accountKey: 'x-account-key',
 } as const;

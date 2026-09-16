@@ -43,6 +43,15 @@ export const queryKeys = {
     all: ['wishlist'] as const,
     products: (ids: readonly string[], locale: string) =>
       [...queryKeys.wishlist.all, locale, ids.join(',')] as const,
+    /**
+     * One account's own list of ids.
+     *
+     * Keyed by the account, unlike the bag's summary — a cart id belongs to the
+     * browser, but a saved list belongs to the CUSTOMER, and signing out and in
+     * again as somebody else is a soft navigation the query cache survives.
+     */
+    savedItems: (accountKey: string) =>
+      [...queryKeys.wishlist.all, 'saved-items', accountKey] as const,
   },
   /**
    * §16 — the bag is ONE server-owned object, so it is one key.

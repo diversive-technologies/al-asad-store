@@ -7,7 +7,9 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-16, on `main`, with all six Made-to-Measure plan phases done
+Last updated: 2026-09-16, on `main`, with account plan phases 1 to 3 done — a
+saved profile read back into the studio, `/account`, and the saved items moved off
+the browser and onto the account — and with all six Made-to-Measure plan phases done
 — the client's order, the list served as content, a real save with a review, the
 tailor's-card path, finishing choices that decide what is asked, and the tailor's
 rules as rows. Every rule row, bound and card convention is FIXTURE until the
@@ -559,10 +561,13 @@ mobile plus a sign-out button; signed out, the same icon links to sign-in.
   was saved is an expected outcome of this read, not a failure of it. The order
   of the response follows the order asked for, because a saved list's sequence
   belongs to its owner.
-- **BFF** — `/api/products`, the sixth. It exists because the ids live in the
-  BROWSER and `apiRequest` is `server-only`, and it aggregates the cached
+- **BFF** — `/api/products`, the sixth. It exists because the saved-items page
+  is a CLIENT screen — it renders the catalogue's own card — so the ids are in
+  the browser while `apiRequest` is `server-only`, and it aggregates the cached
   projection with the live availability overlay that §8.2 keeps separate. Ids
   are capped at 100 (SEC-02: the length is untrusted input).
+- **The list itself is the ACCOUNT's** since plan Phase 3 — see "the wishlist,
+  moved to the account" below. It is no longer per-browser.
 - **`features/catalogue/contract.ts`** — a second, CLIENT-SAFE barrel, on the
   precedent the bag already set (STRUCT-06). The main barrel re-exports
   `CatalogueScreen`, which reaches `next/headers` through
@@ -1787,9 +1792,121 @@ captions and the saved-on line in Urdu and nothing past the viewport; the header
 menu reads "Your account", "Saved items", "Sign out"; and the studio's save
 confirmation offers "See your saved measurements".
 
-**Phases 3 to 7 are not started.** The wishlist moving to the account, the address
-book, order history, the made-to-measure bag line with its stitching charge, and
-the product entry with the card mark are all still to come.
+**Phases 4 to 7 are not started.** The address book, order history, the
+made-to-measure bag line with its stitching charge, and the product entry with the
+card mark are all still to come.
+
+## Account and tailored-from-a-product — plan Phase 3: the wishlist, moved to the account
+
+**A saved item belongs to the customer now**, so it follows them to a phone. It
+used to live in `localStorage` and be invisible to the operator.
+
+- **Server-held per ACCOUNT** — `src/lib/mocks/wishlist-db.ts`, one list per
+  account key, with MSW handlers in `account-handlers.ts` and the endpoints under
+  `ENDPOINTS.account`. **A guest keeps `localStorage`**, which is the plan's own
+  wording: a guest has no account for a list to belong to, and the heart is
+  already hidden for them. This is why the account travels in its own header
+  (`x-account-key`) rather than through §34's owner machinery — that carries a
+  KIND as well as a key precisely because measurements can belong to a device,
+  and a saved list never can.
+- **D6.** Un-hearting RECORDS a removal on the row; saving the same product again
+  appends a NEW row rather than resurrecting the settled one, exactly as a bag
+  line does. **6 tests** pin it, including that a removed row keeps its date and
+  that a re-save leaves the removal on file.
+- **Two BFF routes** — `/api/saved-items` (GET and POST) and
+  `/api/saved-items/removal`, the eighth and ninth. They exist because the heart
+  is pressed in the browser and `apiRequest` is `server-only`. The account is read
+  from the SESSION on the server side and attached as a header, so a request can
+  no more name its own owner than a measurement save can; both carry the SEC-08
+  origin check, and a guest is refused 401 rather than served an empty list.
+- **`accountKeyOf` is one function now** (`src/features/auth/account-key.ts`):
+  the email when there is one and the mobile otherwise, because a customer who
+  signed in by code has no email and keying them by `''` would put every such
+  customer in one shared account. Made-to-measure's `profile-owner.ts` had two
+  copies of that rule and now has none (PD-01).
+- **A list built before signing in is carried into the account, once**, and the
+  saved-items page says so. `SavedItemsProvider` is mounted in the root layout
+  rather than inside the hook every card calls — a listing holds twenty-four
+  hearts, each would have held its own "already carrying" latch, and all
+  twenty-four would have posted the same list on the same render. It attempts
+  once per visit and never un-latches: the effect's dependencies include the
+  local list, which is a new object every render, so releasing on failure would
+  retry on the next render and a failing endpoint would become a request storm.
+  The browser's copy is cleared only after the account confirms.
+- **`useWishlist` kept its shape**, as the plan asked, and gained one thing it
+  did not have: `isUnreadable`, so a list that could not be READ is never shown
+  as a list that is empty.
+- **The account page has a saved-items section** — count and a way in, read on
+  the server, so `/account` still ships no JavaScript of its own. It does not
+  repeat the grid: the grid is the catalogue's client card, hearts and all, and a
+  second copy of it here would put every one of those on the one page whose point
+  is that it has none.
+- `features/wishlist/contract.ts` is the client-safe barrel (STRUCT-06), because
+  `index.ts` now reaches `server-only` code. `WishlistScreen` stays on the server
+  barrel although it is a Client Component: only a Server Component mounts it, and
+  a client barrel carrying the whole product grid would make a cycle out of the
+  card that imports the hook.
+
+**Two defects were found by watching it fail rather than by reading**, both fixed:
+
+- **A failed read of the account's list rendered as "Nothing saved yet."** MSW
+  died mid-session, the GET answered 502, and the page told the customer they had
+  saved nothing. That is the Phase 2 defect again in a new place, and the fix is
+  the same shape: `isUnreadable` is its own answer. Re-verified against a
+  genuinely dead backend, not a simulated one.
+- **One customer's saved list was served to the next one on the same browser.**
+  Signing out and signing in again are both SOFT navigations, so the query cache
+  survives them; with one key for the whole browser, TanStack returned the
+  previous customer's cached list to the next one for the 30s stale window. The
+  key is `savedItems(accountKey)` now. The bag is deliberately not keyed this way
+  and should not be: a cart id belongs to the browser, and a saved list belongs
+  to the customer.
+
+**The review** (three lenses — correctness and security, the rulebook, the
+customer and the plan — with every finding put to an independent skeptic; 4 of 14
+stood, and three of the refutations were findings the two fixes above had already
+answered while the review was running):
+
+- **The optimistic toggle serialised nothing.** Saving and removing are different
+  routes, so a double press sent two writes that could arrive in either order —
+  and a removal arriving first is a no-op on a row that does not exist yet, which
+  left the product SAVED after the customer's last action was to unsave it. The
+  mutation carries `scope: { id: 'saved-items' }` now, so presses queue. Verified
+  in the store: remove then save 120ms apart ends saved in both the heart and the
+  mock, and two presses in one tick are two idempotent saves.
+- **A refused change was never told to the customer**, and `onError` only
+  invalidated — but the refetch does not retry either, and TanStack keeps the
+  last data it had, which is the guess. So a failed save left the heart filled
+  for the life of the page on a product that was never saved. The press now puts
+  back the list it was made against, and the card carries a `role="alert"` line.
+  Verified with the browser's own `fetch` bent to refuse the POST: the heart
+  returned to `aria-pressed="false"`, exactly ONE card showed the line, and the
+  store was unchanged.
+- Two doc comments had gone stale the moment the list moved — the wishlist
+  route's and `fetch-saved-products`'s stated reason for putting ids in the query
+  string — and two relative imports had been left inside the `@/` alias group
+  (IMP-02).
+
+Verified: typecheck, lint, **459 tests** and the production build pass, with
+`/api/saved-items` and `/api/saved-items/removal` in the build output. In the
+running store: a two-id browser list was carried into the account on the page the
+customer landed on, the browser's copy emptied, and the saved-items page read "2
+items you saved on this browser are now kept with your account"; the heart saved
+and un-saved through the real HTTP boundary with the order of the list preserved;
+and the account page and the saved list agreed on the count. Directly against the
+routes: another origin 403 on both GET and POST, a guest 401 on all three, a
+non-UUID id 400, an empty list 400, 101 ids 400, a body naming `ids` instead of
+`productIds` 400, GET on the removal path 405; two different accounts kept two
+different lists, including a customer with no email keyed by their mobile; and
+saving something already saved changed nothing. In Urdu at 375px the page is
+`dir="rtl"` with the carried line, the counts and the account section all in
+Urdu and no sideways scroll.
+
+**Deviation from the plan:** the plan's first bullet says "through the same owner
+mechanism the measurements use", and this does not use it — its second bullet,
+that a guest keeps `localStorage`, is what makes the DEVICE half of that mechanism
+dead weight here. A saved list only ever belongs to an account, so it is keyed by
+an account and nothing else.
 
 ## Phone layout — the five faults the by-hand pass found
 
@@ -1879,22 +1996,21 @@ tray's X being the X, which then closes the tray.
   on the sign-in screen. Passwords are compared in plaintext there because §11's
   adaptive hashing is the Java module's job, and imitating it would suggest that
   file is a security boundary. It is not.
-- **No account area** beyond the saved items. Order history and saved addresses
-  are still M6.
+- **No address book and no order history.** `/account` holds the customer's
+  details, their saved items and their measurements; the other two are plan
+  phases 4 and 5.
 - **The wishlist has a PAGE now, at `/wishlist`**, reached from the account
   menu — the heart used to save into a list with nowhere to open it. It renders
   the same `ProductCard` as the catalogue, so the heart, the quick add and the
   frame carousel work there for free, and un-hearting removes the item from the
   page as you watch.
 
-  It is still per-browser and still only offered to a signed-in customer. A real
-  one belongs to an account (§28.3), so the heart is HIDDEN for guests —
-  offering it let them save into a list they could never open — and the page
-  itself asks a guest to sign in rather than showing an empty list they were
-  never allowed to fill. Behind the mock sign-in it persists to `localStorage`:
-  it survives a reload on one device, does not follow the customer to a phone,
-  and is invisible to the operator. `useWishlist` is shaped so a server-backed
-  list replaces it without the page or the cards changing.
+  **It belongs to the ACCOUNT now** (plan Phase 3), so it follows the customer
+  between devices, and it is still only offered to a signed-in customer: the
+  heart is HIDDEN for guests — offering it let them save into a list they could
+  never open — and the page itself asks a guest to sign in rather than showing an
+  empty list they were never allowed to fill. A list built in a browser before
+  signing in is carried into the account once, and the page says so.
 
   Three details are load-bearing. `useWishlist` now returns `isReady`, because
   the ids are read in an effect — so the server and client renders agree — and

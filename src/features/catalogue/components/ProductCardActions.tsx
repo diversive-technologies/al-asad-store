@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { useSession } from '@/features/auth';
 import { addToBag, useBag } from '@/features/bag/contract';
-import { useWishlist } from '@/hooks/use-wishlist';
+import { useWishlist } from '@/features/wishlist/contract';
 import type { Messages } from '@/i18n/messages/en';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { ProductId, SizeId } from '@/lib/domain/ids';
@@ -35,7 +35,7 @@ export interface ProductCardActionsProps {
 export function ProductCardActions({ product, isSoldOut, messages }: ProductCardActionsProps) {
   const t = messages.catalogue;
   const { onSummary, open } = useBag();
-  const { isSaved, toggle } = useWishlist();
+  const { isSaved, toggle, changeFailed } = useWishlist();
   /*
    * §28.3 makes the wishlist an ACCOUNT feature, so a guest has nowhere to see
    * one — offering the heart anyway let them save into a list they could never
@@ -142,6 +142,19 @@ export function ProductCardActions({ product, isSoldOut, messages }: ProductCard
           </button>
         )}
       </div>
+
+      {/*
+       * A11Y-05 / ERR-04: a refused save is ANNOUNCED, not only undone. The
+       * heart has already gone back to what the server holds, and without a
+       * word the customer would have watched it fill and empty for no stated
+       * reason. Above the size tray, because either can be on screen.
+       */}
+      <p
+        role="alert"
+        className="bg-fg/85 text-bg rounded-card absolute inset-x-2 bottom-2 z-30 px-2 py-1 text-center text-[0.625rem] empty:hidden"
+      >
+        {changeFailed ? t.wishlistChangeFailed : null}
+      </p>
 
       {!isTrayOpen ? null : (
         <div className="card-size-tray">

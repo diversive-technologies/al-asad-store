@@ -32,8 +32,8 @@ export interface SavedProductsError {
 /**
  * The browser side of the saved-items list: our own BFF, never Java directly.
  *
- * The ids travel in the query string because they come from `localStorage` and
- * the server has no other way to learn them. They are product ids, which are
+ * The ids travel in the query string because the screen that holds them is a
+ * CLIENT one, so the browser is what has them. They are product ids, which are
  * public and appear in every listing response — SEC-01's rule about keeping
  * data out of URLs is about credentials and personal data, and a list of
  * catalogue ids is neither.

@@ -16,6 +16,8 @@ export {
   signUpAction,
 } from './actions';
 
+export { accountKeyOf } from './account-key';
+
 export { AccountIdentity } from './components/AccountIdentity';
 export { AccountMenu } from './components/AccountMenu';
 export { SessionProvider, useSession } from './components/SessionProvider';

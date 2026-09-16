@@ -6,9 +6,9 @@ import { logApiError } from '@/lib/utils/log';
 /**
  * DATA-08 — a BFF that proxies and AGGREGATES, and does nothing else.
  *
- * It exists because the saved-items list lives in the browser's own storage
- * (see `useWishlist`), so the request can only start on the client — and
- * `apiRequest` is `server-only`.
+ * It exists because the saved-items page is a CLIENT screen — it renders the
+ * catalogue's own card, hearts and all — so the request can only start in the
+ * browser, and `apiRequest` is `server-only`.
  *
  * The aggregation is the second reason it earns its place: a saved list needs
  * the cached product projection AND the live availability overlay, which

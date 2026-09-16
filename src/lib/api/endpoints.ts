@@ -162,6 +162,16 @@ export const ENDPOINTS = {
   newsletter: {
     subscribe: '/api/v1/newsletter/subscriptions',
   },
+  /**
+   * §28.3's account. Today that is the saved items; the addresses and the order
+   * history join it as they are built.
+   */
+  account: {
+    /** What this customer has saved. GET reads it, POST adds to it. */
+    savedItems: '/api/v1/account/saved-items',
+    /** D6 — a removal is RECORDED at its own path; there is no DELETE. */
+    savedItemRemoval: '/api/v1/account/saved-items/removal',
+  },
   /** Section 11 Identity and Access. */
   auth: {
     /** `authenticate(email, password) -> Session`. */

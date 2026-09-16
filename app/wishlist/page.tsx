@@ -19,8 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
  * §28.3's saved items, at their own address.
  *
  * STRUCT-02: the route composes and does not implement. Everything below is a
- * Client Component because the list lives in the browser's own storage until
- * M6 gives it an account to belong to — see `WishlistScreen`.
+ * Client Component because it renders the catalogue's own client card and reads
+ * the list through the BFF the heart writes to — see `WishlistScreen`. The list
+ * itself belongs to the account and follows the customer between devices.
  */
 export default async function WishlistPage() {
   const [locale, messages] = await Promise.all([getLocale(), getMessages()]);

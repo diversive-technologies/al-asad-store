@@ -6,7 +6,6 @@ import { ButtonLink } from '@/components/ui/button';
 import { ROUTES } from '@/config/routes';
 import { ProductGrid } from '@/features/catalogue/contract';
 import { useSession } from '@/features/auth';
-import { useWishlist } from '@/hooks/use-wishlist';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -14,6 +13,8 @@ import { unwrap } from '@/lib/result';
 import { formatPlural } from '@/lib/utils/format';
 
 import { fetchSavedProducts } from '../api/fetch-saved-products';
+import { useWishlist } from '../hooks/use-wishlist';
+import { useCarriedFromThisBrowser } from './SavedItemsProvider';
 
 export interface WishlistScreenProps {
   locale: Locale;
@@ -21,13 +22,11 @@ export interface WishlistScreenProps {
 }
 
 /**
- * §28.3's saved items.
+ * §28.3's saved items — the account's.
  *
- * A CLIENT screen, unavoidably: the list lives in this browser's own storage
- * (see `useWishlist`), so the server cannot know what to render. That is the
- * interim D3 leaves behind — a real wishlist belongs to an account, and when
- * M6 lands this page reads the same shape from the server instead and the grid
- * below does not change.
+ * A CLIENT screen, because the list is read through the BFF the heart writes to,
+ * and because the grid it renders is the catalogue's own client card. The list
+ * itself belongs to the customer now and follows them between devices.
  *
  * It is offered only to a SIGNED-IN customer, because the heart is. Showing a
  * guest an empty saved list they were never allowed to fill would be a page
@@ -36,7 +35,8 @@ export interface WishlistScreenProps {
 export function WishlistScreen({ locale, messages }: WishlistScreenProps) {
   const t = messages.wishlist;
   const { isSignedIn } = useSession();
-  const { ids, isReady } = useWishlist();
+  const { ids, isReady, isUnreadable } = useWishlist();
+  const carriedFromThisBrowser = useCarriedFromThisBrowser();
 
   const saved = useQuery({
     queryKey: queryKeys.wishlist.products(ids, locale),
@@ -69,7 +69,13 @@ export function WishlistScreen({ locale, messages }: WishlistScreenProps) {
     return <p className="text-fg-muted py-16 text-sm">{messages.common.loading}</p>;
   }
 
-  if (saved.isError) {
+  /*
+   * Two different reads, one sentence: the account's LIST could not be read, or
+   * the products on it could not be. Either way the customer is told we could
+   * not load their saved items — never that they have none, which is what an
+   * empty list here would say and would be false.
+   */
+  if (isUnreadable || saved.isError) {
     return <p className="text-fg-muted py-16 text-sm">{t.unreachable}</p>;
   }
 
@@ -89,6 +95,17 @@ export function WishlistScreen({ locale, messages }: WishlistScreenProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+       * A list built before signing in has just been handed to the account.
+       * Said out loud, because the customer did not ask for it and would
+       * otherwise find items here they only ever saved on one browser.
+       */}
+      {carriedFromThisBrowser > 0 ? (
+        <p className="text-fg-muted text-sm">
+          <bdi>{formatPlural(t.carried, carriedFromThisBrowser, locale)}</bdi>
+        </p>
+      ) : null}
+
       {/* I18N-07: the count goes through the locale's plural rules. */}
       <p className="text-fg-muted text-sm">
         <bdi>{formatPlural(t.savedCount, entries.length, locale)}</bdi>
