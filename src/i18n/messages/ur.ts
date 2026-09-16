@@ -252,6 +252,14 @@ export const ur: Messages = {
     addressInvalid: 'براہِ کرم اپنا پتہ درج کریں۔',
     cityInvalid: 'براہِ کرم اپنا شہر درج کریں۔',
     methodUnavailable: 'اس آرڈر کے لیے دستیاب نہیں',
+    cutCutoffHeading: 'آرڈر کا کچھ حصہ آپ کے لیے کاٹا جا رہا ہے',
+    cutCutoffBody:
+      'کٹائی شروع ہونے کے بعد آپ کے ناپ پر بنا کپڑا نہ بدلا جا سکتا ہے، نہ منسوخ اور نہ واپس — وہ آپ کے اعداد پر بنتا ہے اور کسی اور کو نہیں آتا۔',
+    cutCutoffOthers: 'آرڈر کی باقی اشیاء معمول کے مطابق واپس کی جا سکتی ہیں۔',
+    cutCutoffLeadTime: 'بننے میں تقریباً {days} دن لگیں گے، ڈلیوری کے علاوہ۔',
+    measurementsChangedTitle: 'آپ کے ناپ دوبارہ محفوظ ہوئے ہیں',
+    measurementsChangedBody:
+      '{items} کے بیگ میں آنے کے بعد آپ نے وہ ناپ دوبارہ محفوظ کیے ہیں۔ ہم اُن اعداد پر نہیں کاٹیں گے جو آپ نے دیکھے نہیں — اپنا بیگ کھولیں اور جو ناپ آپ چاہتے ہیں اُن سے دوبارہ شامل کریں۔',
   },
   order: {
     title: 'آرڈر کی تصدیق ہو گئی',
@@ -344,6 +352,15 @@ export const ur: Messages = {
     savedItemsUnavailable:
       'اس وقت آپ کی محفوظ اشیاء تک رسائی نہیں ہو سکی۔ جو کچھ آپ نے محفوظ کیا ہے وہ محفوظ ہے — تھوڑی دیر بعد دوبارہ کوشش کریں۔',
     openSavedItems: 'اپنی محفوظ اشیاء دیکھیں',
+  },
+  stitched: {
+    madeToMeasure: 'آپ کے ناپ پر بنا',
+    fromProfile: '{style}، {date} کو محفوظ',
+    figures: { one: '{count} ناپ', other: '{count} ناپ' },
+    garmentPrice: 'لباس',
+    charge: 'سلائی',
+    leadTime: 'بننے میں تقریباً {days} دن',
+    noReturns: 'کٹائی شروع ہونے کے بعد واپس نہیں ہو سکتا',
   },
   wishlist: {
     title: 'محفوظ اشیاء',

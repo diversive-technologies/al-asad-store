@@ -1,7 +1,8 @@
 import type { Locale } from '@/i18n/locales';
 
-import { convertCart, summaryFor, type BagSummaryPayload } from './bag-db';
+import { convertCart, stitchingFiguresFor, summaryFor, type BagSummaryPayload } from './bag-db';
 import { allocate, expiryFor } from './bag-reservations';
+import { isCurrentProfile } from './profiles-db';
 
 /**
  * D1 — architecture §17 `CheckoutService` and the §7.2 placement transaction.
@@ -166,6 +167,7 @@ export interface CheckoutQuotePayload {
     unavailableReason: string | null;
   }[];
   gift: { isOffered: boolean; chargeMinor: number };
+  madeToMeasure: { isPresent: boolean; leadTimeDays: number; hasOtherItems: boolean };
 }
 
 /** §17 `quote(cart, address, deliveryOption) -> {totals, availableMethods}`. */
@@ -206,6 +208,16 @@ export function quoteFor(
       };
     }),
     gift: { isOffered: true, chargeMinor: GIFT_CHARGE_MINOR },
+    /* §34.7 — the LONGEST lead time in the bag, because that is when the order
+       can go out, not the average of what is in it. */
+    madeToMeasure: {
+      isPresent: bag.lines.some((line) => line.stitching !== null),
+      leadTimeDays: bag.lines.reduce(
+        (longest, line) => Math.max(longest, line.stitching?.leadTimeDays ?? 0),
+        0,
+      ),
+      hasOtherItems: bag.lines.some((line) => line.stitching === null),
+    },
   };
 }
 
@@ -240,6 +252,20 @@ export interface OrderPayload {
     unitPriceMinor: number;
     lineTotalMinor: number;
     pieces: { pieceCode: string; name: string; size: string }[];
+    /**
+     * §6.5 as amended — the fulfilment kind, and for a garment being CUT an
+     * IMMUTABLE measurement snapshot: the figures themselves, copied, never a
+     * reference. A later edit to the profile cannot reach an order, and the
+     * workshop is told what the customer confirmed.
+     */
+    stitching: {
+      garmentStyle: string;
+      styleLabel: string;
+      profileId: string;
+      chargeMinor: number;
+      leadTimeDays: number;
+      measurements: { pointId: string; mm: number }[];
+    } | null;
   }[];
   totals: OrderTotalsPayload;
 }
@@ -247,6 +273,13 @@ export interface OrderPayload {
 export type PlaceOutcome =
   | { kind: 'PLACED'; order: OrderPayload }
   | { kind: 'RESERVATION_EXPIRED'; expiredItems: string[] }
+  /**
+   * §34.7 — a garment to be cut names the measurements it was added against,
+   * and those have been saved again since. Named rather than refused generically,
+   * for the reason §7.1 names the piece that failed: the customer has to know
+   * which garment to look at.
+   */
+  | { kind: 'MEASUREMENTS_CHANGED'; restitchedItems: string[] }
   | { kind: 'PRICE_CHANGED'; totals: OrderTotalsPayload }
   | { kind: 'PAYMENT_FAILED'; reason: string }
   | { kind: 'NOT_FOUND' };
@@ -291,8 +324,28 @@ export function placeOrder(
    * line that has gone. Comparing against what the customer was quoting on is
    * what makes it nameable rather than a silent shrink.
    */
-  const expiredItems = bag.lines.filter((line) => expiryFor(line.id) === null).map((l) => l.name);
+  const expiredItems = bag.lines
+    /* §34.8's cut line holds nothing, so it cannot have expired. Asking
+       `expiryFor` about it would report every one of them as lapsed. */
+    .filter((line) => line.stitching === null && expiryFor(line.id) === null)
+    .map((l) => l.name);
   if (expiredItems.length > 0) return { kind: 'RESERVATION_EXPIRED', expiredItems };
+
+  /*
+   * Step 1b, and it is §34.7's whole point: a line is cut to the figures the
+   * customer CONFIRMED, not to whatever is current when they pay.
+   *
+   * A profile saved again between the bag and the checkout mints a new version,
+   * and the line still names the old one. ADR 18 says the numbers are taken live
+   * at placement and that a later edit must never rewrite what the workshop was
+   * told — read together, that means the placement must stop rather than quietly
+   * cut to figures nobody reviewed. Cloth gets cut; this is the one place the
+   * cost of guessing is a garment.
+   */
+  const restitched = bag.lines
+    .filter((line) => line.stitching !== null && !isCurrentProfile(line.stitching.profileId))
+    .map((line) => line.name);
+  if (restitched.length > 0) return { kind: 'MEASUREMENTS_CHANGED', restitchedItems: restitched };
 
   /*
    * Step 2 — "Re-price the cart through Pricing at current time. If the total
@@ -353,6 +406,7 @@ export function placeOrder(
         name: piece.name,
         size: piece.sizeLabel,
       })),
+      stitching: snapshotOf(cartId, line),
     })),
     totals,
   };
@@ -372,6 +426,29 @@ export function placeOrder(
   convertCart(cartId, orderNumber);
 
   return { kind: 'PLACED', order };
+}
+
+/**
+ * The measurement snapshot §34.7 requires on the order line.
+ *
+ * The FIGURES, copied — not the profile id alone. "A later profile edit must
+ * never rewrite what the workshop was told" (ADR 18), and a reference is exactly
+ * a thing a later edit can rewrite. The id travels too, so an order can still be
+ * traced back to the save it came from.
+ */
+function snapshotOf(cartId: string, line: BagSummaryPayload['lines'][number]) {
+  if (line.stitching === null) return null;
+
+  return {
+    garmentStyle: line.stitching.garmentStyle,
+    styleLabel: line.stitching.styleLabel,
+    profileId: line.stitching.profileId,
+    chargeMinor: line.stitching.chargeMinor,
+    leadTimeDays: line.stitching.leadTimeDays,
+    /* Asked of the BAG, not of the profile store: the bag is what knows whose
+       measurements this line names, and that identity never reaches the wire. */
+    measurements: stitchingFiguresFor(cartId, line.id),
+  };
 }
 
 /** §28.3 tracks a guest order by number and mobile. */

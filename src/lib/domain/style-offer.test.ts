@@ -6,8 +6,8 @@ describe('the style offers', () => {
   it('accepts a list of distinct styles', () => {
     expect(
       styleOffersSchema.safeParse([
-        { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7 },
-        { garmentStyle: 'KURTA', leadTimeDays: 5 },
+        { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
+        { garmentStyle: 'KURTA', leadTimeDays: 5, stitchingChargeMinor: 250000 },
       ]).success,
     ).toBe(true);
   });
@@ -15,8 +15,8 @@ describe('the style offers', () => {
   it('refuses a style offered twice, which would draw two choices with one key', () => {
     expect(
       styleOffersSchema.safeParse([
-        { garmentStyle: 'KURTA', leadTimeDays: 5 },
-        { garmentStyle: 'KURTA', leadTimeDays: 6 },
+        { garmentStyle: 'KURTA', leadTimeDays: 5, stitchingChargeMinor: 250000 },
+        { garmentStyle: 'KURTA', leadTimeDays: 6, stitchingChargeMinor: 250000 },
       ]).success,
     ).toBe(false);
   });

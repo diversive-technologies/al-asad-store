@@ -16,7 +16,9 @@ import { judgeCheck, judgeRejection, splitOf } from './verdicts';
 
 const joined = joinCopy(
   servedSet('KAMEEZ_SHALWAR'),
-  styleOffersSchema.parse([{ garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7 }]),
+  styleOffersSchema.parse([
+    { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
+  ]),
   measurementCopySchema.parse(measurementCopyFor('en')),
 );
 if (!joined.ok) throw new Error(`missing: ${joined.error.join(', ')}`);
@@ -45,7 +47,10 @@ const shoulderNote = findingSchema.parse({
 const aboutTheList = (reason: Finding['reason'], id: string | null = null): Finding =>
   findingSchema.parse({ ...hemBelowChest, pointId: id, ruleId: null, reason, relatedPoints: [] });
 
-const check = (findings: Finding[], recorded: MeasurementCheck['recorded'] = []): MeasurementCheck => ({
+const check = (
+  findings: Finding[],
+  recorded: MeasurementCheck['recorded'] = [],
+): MeasurementCheck => ({
   findings,
   recorded,
   acknowledged: [],

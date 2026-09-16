@@ -6,6 +6,7 @@ import type { Locale } from '@/i18n/locales';
 import { apiRequest } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
+import { API_HEADERS } from '@/lib/api/headers';
 import { cartIdSchema, type CartId, type CartLineId } from '@/lib/domain/ids';
 import type { Result } from '@/lib/result';
 
@@ -64,12 +65,23 @@ export function addItem(
   cartId: CartId,
   request: AddToBagRequest,
   locale: Locale,
+  /**
+   * §34 — whose measurements a made-to-measure add may name, resolved from the
+   * session or the device cookie on THIS side.
+   *
+   * The same header §34.4's own routes attach, and for the same reason: the
+   * profile id travels in the body, so the owner must not. Absent for a stock
+   * add, which names no profile.
+   */
+  measurementOwner?: string,
 ): Promise<Result<AddToBagResult, ApiError>> {
   return apiRequest({
     path: ENDPOINTS.bag.items(cartId),
     schema: addToBagResultSchema,
     method: 'POST',
     body: request,
+    headers:
+      measurementOwner === undefined ? {} : { [API_HEADERS.measurementOwner]: measurementOwner },
     searchParams: { locale },
     next: { revalidate: 0 },
   });

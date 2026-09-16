@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-import { cartLineIdSchema, pieceIdSchema, productIdSchema, sizeIdSchema } from '@/lib/domain/ids';
+import {
+  cartLineIdSchema,
+  garmentStyleIdSchema,
+  pieceIdSchema,
+  productIdSchema,
+  profileIdSchema,
+  sizeIdSchema,
+} from '@/lib/domain/ids';
 
 /**
  * SSOT-09 — the wire contract for architecture §16 `CartService`.
@@ -37,31 +44,83 @@ export const bagLinePieceSchema = z.object({
 
 export type BagLinePiece = z.infer<typeof bagLinePieceSchema>;
 
-/** One line of the bag: a product, at a quantity, with a live hold behind it. */
-export const bagLineSchema = z.object({
-  id: cartLineIdSchema,
-  productId: productIdSchema,
-  slug: z.string().min(1),
-  name: z.string().min(1),
-  imageUrl: z.string().min(1),
-  /** DATA-13a: declared by the catalogue, never inferred from `pieces.length`. */
-  type: z.enum(['SIMPLE', 'SET']),
-  pieces: z.array(bagLinePieceSchema).min(1),
-  quantity: z.number().int().positive(),
-  unitPriceMinor: z.number().int().nonnegative(),
-  /** Sent, not derived. See DATA-13 above. */
-  lineTotalMinor: z.number().int().nonnegative(),
-  /**
-   * §7.3 — when this line's hold lapses. DATA-12: ISO-8601 on the wire, parsed
-   * at this boundary.
-   *
-   * The interface shows it and nothing more. "Correctness never depends on a
-   * background job having run" because availability filters on `expires_at` at
-   * READ time — so a countdown reaching zero in the browser is a display event,
-   * not the thing that frees the stock.
-   */
-  reservationExpiresAt: z.iso.datetime(),
+/**
+ * §34.8 — what a made-to-measure line is cut from, and what the cutting costs.
+ *
+ * The charge is a LINE COMPONENT and not a different unit price, which is
+ * §34.8's own wording and the reason it is a separate figure: the garment's
+ * price stays the garment's price, and a customer can see what the stitching
+ * costs rather than being shown a bigger number for the same cloth.
+ *
+ * The profile is named by ID, and an id names one VERSION — every save mints a
+ * new one (§34.5). That is what lets the order refuse rather than quietly cut to
+ * figures the customer never confirmed.
+ */
+export const bagLineStitchingSchema = z.object({
+  garmentStyle: garmentStyleIdSchema,
+  /** Authored by the backend (I18N-06); nothing here builds it from parts. */
+  styleLabel: z.string().min(1),
+  profileId: profileIdSchema,
+  /** When those measurements were saved — what makes them recognisable. */
+  savedAt: z.iso.datetime(),
+  figureCount: z.number().int().positive(),
+  chargeMinor: z.number().int().nonnegative(),
+  leadTimeDays: z.number().int().positive(),
 });
+
+export type BagLineStitching = z.infer<typeof bagLineStitchingSchema>;
+
+/** One line of the bag: a product, at a quantity, off the shelf or cut to fit. */
+export const bagLineSchema = z
+  .object({
+    id: cartLineIdSchema,
+    productId: productIdSchema,
+    slug: z.string().min(1),
+    name: z.string().min(1),
+    imageUrl: z.string().min(1),
+    /** DATA-13a: declared by the catalogue, never inferred from `pieces.length`. */
+    type: z.enum(['SIMPLE', 'SET']),
+    /**
+     * Empty for a made-to-measure line, and that is the whole of the departure
+     * from §16's "a line cannot exist without a size selected for every piece":
+     * a garment being cut to somebody's measurements has no size to select.
+     * The refinement below holds the invariant for the lines it still governs.
+     */
+    pieces: z.array(bagLinePieceSchema),
+    quantity: z.number().int().positive(),
+    unitPriceMinor: z.number().int().nonnegative(),
+    /** Sent, not derived. See DATA-13 above. */
+    lineTotalMinor: z.number().int().nonnegative(),
+    /**
+     * §7.3 — when this line's hold lapses. DATA-12: ISO-8601 on the wire, parsed
+     * at this boundary.
+     *
+     * The interface shows it and nothing more. "Correctness never depends on a
+     * background job having run" because availability filters on `expires_at` at
+     * READ time — so a countdown reaching zero in the browser is a display event,
+     * not the thing that frees the stock.
+     *
+     * NULL for a made-to-measure line, which holds nothing: a garment being cut
+     * has not taken a standard size off the shelf, and there is no cloth in the
+     * fixture to hold instead. A time would be a claim about a hold that does
+     * not exist.
+     */
+    reservationExpiresAt: z.iso.datetime().nullable(),
+    /** §34.8 — present exactly when the line is being CUT rather than picked. */
+    stitching: bagLineStitchingSchema.nullable(),
+  })
+  /*
+   * ONE place where the two kinds of line are told apart, so neither can arrive
+   * half-formed: a picked line has pieces with sizes and a live hold, and a cut
+   * line has neither and carries what it is cut from instead.
+   */
+  .refine(
+    (line) =>
+      line.stitching === null
+        ? line.pieces.length > 0 && line.reservationExpiresAt !== null
+        : line.pieces.length === 0 && line.reservationExpiresAt === null,
+    { error: 'A bag line must be picked from stock or cut to measure, not both or neither.' },
+  );
 
 export type BagLine = z.infer<typeof bagLineSchema>;
 
@@ -138,16 +197,34 @@ export const sizeSelectionSchema = z.object({
 export type SizeSelection = z.infer<typeof sizeSelectionSchema>;
 
 /** §16 `addItem(cart, product_id, {piece_id -> size}, qty)`. */
-export const addToBagRequestSchema = z.object({
-  productId: productIdSchema,
-  /**
-   * §16 invariant: "A line cannot exist without a size selected for every piece
-   * of its product." `min(1)` is the schema's share of that; the backend owns
-   * the real check, because only it knows how many pieces the product has.
-   */
-  selections: z.array(sizeSelectionSchema).min(1),
-  quantity: z.number().int().positive(),
-});
+export const addToBagRequestSchema = z
+  .object({
+    productId: productIdSchema,
+    /**
+     * §16 invariant: "A line cannot exist without a size selected for every
+     * piece of its product." The refinement below is the schema's share of
+     * that; the backend owns the real check, because only it knows how many
+     * pieces the product has — and a made-to-measure line is the one case the
+     * invariant does not govern, because it has no size to select.
+     */
+    selections: z.array(sizeSelectionSchema),
+    quantity: z.number().int().positive(),
+    /**
+     * §34 — cut to this saved profile instead of picked off the shelf.
+     *
+     * An id names one VERSION of a profile. The backend resolves WHOSE it is
+     * from the owner it already knows — the session, or the device cookie — so
+     * naming somebody else's id here buys nothing.
+     */
+    madeToMeasureProfileId: profileIdSchema.optional(),
+  })
+  .refine(
+    (request) =>
+      request.madeToMeasureProfileId === undefined
+        ? request.selections.length > 0
+        : request.selections.length === 0,
+    { error: 'Give sizes for a stock item, or a profile for a made-to-measure one.' },
+  );
 
 export type AddToBagRequest = z.infer<typeof addToBagRequestSchema>;
 

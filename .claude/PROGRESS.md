@@ -7,10 +7,11 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-16, on `main`, with account plan phases 1 to 5 done — a
+Last updated: 2026-09-16, on `main`, with account plan phases 1 to 6 done — a
 saved profile read back into the studio, `/account`, the saved items moved off the
-browser and onto the account, an address book offered at checkout, and an order
-history — and with all six Made-to-Measure plan phases done
+browser and onto the account, an address book offered at checkout, an order
+history, and a made-to-measure line the bag can hold and the order can carry — and
+with all six Made-to-Measure plan phases done
 — the client's order, the list served as content, a real save with a review, the
 tailor's-card path, finishing choices that decide what is asked, and the tailor's
 rules as rows. Every rule row, bound and card convention is FIXTURE until the
@@ -1793,8 +1794,117 @@ captions and the saved-on line in Urdu and nothing past the viewport; the header
 menu reads "Your account", "Saved items", "Sign out"; and the studio's save
 confirmation offers "See your saved measurements".
 
-**Phases 6 and 7 are not started.** The made-to-measure bag line with its stitching
-charge, and the product entry with the card mark, are still to come.
+**Phase 7 is not started.** The product entry — "Get it tailored" travelling from a
+product into the studio and back, with the reuse and the mark on the card — is all
+that is left.
+
+## Account and tailored-from-a-product — plan Phase 6: a made-to-measure line in the bag
+
+**The bag can hold a garment that is being CUT.** `bagLineSchema` had eleven
+fields and none of them could say so; this is the largest piece of new contract
+in either feature, and three of its decisions are about cloth rather than code.
+
+- **A LINE COMPONENT, not a different unit price** (§34.8's own wording). The
+  garment keeps its price and the stitching is its own figure, so the line reads
+  "Garment · Rs 18,459 / Stitching · Rs 2,500" and the two close on the total.
+  The charge joins the STYLE OFFER, which the studio serves and the product page
+  carries, so there is one definition both features read.
+- **It reserves NOTHING**, and that is a stated DEVIATION rather than a
+  simplification. §34.8 says stitching reserves metreage; the spec has no
+  mechanism for it — §13 and §6.4 key everything on `(piece, size)`, there is no
+  length column and no `reserve` that takes metres — and there is no cloth in the
+  fixture to hold. So the line holds nothing at all, which is a THIRD reservation
+  shape that neither §16, ADR 19 nor amendment A2-17 describes. §16's "every line
+  holds a live reservation" is the invariant this one line kind departs from, in
+  one place, with the departure written down.
+- **`allocate` now succeeds when there is nothing to allocate.** It used to
+  answer false on an empty set, which doubled as "there is nothing to place" — a
+  job that was never its own. The caller asks that question first and better, by
+  counting the lines in the summary, and a stock line whose hold lapsed has
+  already dropped out of it by then.
+- **A line names a profile VERSION, and placement REFUSES if it was superseded.**
+  ADR 18 says a garment is cut to the numbers live at placement and that a later
+  edit must never rewrite what the workshop was told; read together, that means
+  the order has to STOP rather than quietly cut to figures nobody reviewed. It
+  returns `MEASUREMENTS_CHANGED` naming the garment, the way §7.1 names the piece
+  that failed. Cloth gets cut, so guessing is not available.
+- **The ORDER line carries the figures, copied** — §6.5 as amended asks for an
+  immutable measurement snapshot, and a reference is precisely the thing a later
+  edit could rewrite.
+- **§34.7's cut cutoff is stated before payment, on the same screen as the
+  price**, which the spec asks for in as many words and which nothing in the
+  store said until now. It sits between the total and the button that spends it.
+
+**The stitching charges are FIXTURE** — Rs 2,500 / 4,000 / 1,800 by style, in
+`measurement-sets-db.ts` and labelled so in its header. §31 #35 records the real
+figure as "To be set". This is the one placeholder a CUSTOMER would pay, so it is
+the first number the client has to supply and it must be named aloud at any demo.
+
+**The phase's review** (three lenses — the §7.1/§7.2 correctness core, the
+rulebook, the customer and the spec — with every finding put to an independent
+skeptic; 14 of 25 stood, and two of them were HIGH):
+
+- **A cut line never checked the PRODUCT's own stitching offer.** A kameez
+  shalwar profile could be attached to a waistcoat suit, and the line was then
+  priced from the PROFILE's style: the kameez's charge, the kameez's lead time,
+  the kameez's label on the order, and the kameez's figures sent to the workshop
+  for a waistcoat. `STITCHING_STYLE` is the backend's declaration of what a
+  garment is cut as, and of whether it is cut at all — a boy's kurta maps to null
+  because every served bound is an adult's. **The tests had blessed it**: the
+  fixture picked "any stitched product", which was a waistcoat, paired it with a
+  kameez profile and asserted the mismatched result correct. The add path refuses
+  the mismatch now, the projection prices from the product, and the fixture
+  states the style it wants.
+- **A profile id arrived from the browser with no owner check anywhere**, while
+  the schema's own comment claimed "the backend resolves whose it is". It did
+  not: `profileById` searched every profile by id, unlike every other read in
+  that file. One skeptic reproduced it — owner A's profile added to owner B's
+  cart, and PLACED. The owner is resolved on the BFF side now from the session or
+  the device cookie, attached as the same header §34.4's own routes use, carried
+  on the line, and the store refuses a profile the owner does not hold. Three
+  tests pin it, including that a DEVICE cannot name an ACCOUNT's profile.
+- **"One item is being cut for you" was false with two**, and "everything else in
+  this order can be returned as usual" was a promise about nothing on an order of
+  only cut garments. The heading names no count, and the returns sentence is its
+  own message shown only when there IS something else — which the backend
+  answers, because the backend is what knows which lines are cut.
+- The line total and the charge did not reconcile above quantity one: the
+  garment's own price is shown beside the charge now, so the three figures close.
+- `CheckoutScreen` crossed MOD-03's 250-line hard ceiling, so the outcome alert
+  became `CheckoutOutcomeAlert` — and its two switches end in `assertNever`
+  rather than a bare `default`, which is what makes the NEXT outcome a compile
+  error instead of a silent fall-through. That fall-through is not hypothetical:
+  it is how `PAYMENT_FAILED` once rendered as "The total has changed".
+- `profiles-db.ts` crossed the 300-line ceiling, so who may WRITE to the store
+  moved to `profile-owners.ts` — a split the file's own header had already
+  described. A doc comment orphaned by the insertion went back to its function.
+- I18N: `restitchedItems.join(', ')` became `formatList`, and two lead times went
+  through `formatNumber` rather than `String`.
+
+Eleven further claims were refuted, including that a cut line's quantity is
+unbounded, that the cutoff promises a return the store cannot perform, and that
+the fulfilment kind should be a literal on the wire rather than a nullable field.
+
+**A rule this phase leaves worse and does not fix:** `src/lib/mocks/bag-db.ts` is
+**733 lines** against MOD-03's 300-line hard ceiling. It was already 517 before
+this change — a standing violation — and the cut-line paths added 216. No split of
+what was ADDED brings it near the limit; splitting the file properly means
+refactoring the §7.1 cart store, which is the correctness core and deserves its
+own change and its own review rather than being folded into this one (BOT-04). It
+is offered separately and recorded here so it is not discovered again.
+
+Verified: typecheck, lint, **486 tests** (12 new) and the production build pass.
+In the running store: a cut line renders as "Made to your measurements / Kameez
+shalwar, saved on 16 September 2026 / 8 measurements / Garment · Rs 18,459 /
+Stitching · Rs 2,500 / About 7 days to make / Cannot be returned once cutting
+starts", with no sizes and no "Held for you until"; the same profile was REFUSED
+on all eight waistcoat-suit products and accepted on the kameez shalwar one; the
+cutoff sits between the total and Place order, drops its returns sentence on an
+all-cut order and shows it once a stock line joins, and is absent entirely on a
+stock-only bag; the order confirmation carries the measurements; saving the
+measurements again and then paying gives "Your measurements were saved again"
+naming the garment; a plain stock order still places; and in Urdu at 375px the
+bag and the cutoff read right to left with no sideways scroll and 16px fields.
 
 ## Account and tailored-from-a-product — plan Phase 5: order history
 
@@ -3071,6 +3181,15 @@ out, and `/order/AA100001` still renders on a fresh load.
   written at the same time as the intention and outlived it by minutes. When a
   comment states a property, the next thing to write is the check, not the next
   comment.
+- **A TEST WRITTEN FROM THE SAME MISUNDERSTANDING AS THE CODE BLESSES THE BUG.**
+  The made-to-measure fixture picked "any stitched product", which was a
+  waistcoat suit, paired it with a kameez shalwar profile, and then asserted the
+  charge, the lead time and the style label that came back — all of which were
+  the KAMEEZ's, because the projection priced from the profile rather than the
+  product. Nine tests passed and the mismatch was the thing they were pinning. A
+  fixture has to STATE the property under test, not pick whatever is first: if
+  the code must match a product's declared style to a profile's, the fixture has
+  to name the style it wants.
 - **A MARGIN IS NOT A SPACE, and `innerText` is where you see it.** Two inline
   boxes separated only by `ms-2` have no character between them, so a screen
   reader and every text probe read "Ali Razaطے شدہ" and "Plain Waistcoat Suitand

@@ -1,4 +1,5 @@
 import type { Locale } from '@/i18n/locales';
+import type { StyleOffer } from '@/lib/domain/style-offer';
 
 import { CATALOGUE, frameUrls, vocabularyLabel, type CatalogueRecord } from './catalogue-db';
 import { styleOfferFor } from './measurement-sets-db';
@@ -370,7 +371,13 @@ export interface ProductDetailPayload {
     minHeightCm: number;
     maxHeightCm: number;
   } | null;
-  stitching: { garmentStyle: string; leadTimeDays: number } | null;
+  /*
+   * The offer BY VALUE, and DERIVED from the domain type so a new field on the
+   * offer breaks here rather than being forgotten — an inline restatement is
+   * exactly what let this drift. The style id loses its brand because this is
+   * the WIRE shape: branding happens where the schema parses it, not here.
+   */
+  stitching: (Omit<StyleOffer, 'garmentStyle'> & { garmentStyle: string }) | null;
   isNew: boolean;
 }
 

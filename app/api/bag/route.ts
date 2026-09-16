@@ -1,5 +1,6 @@
 import { addItem, clearCartId, ensureCartId, fetchBagSummary, readCartId } from '@/features/bag';
 import { EMPTY_BAG, addToBagRequestSchema } from '@/features/bag/contract';
+import { readProfileOwner } from '@/features/made-to-measure';
 import { getLocale } from '@/i18n';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
@@ -74,7 +75,24 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const locale = await getLocale();
-  let result = await addItem(cartId.value, parsed.data, locale);
+
+  /*
+   * §34 — a made-to-measure add names a saved profile, so the owner is resolved
+   * HERE, from the session or the device cookie, and attached as a header. A
+   * READ of the owner, deliberately: `resolveProfileOwner` would mint a device
+   * token, and adding to a bag is not a reason to hand a browser one.
+   *
+   * A browser that names a profile it does not own is refused by the backend,
+   * which is the only side that can tell.
+   */
+  const owner = parsed.data.madeToMeasureProfileId === undefined ? null : await readProfileOwner();
+
+  let result = await addItem(
+    cartId.value,
+    parsed.data,
+    locale,
+    owner === null ? undefined : `${owner.keptWith}:${owner.key}`,
+  );
 
   /*
    * The cookie can name a cart the backend no longer has: swept for age, lost

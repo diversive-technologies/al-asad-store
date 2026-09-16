@@ -1,7 +1,13 @@
 import { z } from 'zod';
 
 import { ADDRESS_RULES } from '@/lib/domain/address';
-import { orderIdSchema, productIdSchema } from '@/lib/domain/ids';
+import {
+  garmentStyleIdSchema,
+  measurementPointIdSchema,
+  orderIdSchema,
+  productIdSchema,
+  profileIdSchema,
+} from '@/lib/domain/ids';
 
 /**
  * SSOT-09 — the wire contract for architecture §17 `CheckoutService`.
@@ -68,6 +74,28 @@ export const checkoutQuoteSchema = z.object({
   paymentMethods: z.array(paymentMethodSchema).min(1),
   /** Whether gift wrapping is offered, and what it costs (§28.2). */
   gift: z.object({ isOffered: z.boolean(), chargeMinor: z.number().int().nonnegative() }),
+  /**
+   * §34.7 — whether anything in this bag is being CUT, and how long the longest
+   * of them takes.
+   *
+   * A fact rather than the lines themselves: checkout renders no lines and does
+   * not need to start. What it needs is to say, on the same screen as the price
+   * and before payment, that a cut garment cannot be sent back — and the backend
+   * is what decides which lines are cut, so it is what answers (DATA-13).
+   */
+  madeToMeasure: z.object({
+    isPresent: z.boolean(),
+    leadTimeDays: z.number().int().nonnegative(),
+    /**
+     * Whether anything in the order is NOT being cut.
+     *
+     * The notice says what is still returnable, and that sentence is false on an
+     * order of nothing but cut garments — which is the commonest made-to-measure
+     * order there is. The backend answers it, because the backend is what knows
+     * which lines are cut (DATA-13).
+     */
+    hasOtherItems: z.boolean(),
+  }),
 });
 
 export type CheckoutQuote = z.infer<typeof checkoutQuoteSchema>;
@@ -154,6 +182,25 @@ export const orderLineSchema = z.object({
       size: z.string().min(1),
     }),
   ),
+  /**
+   * §6.5 as amended — present exactly when the line was CUT rather than picked.
+   *
+   * The measurements are the SNAPSHOT, copied at placement: §34.7 requires the
+   * order line to hold the values, and a reference would be a thing a later
+   * profile edit could rewrite.
+   */
+  stitching: z
+    .object({
+      garmentStyle: garmentStyleIdSchema,
+      styleLabel: z.string().min(1),
+      profileId: profileIdSchema,
+      chargeMinor: z.number().int().nonnegative(),
+      leadTimeDays: z.number().int().positive(),
+      measurements: z
+        .array(z.object({ pointId: measurementPointIdSchema, mm: z.number().int().positive() }))
+        .min(1),
+    })
+    .nullable(),
 });
 
 export type OrderLine = z.infer<typeof orderLineSchema>;
@@ -214,12 +261,21 @@ export type Order = z.infer<typeof orderSchema>;
  * - **`PRICE_CHANGED`** — step 2. "Prices are never silently changed under a
  *   customer at payment." The new totals come back for explicit confirmation,
  *   and the customer re-submits or leaves.
+ * - **`MEASUREMENTS_CHANGED`** — §34.7's equivalent for cloth. A garment to be
+ *   cut names the measurements it was added against; saving them again mints a
+ *   new version, and cutting to figures the customer never confirmed is the one
+ *   mistake this whole feature exists to avoid. The garments are named, for the
+ *   reason §7.1 names the piece that failed.
  */
 export const placeOrderResultSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('PLACED'), order: orderSchema }),
   z.object({
     kind: z.literal('RESERVATION_EXPIRED'),
     expiredItems: z.array(z.string().min(1)).min(1),
+  }),
+  z.object({
+    kind: z.literal('MEASUREMENTS_CHANGED'),
+    restitchedItems: z.array(z.string().min(1)).min(1),
   }),
   z.object({ kind: z.literal('PRICE_CHANGED'), totals: orderTotalsSchema }),
   /** §7.2 step 7: authorisation failed after commit, so the order was cancelled. */

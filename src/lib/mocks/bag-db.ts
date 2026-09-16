@@ -1,8 +1,10 @@
 import type { Locale } from '@/i18n/locales';
 
-import { CATALOGUE } from './catalogue-db';
+import { CATALOGUE, type CatalogueRecord } from './catalogue-db';
 import { expiryFor, release, releaseCart, reserve, type ReservationKey } from './bag-reservations';
+import { styleLabelFor } from './measurement-sets-db';
 import { toProductDetail } from './product-detail-db';
+import { profileById, type ProfileOwnerRow } from './profiles-db';
 
 /**
  * D1 — architecture §16 `CartService`, standing in for the Java module.
@@ -69,6 +71,24 @@ interface CartLineRecord {
   productId: string;
   selections: readonly { pieceId: string; sizeId: string }[];
   quantity: number;
+  /**
+   * §34.8 — the saved profile VERSION this line is cut from, or null when it is
+   * picked off the shelf.
+   *
+   * An id and nothing else: the figures, the style and the date are read from
+   * the profile when the line is projected, so a line cannot come to hold a
+   * stale copy of a record that lives somewhere else.
+   */
+  stitchingProfileId: string | null;
+  /**
+   * WHOSE measurements they are, recorded when the line was added.
+   *
+   * Every read of a profile is owner-scoped, and a bag summary is rendered long
+   * after the request that carried the owner has gone — so the line remembers
+   * who it was cut for. It is not on the wire: it is an identity, and the bag
+   * has no reason to tell a browser one.
+   */
+  stitchingOwner: ProfileOwnerRow | null;
   /** D6 — null while the line is in the bag; set once, never unset. */
   removedAt: number | null;
   removalReason: LineRemovalReason | null;
@@ -179,7 +199,17 @@ export interface BagLinePayload {
   quantity: number;
   unitPriceMinor: number;
   lineTotalMinor: number;
-  reservationExpiresAt: string;
+  /** Null for a made-to-measure line: it holds nothing, so nothing lapses. */
+  reservationExpiresAt: string | null;
+  stitching: {
+    garmentStyle: string;
+    styleLabel: string;
+    profileId: string;
+    savedAt: string;
+    figureCount: number;
+    chargeMinor: number;
+    leadTimeDays: number;
+  } | null;
 }
 
 export interface BagSummaryPayload {
@@ -200,6 +230,15 @@ function toLinePayload(line: CartLineRecord, locale: Locale): BagLinePayload | n
   if (record === undefined) return null;
 
   const detail = toProductDetail(record, locale);
+
+  /*
+   * §34.8 — a garment being CUT. It holds nothing, so there is no expiry to
+   * check and no size to show: it is not competing for a row on a shelf, and
+   * §16's "every line holds a live reservation" is the invariant this one line
+   * kind departs from, deliberately and in one place.
+   */
+  if (line.stitchingProfileId !== null) return toStitchedPayload(line, record, detail, locale);
+
   const expiresAt = expiryFor(line.id);
   // A line whose hold has lapsed is no longer a line (§16: "Every line holds a
   // live reservation"), so it drops out of the summary rather than showing as
@@ -226,7 +265,96 @@ function toLinePayload(line: CartLineRecord, locale: Locale): BagLinePayload | n
     // Stated, not derived on the other side of the wire (DATA-13).
     lineTotalMinor: record.currentMinor * line.quantity,
     reservationExpiresAt: new Date(expiresAt).toISOString(),
+    stitching: null,
   };
+}
+
+/**
+ * A line that is being cut rather than picked.
+ *
+ * The charge is a LINE COMPONENT (§34.8): the garment keeps its own unit price
+ * and the stitching is its own figure, so the line total is the two of them
+ * together, per garment. A customer buying two identical kameez is charged for
+ * cutting two.
+ *
+ * A profile the store cannot find drops the line, the way a lapsed hold does.
+ * It is only reachable after a restart — profiles live in memory too — and a
+ * line that cannot say what it is cut from is not a line anybody can check.
+ */
+function toStitchedPayload(
+  line: CartLineRecord,
+  record: CatalogueRecord,
+  detail: ReturnType<typeof toProductDetail>,
+  locale: Locale,
+): BagLinePayload | null {
+  const profile = stitchingProfileOf(line);
+  if (profile === null) return null;
+
+  /*
+   * Priced from the PRODUCT's own offer, never the profile's style.
+   *
+   * They are two declarations of the same thing and only one of them is the
+   * backend's answer to "what is this garment cut as": \`STITCHING_STYLE\` on the
+   * product. Taking the charge and the lead time off the profile let a kameez
+   * profile price a waistcoat at the kameez's rate — and the add path now
+   * refuses the mismatch outright, so this is the second lock on one door.
+   */
+  const offer = detail.stitching;
+  if (offer === null || offer.garmentStyle !== profile.garmentStyle) return null;
+
+  const styleLabel = styleLabelFor(profile.garmentStyle, locale);
+  if (styleLabel === null) return null;
+
+  return {
+    id: line.id,
+    productId: record.id,
+    slug: record.slug,
+    name: detail.name,
+    imageUrl: detail.media[0]?.url ?? '',
+    type: record.type,
+    pieces: [],
+    quantity: line.quantity,
+    unitPriceMinor: record.currentMinor,
+    lineTotalMinor: (record.currentMinor + offer.stitchingChargeMinor) * line.quantity,
+    reservationExpiresAt: null,
+    stitching: {
+      garmentStyle: profile.garmentStyle,
+      styleLabel,
+      profileId: profile.id,
+      savedAt: profile.createdAt,
+      figureCount: profile.values.length,
+      chargeMinor: offer.stitchingChargeMinor,
+      leadTimeDays: offer.leadTimeDays,
+    },
+  };
+}
+
+/** The profile a cut line names, read as its own owner — never by id alone. */
+function stitchingProfileOf(line: CartLineRecord) {
+  if (line.stitchingProfileId === null || line.stitchingOwner === null) return null;
+  return profileById(line.stitchingProfileId, line.stitchingOwner);
+}
+
+/**
+ * The figures a cut line will be cut to, for the order's snapshot (§34.7).
+ *
+ * It lives here because the owner the profile is read as lives here, and neither
+ * belongs on the wire. Checkout asks the bag rather than the profile store, so
+ * there is one place that knows whose measurements a line names.
+ */
+export function stitchingFiguresFor(
+  cartId: string,
+  lineId: string,
+): { pointId: string; mm: number }[] {
+  const cart = CARTS.get(cartId);
+  if (cart === undefined) return [];
+
+  const line = activeLines(cart).find((entry) => entry.id === lineId);
+  const profile = line === undefined ? null : stitchingProfileOf(line);
+  return (profile?.values ?? []).map((value) => ({
+    pointId: value.pointId,
+    mm: value.valueMm,
+  }));
 }
 
 function priceCart(cartId: string, lines: BagLinePayload[], locale: Locale) {
@@ -334,11 +462,24 @@ export function addItem(
   selections: readonly { pieceId: string; sizeId: string }[],
   quantity: number,
   locale: Locale,
+  stitchingProfileId: string | null = null,
+  stitchingOwner: ProfileOwnerRow | null = null,
 ): CartWriteResult {
   const cart = CARTS.get(cartId);
   const record = CATALOGUE.find((entry) => entry.id === productId);
   if (cart === undefined || cart.status !== 'ACTIVE' || record === undefined) {
     return { kind: 'NOT_FOUND' };
+  }
+
+  /*
+   * §34.8 — a garment to be CUT takes a different path through this function
+   * and nothing else in the file changes: no size coverage to check, because
+   * there are no sizes, and no reservation to take, because a cut garment has
+   * not taken a standard size off the shelf and there is no cloth in the
+   * fixture to hold instead. §7.1 is untouched — it is simply not reached.
+   */
+  if (stitchingProfileId !== null) {
+    return addStitched(cartId, cart, record, stitchingProfileId, stitchingOwner, quantity, locale);
   }
 
   // §16 invariant: a line cannot exist without a size for EVERY piece. Only the
@@ -366,6 +507,8 @@ export function addItem(
     quantity: 0,
     removedAt: null,
     removalReason: null,
+    stitchingProfileId: null,
+    stitchingOwner: null,
   };
 
   const wanted = line.quantity + quantity;
@@ -384,6 +527,72 @@ export function addItem(
   return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
 }
 
+/**
+ * A garment to be cut, added to the bag.
+ *
+ * The line is merged on (product, PROFILE), so asking for a second kameez to the
+ * same figures raises the quantity rather than making a second line — and asking
+ * for one to DIFFERENT figures makes its own line, because it is a different
+ * garment however alike the two look.
+ *
+ * A profile the store does not know is NOT_FOUND. That covers a forged id and a
+ * profile lost to a restart alike, and neither is a state worth telling apart in
+ * a mock that keeps everything in memory.
+ */
+function addStitched(
+  cartId: string,
+  cart: CartRecord,
+  record: CatalogueRecord,
+  stitchingProfileId: string,
+  stitchingOwner: ProfileOwnerRow | null,
+  quantity: number,
+  locale: Locale,
+): CartWriteResult {
+  /*
+   * WHOSE measurements, before anything else. The id comes from a browser and
+   * what it buys is cloth cut to those figures, so "does this exist" is not the
+   * question — "is it yours" is. No owner at all is no.
+   */
+  if (stitchingOwner === null) return { kind: 'NOT_FOUND' };
+  const profile = profileById(stitchingProfileId, stitchingOwner);
+  if (profile === null) return { kind: 'NOT_FOUND' };
+
+  /*
+   * And WHETHER THIS GARMENT is cut at all, and as what.
+   *
+   * \`STITCHING_STYLE\` is the backend's declaration — a boy's kurta maps to null
+   * deliberately, because every served bound is an adult's. Without this a
+   * kameez profile could be attached to a waistcoat suit, and the line would
+   * have been priced from the kameez's charge with the kameez's figures sent to
+   * the workshop. It is the same check \`addItem\` makes for sizes, for the same
+   * reason: only the backend knows what the product is.
+   */
+  const offer = toProductDetail(record, locale).stitching;
+  if (offer === null || offer.garmentStyle !== profile.garmentStyle) return { kind: 'NOT_FOUND' };
+
+  const productId = record.id;
+  const existing = activeLines(cart).find(
+    (line) => line.productId === productId && line.stitchingProfileId === stitchingProfileId,
+  );
+
+  const line: CartLineRecord = existing ?? {
+    id: mockId('0002'),
+    productId,
+    selections: [],
+    quantity: 0,
+    removedAt: null,
+    removalReason: null,
+    stitchingProfileId,
+    stitchingOwner,
+  };
+
+  line.quantity += quantity;
+  if (existing === undefined) cart.lines.push(line);
+
+  const summary = summaryFor(cartId, locale);
+  return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
+}
+
 /** §16 `updateQuantity(cart, line, qty)`. */
 export function updateQuantity(
   cartId: string,
@@ -396,6 +605,14 @@ export function updateQuantity(
 
   const line = activeLines(cart).find((entry) => entry.id === lineId);
   if (line === undefined) return { kind: 'NOT_FOUND' };
+
+  /* A cut garment holds nothing, so there is nothing to re-reserve: asking for
+     two is asking the workshop to cut two, which no shelf has to agree to. */
+  if (line.stitchingProfileId !== null) {
+    line.quantity = quantity;
+    const stitched = summaryFor(cartId, locale);
+    return stitched === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary: stitched };
+  }
 
   const outcome = reserve(cartId, line.id, toKeys({ ...line, quantity }));
   if (outcome.kind === 'UNAVAILABLE') {
@@ -431,8 +648,7 @@ export function removeLine(cartId: string, lineId: string, locale: Locale): Cart
 }
 
 export type CodeResult =
-  | { kind: 'APPLIED'; summary: BagSummaryPayload }
-  | { kind: 'REJECTED'; reason: string };
+  { kind: 'APPLIED'; summary: BagSummaryPayload } | { kind: 'REJECTED'; reason: string };
 
 /** §16 `applyCode(cart, code)`. Validity is Pricing's answer, never the UI's. */
 export function applyCode(cartId: string, code: string, locale: Locale): CodeResult {

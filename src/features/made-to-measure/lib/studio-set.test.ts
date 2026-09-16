@@ -9,7 +9,9 @@ import { joinCopy } from './studio-set';
 import { servedSet } from './test-support';
 
 const PAIR = servedSet('KAMEEZ_SHALWAR');
-const OFFERS = styleOffersSchema.parse([{ garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7 }]);
+const OFFERS = styleOffersSchema.parse([
+  { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
+]);
 const COPY = measurementCopySchema.parse(measurementCopyFor('en'));
 
 describe('joining the list to its words', () => {
@@ -23,7 +25,12 @@ describe('joining the list to its words', () => {
       label: 'Kameez length',
     });
     expect(joined.value.styles).toEqual([
-      { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, label: 'Kameez shalwar' },
+      {
+        garmentStyle: 'KAMEEZ_SHALWAR',
+        leadTimeDays: 7,
+        stitchingChargeMinor: 250000,
+        label: 'Kameez shalwar',
+      },
     ]);
   });
 
@@ -55,8 +62,8 @@ describe('joining the list to its words', () => {
 
   it('leaves out a style with no name, and says so, without taking the list down', () => {
     const offers = styleOffersSchema.parse([
-      { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7 },
-      { garmentStyle: 'SHERWANI', leadTimeDays: 14 },
+      { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
+      { garmentStyle: 'SHERWANI', leadTimeDays: 14, stitchingChargeMinor: 250000 },
     ]);
 
     const joined = joinCopy(PAIR, offers, COPY);

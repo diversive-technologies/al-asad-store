@@ -16,6 +16,7 @@ import {
   updateQuantity,
 } from './bag-db';
 import { reservedLookup } from './bag-reservations';
+import { profileOwnerOf } from './profile-owners';
 import {
   authenticate,
   authenticateByCode,
@@ -312,6 +313,7 @@ export const handlers = [
       productId?: string;
       selections?: { pieceId: string; sizeId: string }[];
       quantity?: number;
+      madeToMeasureProfileId?: string;
     };
 
     const result = addItem(
@@ -320,6 +322,11 @@ export const handlers = [
       input.selections ?? [],
       input.quantity ?? 1,
       localeOf(request),
+      /* §34.8 — cut to this saved profile, or picked off the shelf when absent. */
+      input.madeToMeasureProfileId ?? null,
+      /* WHOSE it is, from the header the BFF attached — never from the body. The
+         store refuses a profile this owner does not hold. */
+      profileOwnerOf(request.headers.get(API_HEADERS.measurementOwner)),
     );
 
     if (result.kind === 'NOT_FOUND') return new HttpResponse(null, { status: 404 });

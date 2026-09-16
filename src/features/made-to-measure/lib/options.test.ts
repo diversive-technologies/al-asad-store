@@ -24,7 +24,9 @@ import { NOTHING_HELD, typedEntriesOf } from './unit-switch';
 
 const joined = joinCopy(
   servedSet('KAMEEZ_SHALWAR'),
-  styleOffersSchema.parse([{ garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7 }]),
+  styleOffersSchema.parse([
+    { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
+  ]),
   measurementCopySchema.parse(measurementCopyFor('en')),
 );
 if (!joined.ok) throw new Error(`missing: ${joined.error.join(', ')}`);
@@ -144,12 +146,8 @@ describe('what the choices ask for', () => {
     // cuff style only applies with a cuff, so it can never meet the plain opening.
     const doubleCuffDepth = { askedWhen: { group: 'cuffStyle', values: ['DOUBLE'] } };
     const parsed = optionConditionSchema.parse(doubleCuffDepth.askedWhen);
-    expect(
-      neverTogether({ askedWhen: parsed }, pointOf('kameezMohri'), STUDIO.options),
-    ).toBe(true);
-    expect(neverTogether({ askedWhen: parsed }, pointOf('kameezCuff'), STUDIO.options)).toBe(
-      false,
-    );
+    expect(neverTogether({ askedWhen: parsed }, pointOf('kameezMohri'), STUDIO.options)).toBe(true);
+    expect(neverTogether({ askedWhen: parsed }, pointOf('kameezCuff'), STUDIO.options)).toBe(false);
   });
 });
 
@@ -165,7 +163,10 @@ describe('how the choices draw the kameez', () => {
   });
 
   it('draws a collar for a collar, and a turned hem for a plain sleeve', () => {
-    const variants = drawingVariants(inPlay({ neckStyle: 'COLLAR', sleeveFinish: 'PLAIN' }), KAMEEZ);
+    const variants = drawingVariants(
+      inPlay({ neckStyle: 'COLLAR', sleeveFinish: 'PLAIN' }),
+      KAMEEZ,
+    );
     expect(variants).toEqual(new Set(['COLLAR', 'SLEEVE_PLAIN']));
 
     const detail = detailOf(kameez, variants);

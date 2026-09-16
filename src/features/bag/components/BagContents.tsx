@@ -71,6 +71,9 @@ export function BagContents({ locale, messages }: BagContentsProps) {
 
   const summary = bag.data;
   const isBusy = change.isPending;
+  /* Undefined when nothing in the bag is held — a bag of only cut garments. */
+  const heldUntil =
+    summary?.lines.find((line) => line.reservationExpiresAt !== null)?.reservationExpiresAt ?? null;
 
   function onQuantityChange(line: BagLine, quantity: number): void {
     change.mutate({ lineId: line.id, quantity });
@@ -122,38 +125,51 @@ export function BagContents({ locale, messages }: BagContentsProps) {
             ))}
           </ul>
 
-          <div className="text-fg-muted mt-4 flex items-center gap-1.5 text-xs">
-            {/*
-             * §28.2's durable hold, shown as the time it lapses rather than a
-             * ticking countdown: the countdown would imply the browser is what
-             * frees the stock, and §7.3 is explicit that expiry is applied at
-             * read time on the server whether this tab is open or not.
-             *
-             * The explanation beside it is not decoration. "Held until 2:51 PM"
-             * states a time without saying what happens AT it, and the three
-             * readings a customer flips between — do they leave my bag, do they
-             * just go out of stock, are they actually reserved — have three
-             * different answers. The popover gives all three.
-             */}
-            <p>
-              {formatTemplate(t.heldUntil, {
-                time: new Date(summary.lines[0]?.reservationExpiresAt ?? '').toLocaleTimeString(
-                  locale,
-                  { hour: '2-digit', minute: '2-digit' },
-                ),
-              })}
-            </p>
+          {/*
+           * §7.3's hold, and ONLY for the lines that have one.
+           *
+           * A made-to-measure line holds nothing — it has taken no size off a
+           * shelf — so a time taken from `lines[0]` would be a claim about a hold
+           * that does not exist, and on a bag holding only cut garments it would
+           * have been an Invalid Date. The first line WITH a hold is the one
+           * this sentence is about.
+           */}
+          <div className="text-fg-muted mt-4 flex items-center gap-1.5 text-xs empty:hidden">
+            {heldUntil === null ? null : (
+              <>
+                {/*
+                 * §28.2's durable hold, shown as the time it lapses rather than a
+                 * ticking countdown: the countdown would imply the browser is what
+                 * frees the stock, and §7.3 is explicit that expiry is applied at
+                 * read time on the server whether this tab is open or not.
+                 *
+                 * The explanation beside it is not decoration. "Held until 2:51 PM"
+                 * states a time without saying what happens AT it, and the three
+                 * readings a customer flips between — do they leave my bag, do they
+                 * just go out of stock, are they actually reserved — have three
+                 * different answers. The popover gives all three.
+                 */}
+                <p>
+                  {formatTemplate(t.heldUntil, {
+                    time: new Date(heldUntil).toLocaleTimeString(locale, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }),
+                  })}
+                </p>
 
-            <InfoPopover
-              label={t.heldInfoLabel}
-              title={t.heldInfoTitle}
-              closeLabel={messages.common.close}
-            >
-              <p>{t.heldInfoReserved}</p>
-              <p>{t.heldInfoExpiry}</p>
-              <p>{t.heldInfoAction}</p>
-              <p>{t.heldInfoExtend}</p>
-            </InfoPopover>
+                <InfoPopover
+                  label={t.heldInfoLabel}
+                  title={t.heldInfoTitle}
+                  closeLabel={messages.common.close}
+                >
+                  <p>{t.heldInfoReserved}</p>
+                  <p>{t.heldInfoExpiry}</p>
+                  <p>{t.heldInfoAction}</p>
+                  <p>{t.heldInfoExtend}</p>
+                </InfoPopover>
+              </>
+            )}
           </div>
 
           <StitchingNudge messages={messages} />

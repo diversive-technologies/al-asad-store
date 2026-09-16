@@ -1,4 +1,7 @@
+import type { Locale } from '@/i18n/locales';
+
 import { KAMEEZ_CARD_POINTS, SHALWAR_CARD_POINTS } from './measurement-card-points-db';
+import { measurementCopyFor } from './measurement-copy-db';
 import { KAMEEZ_OPTIONS, type OptionGroupRow } from './measurement-options-db';
 import {
   KAMEEZ_POINTS,
@@ -40,6 +43,15 @@ export type ServedSetRow = SetRow & { sources: SourceRow[] };
 interface StyleOfferRow {
   garmentStyle: string;
   leadTimeDays: number;
+  /**
+   * §34.8's stitching charge — **FIXTURE**, like every other number in this file.
+   *
+   * §31 #35 makes it configuration, by garment style, and records it as "To be
+   * set". These are ours: plausible Pakistani tailoring prices and nothing more.
+   * A charge is the one placeholder a CUSTOMER would pay, so it is the first
+   * thing the client has to supply, and it must be named aloud at any demo.
+   */
+  stitchingChargeMinor: number;
 }
 
 const KAMEEZ = { id: 'KAMEEZ', drawingId: 'KAMEEZ' };
@@ -98,11 +110,21 @@ const MEASUREMENT_SETS: readonly SetRow[] = [
 
 /** In the order the studio offers them; the first is what a bare `/stitched` opens. */
 export const STYLE_OFFERS: readonly StyleOfferRow[] = [
-  { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7 },
-  // A third garment to cut and finish.
-  { garmentStyle: 'WAISTCOAT_SUIT', leadTimeDays: 10 },
-  { garmentStyle: 'KURTA', leadTimeDays: 5 },
+  { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
+  // A third garment to cut and finish, so it costs more and takes longer.
+  { garmentStyle: 'WAISTCOAT_SUIT', leadTimeDays: 10, stitchingChargeMinor: 400000 },
+  { garmentStyle: 'KURTA', leadTimeDays: 5, stitchingChargeMinor: 180000 },
 ];
+
+/**
+ * A style's NAME in one language, from the served words (I18N-06).
+ *
+ * The bag needs it to say what a line is cut as, and building it from the code
+ * would be the interface authoring a label the backend already owns.
+ */
+export function styleLabelFor(garmentStyle: string, locale: Locale): string | null {
+  return measurementCopyFor(locale).styles[garmentStyle] ?? null;
+}
 
 /** Every way a style can be measured, in the order its lists are declared. */
 export function sourcesOf(garmentStyle: string): SourceRow[] {

@@ -343,7 +343,14 @@ export function allocate(cartId: string): boolean {
     (left, right) => left.pieceId.localeCompare(right.pieceId),
   );
 
-  if (rows.length === 0) return false;
+  /*
+   * Allocating NOTHING succeeds, because a cart can legitimately hold nothing
+   * to allocate: §34.8's made-to-measure line takes no hold at all. This used
+   * to answer false, which served as "there is nothing to place" — a job that
+   * was never this function's. The caller asks that question first and better,
+   * by counting the lines in the summary, and a stock line whose hold lapsed has
+   * already dropped out of it by then.
+   */
 
   // The final guard, applied before anything changes.
   for (const row of rows) {

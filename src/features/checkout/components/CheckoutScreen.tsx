@@ -14,7 +14,6 @@ import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 import { queryKeys } from '@/lib/api/query-keys';
 import { unwrap } from '@/lib/result';
-import { formatTemplate } from '@/lib/utils/format';
 
 import { fetchQuote, placeOrder } from '../api/checkout-browser';
 import {
@@ -24,6 +23,8 @@ import {
   type PlaceOrderResult,
 } from '../schemas/checkout.schema';
 import { CheckoutFields } from './CheckoutFields';
+import { CheckoutOutcomeAlert } from './CheckoutOutcomeAlert';
+import { CutCutoffNotice } from './CutCutoffNotice';
 import { OrderSummary } from './OrderSummary';
 
 export interface CheckoutScreenProps {
@@ -174,39 +175,8 @@ export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
     <section className="page-shell py-10">
       <h1 className="text-fg text-2xl font-semibold">{t.title}</h1>
 
-      {outcome === null || outcome.kind === 'PLACED' ? null : (
-        // A11Y-05 / ERR-04: announced, and specific about what happened.
-        <div
-          role="alert"
-          className="border-danger-500 bg-surface-muted rounded-card mt-6 border p-4"
-        >
-          {/*
-           * Three outcomes, three headings. `PAYMENT_FAILED` used to fall
-           * through to "The total has changed", which told the customer the
-           * wrong thing about why their order did not go through.
-           */}
-          <h2 className="text-fg text-sm font-medium">
-            {outcome.kind === 'RESERVATION_EXPIRED'
-              ? t.expiredTitle
-              : outcome.kind === 'PRICE_CHANGED'
-                ? t.priceChangedTitle
-                : t.failedTitle}
-          </h2>
-          <p className="text-fg-muted mt-1 text-sm">
-            {outcome.kind === 'RESERVATION_EXPIRED'
-              ? formatTemplate(t.expiredBody, { items: outcome.expiredItems.join(', ') })
-              : outcome.kind === 'PRICE_CHANGED'
-                ? t.priceChangedBody
-                : outcome.reason}
-          </p>
-          {outcome.kind === 'RESERVATION_EXPIRED' ? (
-            <div className="mt-3">
-              <ButtonLink href={ROUTES.bag} variant="secondary">
-                {t.backToBag}
-              </ButtonLink>
-            </div>
-          ) : null}
-        </div>
+      {outcome === null ? null : (
+        <CheckoutOutcomeAlert outcome={outcome} locale={locale} messages={messages} />
       )}
 
       <form
@@ -227,6 +197,21 @@ export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <OrderSummary totals={totals} locale={locale} messages={messages} />
+
+          {/*
+           * §34.7 — BEFORE payment and on the same screen as the price, which is
+           * where the spec puts it in as many words. It sits between the total
+           * and the button that spends it, because that is the moment somebody
+           * decides, and nothing in the store said it until now.
+           */}
+          {quote.data?.madeToMeasure.isPresent === true ? (
+            <CutCutoffNotice
+              leadTimeDays={quote.data.madeToMeasure.leadTimeDays}
+              hasOtherItems={quote.data.madeToMeasure.hasOtherItems}
+              locale={locale}
+              messages={messages}
+            />
+          ) : null}
 
           {/* FORM-06: disabled and `aria-busy` in flight, so a double submit
               cannot place two orders. */}

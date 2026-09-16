@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { ROUTES } from '@/config/routes';
+
+import { StitchedLineDetail } from './StitchedLineDetail';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 import { Minus, Plus, Trash2 } from '@/lib/vendor/icons';
@@ -71,7 +73,8 @@ export function BagLineRow({
         </div>
 
         {/* §28.2 per-piece size display. A SIMPLE product has one row here and
-            that is correct, not a degenerate case worth branching on. */}
+            that is correct, not a degenerate case worth branching on. A garment
+            being CUT has none: it has no size, which is the point of it. */}
         <ul className="text-fg-muted mt-1 space-y-0.5 text-xs">
           {line.pieces.map((piece) => (
             <li key={piece.pieceId}>
@@ -79,6 +82,15 @@ export function BagLineRow({
             </li>
           ))}
         </ul>
+
+        {line.stitching === null ? null : (
+          <StitchedLineDetail
+            stitching={line.stitching}
+            unitPriceMinor={line.unitPriceMinor}
+            locale={locale}
+            messages={messages}
+          />
+        )}
 
         {isConfirming ? (
           /*

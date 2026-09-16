@@ -272,6 +272,20 @@ export const en = {
     addressInvalid: 'Please enter your address.',
     cityInvalid: 'Please enter your city.',
     methodUnavailable: 'Not available for this order',
+    /* §34.7 — the cut cutoff, stated BEFORE payment and on the same screen as
+       the price, which the spec asks for explicitly. */
+    /* No COUNT in the heading: "one item" is false the moment somebody orders
+       two, and the backend sends a flag rather than a number. */
+    cutCutoffHeading: 'Part of this order is being cut for you',
+    cutCutoffBody:
+      'Once we start cutting, a made-to-measure garment cannot be changed, cancelled or returned — it is made to your figures and fits nobody else.',
+    /* Only when there IS something else. On an order of nothing but cut
+       garments this sentence would promise something about nothing. */
+    cutCutoffOthers: 'Everything else in this order can be returned as usual.',
+    cutCutoffLeadTime: 'Allow about {days} days for it to be made, on top of delivery.',
+    measurementsChangedTitle: 'Your measurements were saved again',
+    measurementsChangedBody:
+      'Since {items} went into your bag you have saved those measurements again. We will not cut to figures you have not checked — open your bag and add it again from the measurements you want.',
   },
   order: {
     title: 'Order confirmed',
@@ -370,6 +384,18 @@ export const en = {
     savedItemsUnavailable:
       'We could not reach your saved items just now. Anything you have saved is still on file — please try again in a moment.',
     openSavedItems: 'See your saved items',
+  },
+  /** §34.8 — a garment being cut, in the bag and on the order. */
+  stitched: {
+    /* Instead of the size row a picked garment shows. */
+    madeToMeasure: 'Made to your measurements',
+    fromProfile: '{style}, saved on {date}',
+    figures: { one: '{count} measurement', other: '{count} measurements' },
+    garmentPrice: 'Garment',
+    charge: 'Stitching',
+    leadTime: 'About {days} days to make',
+    /* §34.7 again, where the garment is listed rather than priced. */
+    noReturns: 'Cannot be returned once cutting starts',
   },
   /** §28.3's saved items. */
   wishlist: {

@@ -23,6 +23,14 @@ import {
  * kind is part of the key, so no device can ever name an account's profiles.
  */
 
+import { ownerKeyOf, type ProfileOwnerRow } from './profile-owners';
+
+/* WHO a profile belongs to lives next door (MOD-03): this file is the store, and
+   `profile-owners.ts` is who may write to it. Re-exported so a reader of the
+   store still finds the type it is keyed by. */
+export type { ProfileOwnerRow };
+export { isKnownOwner, issueDeviceToken, profileOwnerOf } from './profile-owners';
+
 export type { AcknowledgementRow, TypedEntryRow };
 
 export interface SubmissionRow {
@@ -43,11 +51,6 @@ interface ProfileValueRow {
   /** Copied off a card, or typed off a tape — read from the list, not the page. */
   origin: 'TYPED' | 'TRANSCRIBED';
   valueMm: number;
-}
-
-export interface ProfileOwnerRow {
-  keptWith: 'ACCOUNT' | 'DEVICE';
-  key: string;
 }
 
 interface ProfileRecord {
@@ -78,9 +81,29 @@ export type SaveOutcomeRow =
 export type SetsFor = (garmentStyle: string, source: SourceRow) => readonly SetRow[];
 
 const PROFILES: ProfileRecord[] = [];
-const DEVICE_TOKENS = new Set<string>();
 
-const ownerKeyOf = (owner: ProfileOwnerRow): string => `${owner.keptWith}:${owner.key}`;
+/**
+ * ONE profile version, by id, and only for the owner it belongs to.
+ *
+ * The only read that can reach a SUPERSEDED version, and it has to: a bag line
+ * names the version it was added against, and the whole point of naming it is to
+ * notice when a later save replaced it. The served list deliberately offers only
+ * CURRENT ones (§34.5), so this is a different question with a different answer.
+ *
+ * OWNER-SCOPED, like every other read in this file. An id arrives from a browser
+ * and a bag line asks the workshop to cut cloth to whatever it names, so "does
+ * this id exist" is not the question worth asking — "is it yours" is.
+ */
+export function profileById(id: string, owner: ProfileOwnerRow): SavedProfileRow | null {
+  const record = PROFILES.find((entry) => entry.id === id && entry.ownerKey === ownerKeyOf(owner));
+  return record === undefined ? null : projection(record);
+}
+
+/** Whether that version is still the current one for its owner, style and path. */
+export function isCurrentProfile(id: string): boolean {
+  const record = PROFILES.find((entry) => entry.id === id);
+  return record !== undefined && record.supersededBy === null;
+}
 
 /**
  * The list a NEW submission is judged against: the CURRENT version. Older ones
@@ -256,29 +279,6 @@ export function profilesFor(owner: ProfileOwnerRow, garmentStyle: string): Profi
   return PROFILES.filter(
     (profile) => profile.ownerKey === key && profile.garmentStyle === garmentStyle,
   );
-}
-
-/** A guest's device token, minted here as a cart id is minted by the cart module. */
-export function issueDeviceToken(): string {
-  const token = crypto.randomUUID();
-  DEVICE_TOKENS.add(token);
-  return token;
-}
-
-/** A device owner counts only with a token this module issued. */
-export function isKnownOwner(owner: ProfileOwnerRow): boolean {
-  return owner.keptWith === 'ACCOUNT' || DEVICE_TOKENS.has(owner.key);
-}
-
-/** The owner the BFF attached (`API_HEADERS.measurementOwner`), or null. */
-export function profileOwnerOf(header: string | null): ProfileOwnerRow | null {
-  if (header === null) return null;
-  const at = header.indexOf(':');
-  if (at < 1) return null;
-  const kind = header.slice(0, at);
-  const key = header.slice(at + 1);
-  if (key.length === 0) return null;
-  return kind === 'ACCOUNT' || kind === 'DEVICE' ? { keptWith: kind, key } : null;
 }
 
 /* Reading the body the stand-in was sent is `profile-submission.ts`: this file is

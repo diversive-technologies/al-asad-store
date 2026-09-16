@@ -14,7 +14,9 @@ import { servedSet } from './test-support';
 
 const joined = joinCopy(
   servedSet('KAMEEZ_SHALWAR'),
-  styleOffersSchema.parse([{ garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7 }]),
+  styleOffersSchema.parse([
+    { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
+  ]),
   measurementCopySchema.parse(measurementCopyFor('en')),
 );
 if (!joined.ok) throw new Error(`missing: ${joined.error.join(', ')}`);

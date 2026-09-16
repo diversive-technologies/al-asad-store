@@ -3,7 +3,7 @@ import { SaveAddressOffer } from '@/features/addresses/contract';
 import { ROUTES } from '@/config/routes';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { formatDate, formatMoneyMinor } from '@/lib/utils/format';
+import { formatDate, formatMoneyMinor, formatPlural } from '@/lib/utils/format';
 
 import type { Order } from '../schemas/checkout.schema';
 import { OrderPlacedHero } from './OrderPlacedHero';
@@ -98,6 +98,34 @@ export function OrderConfirmation({ order, locale, messages }: OrderConfirmation
                   </li>
                 ))}
               </ul>
+
+              {/*
+               * §34.7 — what it was cut from, on the record the customer keeps.
+               * The figures themselves are the order's snapshot; what belongs
+               * here is which measurements they were, so the two can be matched.
+               */}
+              {line.stitching === null ? null : (
+                <div className="text-fg-muted mt-1 text-xs">
+                  <p className="text-fg">{messages.stitched.madeToMeasure}</p>
+                  <p>
+                    <bdi>{line.stitching.styleLabel}</bdi>
+                  </p>
+                  <p>
+                    <bdi>
+                      {formatPlural(
+                        messages.stitched.figures,
+                        line.stitching.measurements.length,
+                        locale,
+                      )}
+                    </bdi>
+                  </p>
+                  <p>
+                    {messages.stitched.charge} ·{' '}
+                    {formatMoneyMinor(line.stitching.chargeMinor, locale)}
+                  </p>
+                  <p>{messages.stitched.noReturns}</p>
+                </div>
+              )}
               <p className="text-fg-muted mt-1 text-xs">× {line.quantity}</p>
             </div>
             <p className="text-fg shrink-0 text-sm">

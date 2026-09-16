@@ -14,7 +14,9 @@ import { pointId, servedSet } from './test-support';
 
 const joined = joinCopy(
   servedSet('KAMEEZ_SHALWAR'),
-  styleOffersSchema.parse([{ garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7 }]),
+  styleOffersSchema.parse([
+    { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
+  ]),
   measurementCopySchema.parse(measurementCopyFor('en')),
 );
 if (!joined.ok) throw new Error(`missing: ${joined.error.join(', ')}`);
@@ -53,12 +55,10 @@ describe('the review', () => {
   });
 
   it('lists what was sent and stands, garment by garment, in the served order', () => {
-    expect(groups.map((group) => [group.piece.id, group.rows.map((row) => row.point.id)])).toEqual(
-      [
-        ['KAMEEZ', ['kameezChest']],
-        ['SHALWAR', ['shalwarLength']],
-      ],
-    );
+    expect(groups.map((group) => [group.piece.id, group.rows.map((row) => row.point.id)])).toEqual([
+      ['KAMEEZ', ['kameezChest']],
+      ['SHALWAR', ['shalwarLength']],
+    ]);
   });
 
   it('marks the figures the customer was asked about and kept', () => {
@@ -118,7 +118,9 @@ describe('what a field with a problem says', () => {
   });
 
   it('names the measurement a hem came out narrower than, and asks for both again', () => {
-    expect(say(new Map([[pointId('kameezBottom'), hemBelowChest]])).get(pointId('kameezBottom'))).toBe(
+    expect(
+      say(new Map([[pointId('kameezBottom'), hemBelowChest]])).get(pointId('kameezBottom')),
+    ).toBe(
       'This came out smaller than the Chest, which cannot be right. Measure this again, and the Chest too.',
     );
   });
