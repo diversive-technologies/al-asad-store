@@ -9,27 +9,46 @@ import { fetchProfiles } from './profile-server';
 const CONTEXT = 'made-to-measure';
 
 /**
- * What this customer has already saved, for the studio to OFFER them.
+ * What this customer has saved, and whether the question could be answered.
  *
- * It answers with a list rather than a `Result`, and that is the decision worth
- * stating: saved measurements are a convenience laid over a form that works
- * without them. A customer who has never saved anything and a customer whose
- * profiles could not be read should see the same page — the one they came for —
- * rather than have the studio refuse to open because an optional read failed.
+ * The two are kept apart because two screens need different things from the same
+ * read. The studio OFFERS what is on file, so a read it cannot make is simply no
+ * offer — silence there asserts nothing. The account page REPORTS what is on
+ * file, and there the same silence becomes a sentence: "you have not saved any
+ * measurements yet" is a claim about the customer's own record, and it must not
+ * be made on the strength of a read that failed.
  *
- * ERR-10 — a genuine failure is still logged, once, here, where it becomes
- * silence on the page and has nowhere else to be noticed.
+ * ERR-10 — a genuine failure is logged once, here.
  */
-export async function savedProfilesFor(): Promise<MeasurementProfiles> {
+export type SavedProfilesRead =
+  | { readonly kind: 'READ'; readonly profiles: MeasurementProfiles }
+  | { readonly kind: 'UNREADABLE' };
+
+export async function readSavedProfiles(): Promise<SavedProfilesRead> {
   const owner = await readProfileOwner();
-  if (owner === null) return [];
+  /* Nobody to ask about: a browser with no cookie and no session has saved
+     nothing, which is an answer rather than a failure to get one. */
+  if (owner === null) return { kind: 'READ', profiles: [] };
 
   const result = await fetchProfiles(owner);
-  if (result.ok) return result.value;
+  if (result.ok) return { kind: 'READ', profiles: result.value };
 
   /* A device token the module no longer knows — lost to a restart, or never
-     issued — owns nothing. That is an answer rather than a fault, and it is the
-     same one an unknown token gets on a save. */
-  if (result.error.kind !== 'UNAUTHORIZED') logApiError(CONTEXT, result.error);
-  return [];
+     issued — genuinely owns nothing, which is the same answer a save gets. */
+  if (result.error.kind === 'UNAUTHORIZED') return { kind: 'READ', profiles: [] };
+
+  logApiError(CONTEXT, result.error);
+  return { kind: 'UNREADABLE' };
+}
+
+/**
+ * The same read for the studio, where a failure is no offer.
+ *
+ * Saved measurements are a convenience laid over a form that works without them:
+ * a customer who has never saved and one whose profiles could not be read should
+ * both get the page they came for rather than have the studio refuse to open.
+ */
+export async function savedProfilesFor(): Promise<MeasurementProfiles> {
+  const read = await readSavedProfiles();
+  return read.kind === 'READ' ? read.profiles : [];
 }

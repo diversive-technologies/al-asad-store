@@ -74,6 +74,19 @@ export function AccountMenu({ messages }: { messages: Messages }) {
         {mobile.length === 0 ? null : <p className="text-fg-muted text-xs">{mobile}</p>}
 
         {/*
+         * The account area. It is the only way in from the bar, and a guest has
+         * one too — but a guest has no menu to hang it from, so theirs is reached
+         * from the studio's own confirmation instead.
+         */}
+        <Link
+          href={ROUTES.account}
+          className="border-border text-fg hover:bg-surface-muted focus-visible:ring-brand-500 rounded-card mt-3 flex w-full items-center justify-center gap-2 border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <User className="h-4 w-4" aria-hidden />
+          {messages.account.navLabel}
+        </Link>
+
+        {/*
          * The saved items live here because they are the customer's, and the
          * heart that fills them is hidden from guests for the same reason. It
          * is the only way into the page, so without it the heart would keep
@@ -81,7 +94,7 @@ export function AccountMenu({ messages }: { messages: Messages }) {
          */}
         <Link
           href={ROUTES.wishlist}
-          className="border-border text-fg hover:bg-surface-muted focus-visible:ring-brand-500 rounded-card mt-3 flex w-full items-center justify-center gap-2 border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+          className="border-border text-fg hover:bg-surface-muted focus-visible:ring-brand-500 rounded-card mt-2 flex w-full items-center justify-center gap-2 border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
         >
           {/* I18N-05: a heart is not directional, so it must not mirror. */}
           <Heart className="h-4 w-4" aria-hidden />

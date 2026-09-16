@@ -285,6 +285,40 @@ export const en = {
     continueShopping: 'Continue shopping',
     notFound: 'We could not find that order.',
   },
+  /**
+   * §28.3's account area. A guest has one too: measurements save against this
+   * browser before anyone signs in, so the page says where they are kept rather
+   * than pretending there is nothing there.
+   */
+  account: {
+    title: 'Your account',
+    navLabel: 'Your account',
+    detailsHeading: 'Your details',
+    nameLabel: 'Name',
+    emailLabel: 'Email',
+    mobileLabel: 'Mobile',
+    detailsPlaceholder:
+      'Signing in is a placeholder while real accounts are built, so please do not put real personal details in here yet.',
+    guestHeading: 'You are not signed in',
+    guestBody:
+      'You can still use the shop, and anything below is kept on this browser. Signing in does not move it across yet.',
+    measurementsHeading: 'Your measurements',
+    measurementsEmpty: 'You have not saved any measurements yet.',
+    measurementsEmptyCta: 'Take your measurements',
+    measurementsUnavailable:
+      'Your measurements are on file, but the measuring guide could not be loaded to show them. Please try again.',
+    measurementsUnreadable:
+      'We could not reach your saved measurements just now. Anything you have saved is still on file — please try again in a moment.',
+    keptOnThisBrowser: 'These are kept on this browser only, and are not linked to an account.',
+    savedOn: 'Saved on {date}, {path}.',
+    openMeasurements: 'Open these measurements',
+    figuresUnavailable:
+      'We could not load the measuring guide for these, so the figures are not shown here. They are still on file.',
+    figuresNotAsked: {
+      one: '{count} more figure is on file that the guide no longer asks for.',
+      other: '{count} more figures are on file that the guide no longer asks for.',
+    },
+  },
   /** §28.3's saved items. */
   wishlist: {
     title: 'Saved items',
@@ -583,6 +617,7 @@ export const en = {
     savedAccount: 'They are kept with your account.',
     savedDevice: 'They are saved for this browser only, and are not linked to an account.',
     savedOnward: 'Browse the collection',
+    savedSeeAll: 'See your saved measurements',
     measureAgain: 'Change and save again',
     stepPrevious: 'Previous',
     stepNext: 'Next',

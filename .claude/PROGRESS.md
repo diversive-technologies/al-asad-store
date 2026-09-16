@@ -15,9 +15,10 @@ client's written list arrives; the machinery around them is built.
 The 3D experiment is kept, unmerged, on branch `3d-model` at `62363d3`. Nothing
 is pushed: `main` is ahead of `origin/main`.
 
-Phase 1 of the account plan is done: a saved measurement profile can be READ back,
-and the studio offers it — including across garment styles, since every style is
-composed from the same point rows. See "plan Phase 1: reading a profile back".
+Phases 1 and 2 of the account plan are done: a saved measurement profile can be
+READ back and the studio offers it — including across garment styles, since every
+style is composed from the same point rows — and `/account` now shows what is on
+file, for a guest as well as a signed-in customer.
 
 A by-hand pass over every use case on a desktop and a phone (`TESTING-USE-CASES.md`)
 then found five layout faults, led by a product page that was 81px wider than every
@@ -1717,6 +1718,79 @@ band and its status read right to left with 0 elements past the viewport.
 account, the address book, order history, the made-to-measure bag line with its
 stitching charge, and the product entry with the card mark are all still to come.
 
+## Account and tailored-from-a-product — plan Phase 2: the account area
+
+`/account` exists, with the saved measurements in it, for a signed-in customer and
+for a guest.
+
+- **The route composes and implements nothing** (STRUCT-02). Identity comes from
+  `features/auth`, the measurements from `features/made-to-measure`, so neither
+  feature knows about the other and the page knows about neither's internals
+  (MOD-01). `AccountMeasurements` reads its OWN data rather than taking it as a
+  prop: the feature that owns the record owns the reads and the words for it.
+- **A GUEST gets the page.** Measurements save against a device token before
+  anyone signs in, so a page that refused a guest would hide a customer's own
+  figures behind a sign-in they were never asked for. One line says where they are
+  kept, and it does not promise a merge, because there is not one.
+- **The saved figures are the REVIEW's own rows.** A saved profile keeps what was
+  typed beside what was recorded, which is exactly what a passed check leaves
+  behind — so `checkedFromProfile` turns the record into that shape and the page
+  reuses `reviewGroups`, `typedText` and `keptText`. The account page and the
+  review therefore cannot disagree about what a figure records as (PD-01). The
+  table is the review's without its "Change" column, because on this page there is
+  nothing to change into, and it reuses the review's CSS — including its container,
+  so the typed figure moves under the name on a phone exactly as it does there.
+- **No client boundary.** Every part takes its words as a prop rather than from the
+  client context, so the page ships no JavaScript of its own.
+- **One read per profile, and all of them cached.** A saved profile carries point
+  IDS and no words (§34.3), so the page makes the same two content reads the studio
+  makes plus one list per profile. A profile whose list or wording cannot be read
+  still appears with its date and a way in — the customer's own record must not
+  vanish because content did.
+- **The way in.** The header's account menu for a customer; the studio's own save
+  confirmation for a guest, who has no menu to hang it from.
+- **The D3 placeholder is stated in words on the page**, because a screen that
+  looks like an account is a screen people put real details into, and this one is
+  guarded by an unsigned cookie until §11 lands.
+
+**The phase's review** (three lenses — privacy, correctness, the rulebook — each
+finding then put to an independent skeptic; 6 of 34 stood, and the six were two
+defects found independently by all three lenses):
+
+- **A failed read of the RECORD was shown as "you have not saved any measurements
+  yet."** Phase 1's `savedProfilesFor` collapses any failure to an empty list,
+  which is right for the studio — there, silence is simply no offer and asserts
+  nothing. On this page the same silence becomes a sentence about the customer's
+  own record, and the loader's own doc comment said that would be a lie. The read
+  now answers `READ` or `UNREADABLE`; the studio keeps the collapsing wrapper. An
+  UNAUTHORIZED device token still reads as empty, because a token the module never
+  issued genuinely owns nothing. Checked both ways with the mock bent to 500 and
+  then restored: the failure says so and withholds the "Take your measurements"
+  button, which would otherwise have appended a needless version over a record the
+  customer had just been told did not exist.
+- **The new copy block stole the wishlist's doc comment.** Inserted between
+  `/** §28.3's saved items. */` and the key it described, so the registry
+  documented `account` as "saved items" and left `wishlist` with nothing. Both
+  blocks have their own comment now.
+
+Verified: typecheck, lint, **453 tests** (5 new) and the production build pass,
+with `/account` in the output as a DYNAMIC route — it reads cookies, so it is
+never prerendered with one customer's data in it. Measured in the running store: a
+stranger sees the guest heading and the empty state; a guest with a device profile
+sees "Saved on 16 September 2026, Copy a garment I own.", the Kameez and Shalwar
+tables, eight figures reading "21 in across" beside "42 in around", the
+browser-only line and a link to their own list; with a session cookie the details
+block shows name, email and mobile with the placeholder caution and no
+browser-only line; at 375px there are 0 elements past the viewport and the typed
+figure moves under the name; in Urdu at 375px the page is `dir="rtl"` with the
+captions and the saved-on line in Urdu and nothing past the viewport; the header
+menu reads "Your account", "Saved items", "Sign out"; and the studio's save
+confirmation offers "See your saved measurements".
+
+**Phases 3 to 7 are not started.** The wishlist moving to the account, the address
+book, order history, the made-to-measure bag line with its stitching charge, and
+the product entry with the card mark are all still to come.
+
 ## Phone layout — the five faults the by-hand pass found
 
 `TESTING-USE-CASES.md` is the log: thirteen use cases on a desktop and a phone, the
@@ -2468,6 +2542,26 @@ out, and `/order/AA100001` still renders on a fresh load.
   **When feedback repeats after a fix, the fix addressed the wrong thing — go
   back and measure the proportions before touching the drawing again.**
 
+- **A read written to be forgiving becomes a lie when a second screen REPORTS what
+  it returns.** The studio's profile read collapses every failure to an empty list
+  on purpose: there, the absence of an offer asserts nothing. The account page put
+  that same empty list behind the sentence "you have not saved any measurements
+  yet", which is a claim about the customer's own record — made on the strength of
+  a read that had failed. Two screens wanting different things from one read is the
+  signal: let the read say what happened and let each caller decide what to do with
+  it, rather than deciding once for both at the bottom.
+- **A `/** */` comment belongs to whatever key follows it, so inserting a block
+  between the two silently re-labels it.** The new account block landed under the
+  wishlist's `§28.3's saved items` and took it: the registry then documented the
+  account as "saved items" and left the wishlist undocumented. In a file whose
+  block comments are the only statement of what each group is for, that is a real
+  loss. Put a new block ABOVE the comment it must not steal, or give it its own.
+- **`.next/dev/types` corrupts every time the preview is stopped and a build or
+  typecheck follows immediately** — twice in one session now, both times
+  `validator.ts` with TS1128 at a line that is past the real end of the file. The
+  dev server is still flushing those files as it goes down. The documented fix
+  works every time and takes seconds: delete `routes.d.ts` and `validator.ts`, run
+  `npx next typegen`, then typecheck. Do not reach for `rm -rf .next`.
 - **A GET must not create the thing it reads.** The save path mints a device token
   when a browser has none, which is right for a write and wrong for a read —
   reusing it would have taken a token from the backend on every anonymous visit to

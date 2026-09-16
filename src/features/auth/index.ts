@@ -16,6 +16,7 @@ export {
   signUpAction,
 } from './actions';
 
+export { AccountIdentity } from './components/AccountIdentity';
 export { AccountMenu } from './components/AccountMenu';
 export { SessionProvider, useSession } from './components/SessionProvider';
 export { PasswordResetForm } from './components/PasswordResetForm';

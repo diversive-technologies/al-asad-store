@@ -49,6 +49,11 @@ export function MeasurementSaved({ profile, styleLabel, onMeasureAgain }: Measur
         <Button type="button" variant="ghost" onClick={onMeasureAgain}>
           {t.measureAgain}
         </Button>
+        {/* The only way a GUEST reaches their account page: they have no menu in
+            the bar, and what they just saved is theirs to find again. */}
+        <ButtonLink href={ROUTES.account} variant="ghost">
+          {t.savedSeeAll}
+        </ButtonLink>
       </div>
     </section>
   );

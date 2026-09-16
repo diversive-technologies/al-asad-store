@@ -5,6 +5,7 @@
  * `apiRequest`, which is server-only, so a Client Component must not import this
  * file. The static, client-safe surface is `contract.ts` (STRUCT-06).
  */
+export { AccountMeasurements } from './components/AccountMeasurements';
 export { StitchedScreen } from './components/StitchedScreen';
 export { StudioSkeleton } from './components/StudioSkeleton';
 export { requestedSource, requestedStyle } from './lib/studio-params';

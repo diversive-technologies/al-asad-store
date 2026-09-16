@@ -264,6 +264,35 @@ export const ur: Messages = {
     continueShopping: 'خریداری جاری رکھیں',
     notFound: 'ہمیں وہ آرڈر نہیں ملا۔',
   },
+  account: {
+    title: 'آپ کا اکاؤنٹ',
+    navLabel: 'آپ کا اکاؤنٹ',
+    detailsHeading: 'آپ کی تفصیلات',
+    nameLabel: 'نام',
+    emailLabel: 'ای میل',
+    mobileLabel: 'موبائل',
+    detailsPlaceholder:
+      'اصل اکاؤنٹس بننے تک سائن ان عارضی ہے، اس لیے فی الحال یہاں اپنی اصل ذاتی معلومات نہ دیں۔',
+    guestHeading: 'آپ سائن ان نہیں ہیں',
+    guestBody:
+      'آپ پھر بھی خریداری کر سکتے ہیں، اور نیچے جو کچھ ہے وہ اسی براؤزر میں محفوظ ہے۔ سائن ان کرنے سے وہ ابھی منتقل نہیں ہوتا۔',
+    measurementsHeading: 'آپ کے ناپ',
+    measurementsEmpty: 'آپ نے ابھی کوئی ناپ محفوظ نہیں کیا۔',
+    measurementsEmptyCta: 'اپنے ناپ لیں',
+    measurementsUnavailable:
+      'آپ کے ناپ محفوظ ہیں، لیکن انھیں دکھانے کے لیے رہنمائی لوڈ نہیں ہو سکی۔ دوبارہ کوشش کریں۔',
+    measurementsUnreadable:
+      'اس وقت آپ کے محفوظ شدہ ناپ تک رسائی نہیں ہو سکی۔ جو کچھ آپ نے محفوظ کیا ہے وہ محفوظ ہے — تھوڑی دیر بعد دوبارہ کوشش کریں۔',
+    keptOnThisBrowser: 'یہ صرف اسی براؤزر میں محفوظ ہیں اور کسی اکاؤنٹ سے منسلک نہیں۔',
+    savedOn: '{date} کو محفوظ کیے گئے، {path}۔',
+    openMeasurements: 'یہ ناپ کھولیں',
+    figuresUnavailable:
+      'ان کے لیے رہنمائی لوڈ نہیں ہو سکی، اس لیے اعداد یہاں نہیں دکھائے جا رہے۔ وہ محفوظ ہیں۔',
+    figuresNotAsked: {
+      one: '{count} مزید ناپ محفوظ ہے جو موجودہ رہنمائی میں نہیں مانگا جاتا۔',
+      other: '{count} مزید ناپ محفوظ ہیں جو موجودہ رہنمائی میں نہیں مانگے جاتے۔',
+    },
+  },
   wishlist: {
     title: 'محفوظ اشیاء',
     savedCount: { one: '{count} محفوظ شے', other: '{count} محفوظ اشیاء' },
@@ -530,6 +559,7 @@ export const ur: Messages = {
     savedAccount: 'یہ آپ کے اکاؤنٹ کے ساتھ محفوظ ہیں۔',
     savedDevice: 'یہ صرف اسی براؤزر کے لیے محفوظ ہیں، اور کسی اکاؤنٹ سے منسلک نہیں۔',
     savedOnward: 'کلیکشن دیکھیں',
+    savedSeeAll: 'اپنے محفوظ شدہ ناپ دیکھیں',
     measureAgain: 'بدل کر دوبارہ محفوظ کریں',
     stepPrevious: 'پچھلا',
     stepNext: 'اگلا',

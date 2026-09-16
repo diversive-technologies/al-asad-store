@@ -88,6 +88,8 @@ export const ROUTES = {
   bag: '/bag',
   /** §28.3's saved items. Offered only to a signed-in customer — see the page. */
   wishlist: '/wishlist',
+  /** §28.3's account area. A guest has one too — measurements save before anyone signs in. */
+  account: '/account',
   checkout: '/checkout',
   /** §28.3 — the order number is the address, so it can be shared and returned to. */
   orderConfirmation: (orderNumber: string) => `/order/${orderNumber}`,

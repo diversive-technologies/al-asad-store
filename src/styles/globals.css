@@ -2724,6 +2724,21 @@ ellipse.gf-mark--active {
   display: none;
 }
 
+/*
+ * The account's saved-measurement card names the REVIEW's container, so the table
+ * inside it narrows exactly the way the review's does on a phone rather than
+ * carrying a second copy of that breakpoint (PD-01).
+ */
+.mm-saved-card {
+  container: mm-review / inline-size;
+}
+
+/* The review's table minus its "Change" column: the three that remain share the
+   width that column used to take, or the kept figures would sit short of the edge. */
+.mm-review-table.mm-saved-table thead th:nth-child(3) {
+  inline-size: 40%;
+}
+
 @container mm-review (max-width: 26rem) {
   .mm-review-table .mm-review-typed {
     display: none;
