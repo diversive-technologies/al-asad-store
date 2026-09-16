@@ -33,9 +33,20 @@ export function ProductRailSection({
     <section className="page-shell flex flex-col gap-4 py-12">
       <header className="flex items-baseline justify-between gap-4">
         <h2 className="text-fg text-xl font-semibold">{section.title}</h2>
+        {/*
+         * `py-2` grows the tap target from 20px to 36px — it sits above a rail
+         * people swipe, where a near-miss scrolls the rail instead.
+         *
+         * `-my-2` is what keeps the header where it was. This link is a direct
+         * child of a flex container, so it is BLOCKIFIED and its vertical
+         * padding is real layout rather than the free hit area that the same
+         * padding buys on an inline breadcrumb: without the negative margin the
+         * header grows 8px and the heading's baseline shifts with it, on rails
+         * that have a link and not on rails that do not.
+         */}
         <Link
           href={section.viewAllHref}
-          className="text-fg-muted hover:text-fg text-sm underline underline-offset-4"
+          className="text-fg-muted hover:text-fg -my-2 py-2 text-sm underline underline-offset-4"
         >
           {messages.common.viewAll}
         </Link>

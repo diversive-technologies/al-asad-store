@@ -65,7 +65,7 @@ export function Dialog({ isOpen, onClose, title, closeLabel, children, className
             type="button"
             onClick={onClose}
             aria-label={closeLabel}
-            className="text-fg-muted hover:text-fg focus-visible:ring-brand-500 rounded-card p-1 focus-visible:ring-2 focus-visible:outline-none"
+            className="text-fg-muted hover:text-fg focus-visible:ring-brand-500 rounded-card p-2 focus-visible:ring-2 focus-visible:outline-none"
           >
             <X className="h-5 w-5" aria-hidden />
           </button>

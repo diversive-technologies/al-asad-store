@@ -2,7 +2,7 @@
 export default function ProductLoading() {
   return (
     <div className="page-shell py-10" aria-hidden>
-      <div className="grid gap-10 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
         <div className="rounded-card bg-surface-muted aspect-[4/5] w-full animate-pulse" />
         <div className="flex flex-col gap-4">
           <div className="bg-surface-muted h-8 w-2/3 animate-pulse rounded" />

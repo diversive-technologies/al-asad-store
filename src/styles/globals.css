@@ -661,6 +661,66 @@ body:has([data-hero]) header[data-scrolled='false']::before {
     opacity: 1;
     pointer-events: auto;
   }
+
+  /*
+   * The heart and the quick add take the OPPOSITE answer from the arrows above,
+   * and the difference is whether the control has a replacement.
+   *
+   * A swipe replaces the arrows, so hiding them there costs a phone nothing. It
+   * costs the heart and the quick add everything: there is no gesture that saves
+   * a product or opens a size tray, so a control revealed by a hover that cannot
+   * happen is a feature a phone simply does not have. Left as they were they
+   * were worse than absent — `opacity: 0` still takes taps, so every card kept
+   * two invisible hit zones over its own photograph and a tap meant for the
+   * product silently saved it or opened the size tray instead.
+   *
+   * So they are DRAWN on a touch device, and sized for a finger: 2.25rem clears
+   * WCAG 2.2's 24px minimum target comfortably while staying proportionate on a
+   * tile that is about 104px wide at three columns on a 375px screen, where a
+   * 44px control would be nearly half the card.
+   */
+  .card-action {
+    opacity: 1;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+  }
+}
+
+/*
+ * No field is ever under 16px where the primary input is touch.
+ *
+ * iOS Safari zooms the page in when a field below 16px takes focus and does NOT
+ * zoom back out afterwards, so the customer is left scrolling sideways through
+ * the rest of the form — on checkout, on sign-in, and in the search panel, all
+ * of which set their fields at 14px. The measurement studio had already fixed
+ * this for its own sheet and that local rule is gone with this one (PD-01).
+ *
+ * An element rule rather than a class, on purpose: the three field styles in the
+ * store are written in three places (the `Input` primitive, the search panel's
+ * own input, the fabric calculator's select) and a fourth form would get 14px
+ * fields with nobody noticing, which is exactly how this reached every form.
+ * Radios and checkboxes are left alone — they carry no text to zoom into.
+ *
+ * `(hover: none)` asks the same question the card rule above asks: a laptop with
+ * a touchscreen reports `hover: hover`, keeps its mouse-sized fields, and has no
+ * zooming keyboard to protect against. Desktop sizing is untouched.
+ *
+ * Unlayered and at the top level for the reason the card rule is: `text-sm` is a
+ * Tailwind utility in `@layer utilities`, and an unlayered rule beats a layered
+ * one whatever the specificity.
+ */
+@media (hover: none) {
+  /*
+   * Chained `:not()`s rather than one with a selector list. The list form is
+   * Selectors 4, and a browser that cannot parse it drops the WHOLE rule —
+   * `select` and `textarea` with it — on precisely the older iOS Safari this
+   * exists to protect.
+   */
+  input:not([type='radio']):not([type='checkbox']),
+  select,
+  textarea {
+    font-size: 1rem;
+  }
 }
 
 /*
@@ -672,7 +732,14 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   inset-inline: 0;
   inset-block-end: 0;
   z-index: 10;
-  padding: 0.75rem;
+  /*
+   * 0.5rem, not 0.75rem. The tray is clipped by the photograph it is anchored
+   * to, and the tightest case is three columns on a 375px screen: a 104px tile
+   * gives a 130px image, and five 2rem sizes over three rows need every pixel
+   * the padding is not using. Measured at 124px there, with the whole top row
+   * inside the frame.
+   */
+  padding: 0.5rem;
   text-align: center;
   background: linear-gradient(to top, color-mix(in oklab, black 85%, transparent), transparent);
   animation: card-tray-rise 200ms ease-out both;
@@ -690,7 +757,22 @@ body:has([data-hero]) header[data-scrolled='false']::before {
 }
 
 @utility card-size {
+  /*
+   * 2rem of block size, not the 22px the padding alone gave.
+   *
+   * The tray used to be reachable only by hover, so its sizes were never a
+   * touch target; drawing the bag button on a phone makes them one, and a
+   * 22px button is under WCAG 2.2's 24px minimum on a control where a mis-tap
+   * puts the wrong size in the bag. The tray is anchored to the foot of the
+   * photograph and clipped by it, so the height is held to 2rem rather than
+   * the 2.25rem the round controls use: at three columns on a 375px screen a
+   * tile is about 104px and the rows have to fit inside it.
+   */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-inline-size: 2.25rem;
+  min-block-size: 2rem;
   padding-block: 0.3rem;
   padding-inline: 0.5rem;
   border-radius: var(--radius-card);
@@ -2711,13 +2793,6 @@ ellipse.gf-mark--active {
 }
 
 @media (max-width: 63.9375rem) {
-  /* iOS zooms into any field under 16px as it takes focus and does not zoom back
-     out, which crops the sheet sideways and throws its sizing. Stacked layout
-     only; the store-wide `Input` fix is offered separately. */
-  .mm-scene input {
-    font-size: 1rem;
-  }
-
   /* The page beneath cannot be dragged while the sheet is up. */
   html:has(.mm-scene[data-focused]) {
     overflow: hidden;

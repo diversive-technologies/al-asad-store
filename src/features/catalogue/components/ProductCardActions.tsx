@@ -92,7 +92,19 @@ export function ProductCardActions({ product, isSoldOut, messages }: ProductCard
 
   return (
     <>
-      <div className="absolute end-2 top-2 z-10 flex flex-col gap-2">
+      {/*
+       * ABOVE the size tray, which is also z-10 and comes later in the tree, so
+       * at equal z-index it hit-tests on top.
+       *
+       * That matters because the button that CLOSES the tray is in this column:
+       * it turns into an X while the tray is open. At three columns on a phone
+       * the tray is 124px over a 130px photograph, which puts this whole column
+       * inside it — the X stayed visible through the tray's transparent top and
+       * every tap on it landed on the tray, which has no handler. With no
+       * outside-tap and no Escape on a phone, the tray became a dead end whose
+       * only exits were buying a size or a 6px strip of photograph.
+       */}
+      <div className="absolute end-2 top-2 z-20 flex flex-col gap-2">
         {!isSignedIn ? null : (
           <button
             type="button"

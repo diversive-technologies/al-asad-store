@@ -64,15 +64,23 @@ export function ProductScreen({
   return (
     <div className="page-shell py-10">
       <nav aria-label={tc.title} className="text-fg-muted mb-6 text-sm">
-        <ol className="flex flex-wrap items-center gap-2">
+        {/*
+         * `py-2` on the links grows the TARGET without moving the page: vertical
+         * padding on an inline box is hit-tested but does not change the line
+         * box, so a 17px breadcrumb becomes a 33px one in place. The row gap has
+         * to clear twice that padding, or a wrapped breadcrumb would have the
+         * line above stealing taps from the line below; it only ever applies
+         * when the trail actually wraps.
+         */}
+        <ol className="flex flex-wrap items-center gap-x-2 gap-y-4">
           <li>
-            <Link href={ROUTES.home} className="hover:text-fg">
+            <Link href={ROUTES.home} className="hover:text-fg py-2">
               {tc.breadcrumbHome}
             </Link>
           </li>
           <li aria-hidden>/</li>
           <li>
-            <Link href={ROUTES.catalogue.list} className="hover:text-fg">
+            <Link href={ROUTES.catalogue.list} className="hover:text-fg py-2">
               {tc.title}
             </Link>
           </li>
@@ -81,7 +89,21 @@ export function ProductScreen({
         </ol>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
+      {/*
+       * `grid-cols-1` is load-bearing, not decoration. Left implicit, the single
+       * column below 1024px is an AUTO track, which is sized to its contents and
+       * cannot shrink under them — so the widest thing in the column set its
+       * width, and everything else inherited it. That was the gallery's
+       * thumbnail strip: five 80px thumbnails and four gaps is 432px of
+       * max-content, which the strip's own `overflow-x-auto` scroller was meant
+       * to absorb and could not, because an auto track measures a scroller's
+       * contents rather than the scroller. Every common phone (360-414px) laid
+       * the title, price, sizes and per-piece panel out 432px wide and scrolled
+       * sideways; no desktop did, which is why it survived. `minmax(0, 1fr)` is
+       * a definite track that fills the shell and is allowed to be narrower
+       * than its contents.
+       */}
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-start">
         <ProductGallery media={product.media} productName={product.name} messages={messages} />
 
         <div className="flex flex-col gap-6">

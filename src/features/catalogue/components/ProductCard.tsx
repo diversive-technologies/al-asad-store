@@ -127,8 +127,19 @@ export function ProductCard({
         </ProductCardFrames>
 
         {badges.length > 0 ? (
-          // I18N-04: `start-3` is logical — badges hug the reading-start corner.
-          <ul className="absolute start-3 top-3 flex flex-wrap gap-1">
+          /*
+           * I18N-04: `start-3` is logical — badges hug the reading-start corner.
+           *
+           * `end-12` keeps the strip clear of the action column at EVERY tile
+           * width: 2rem of inset and disc plus a gap. A badge states its status
+           * in words and the tint is only reinforcement (A11Y-06), so a word
+           * disappearing under the disc is the message disappearing — and the
+           * discs are drawn permanently on touch. At three columns on a 375px
+           * screen a tile is 104px, and "Low stock" was reading as "Low s"
+           * under the blur. Bounded, it wraps inside its own pill instead.
+           * Wider tiles have room to spare and look exactly as they did.
+           */
+          <ul className="absolute start-3 end-12 top-3 flex flex-wrap gap-1">
             {badges.map((badge) => (
               <li key={badge}>
                 <ProductBadge kind={badge} messages={messages} />

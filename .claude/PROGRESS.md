@@ -7,13 +7,18 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-12, on `main`, with all six Made-to-Measure plan phases done
+Last updated: 2026-09-16, on `main`, with all six Made-to-Measure plan phases done
 — the client's order, the list served as content, a real save with a review, the
 tailor's-card path, finishing choices that decide what is asked, and the tailor's
 rules as rows. Every rule row, bound and card convention is FIXTURE until the
 client's written list arrives; the machinery around them is built.
 The 3D experiment is kept, unmerged, on branch `3d-model` at `62363d3`. Nothing
 is pushed: `main` is ahead of `origin/main`.
+
+A by-hand pass over every use case on a desktop and a phone (`TESTING-USE-CASES.md`)
+then found five layout faults, led by a product page that was 81px wider than every
+phone screen. All five are fixed — see "Phone layout" below. The test log carries the
+customer-facing account; this file carries what is worth not learning twice.
 
 ---
 
@@ -59,7 +64,10 @@ is pushed: `main` is ahead of `origin/main`.
     someone who steered to a frame is looking at that frame. Leaving the card
     clears the pin and returns to the first image.
 
-    On TOUCH there are no arrows at all — the card is SWIPED. A phone has no
+    On TOUCH there are no arrows at all — the card is SWIPED. This is the arrows
+    ONLY: the heart and the quick add beside them are DRAWN on a touch device
+    instead (see "Phone layout" below), because the difference is whether the
+    control has a replacement. A phone has no
     hover, so an arrow revealed by hover is an arrow that does not exist there;
     drawing them permanently instead put two circles over every photograph in
     the grid, which is a worse answer than the gesture people already have for
@@ -1606,6 +1614,82 @@ until the written list arrives. The machinery around them is built and tested; w
 it is filled with is ours, and a demo should say so. They are GARMENT figures — a kameez chest carries ease a body chest does
 not — and ADULT figures, which is why a boy's kurta carries no stitching offer.
 
+## Phone layout — the five faults the by-hand pass found
+
+`TESTING-USE-CASES.md` is the log: thirteen use cases on a desktop and a phone, the
+fault, the repair and the measurement after it. What follows is only what the code
+needs to remember.
+
+- **The product page was 432px wide on every phone, and a scroller was the reason.**
+  The page's main grid declared two columns from 1024px and NOTHING below it, so the
+  single column was an implicit `auto` track — sized to its contents and unable to
+  shrink under them. The widest content was the gallery's thumbnail strip, five 80px
+  thumbnails and four gaps, and the strip's own `overflow-x-auto` did not save it:
+  **an auto track measures what is INSIDE a scroller, not the scroller.** Everything
+  in the column inherited that width, so title, price, sizes and the per-piece panel
+  all ran off the screen. `grid-cols-1` — `minmax(0, 1fr)` — is the fix, on the page
+  and on its loading skeleton. Measured at 320, 360, 375, 390, 414, 480, 768 and
+  1023px: nothing past the edge; 1024 and 1440px unchanged at two equal columns.
+- **The bag panel and the try-on panel were the same fault, not two more.** Both
+  measured the page rather than the screen, because a mobile browser widens its
+  layout viewport to fit an overflowing page. Nothing was changed in either: the bag
+  panel is 375 wide at the left edge and the try-on dialog 343px centred, from a
+  product page, once the page itself fits.
+- **The card's heart and quick add are DRAWN on a touch device now.** They were
+  `opacity: 0` with their taps still live, so a tap meant for the product silently
+  saved it or opened a size tray. The frame arrows beside them take the opposite
+  treatment and always did — the difference is a replacement: a swipe replaces an
+  arrow, and nothing replaces a heart. They are 2.25rem there, not 2.75rem: at three
+  columns on a 375px screen a tile is 104px, and a 44px control would be nearly half
+  the card.
+- **No field is under 16px where the primary input is touch**, because iOS Safari
+  zooms in on a smaller one and does not zoom back out. One unlayered element rule
+  on `input` / `select` / `textarea` under `(hover: none)`, and the studio's own copy
+  of that fix is gone with it (PD-01). An element rule rather than a class on
+  purpose: the store writes field styling in three places and a fourth form would
+  have been missed the same way these were. Written as chained `:not()`s, because the
+  selector-list form is Selectors 4 and a browser that cannot parse it drops the
+  whole rule — on exactly the old iOS Safari the rule exists for.
+- **Three tap targets were raised** — breadcrumbs 17→33px, "View all" 20→36px, the
+  dialogs' close button 28→36px.
+
+### What the repairs themselves broke, and how it was caught
+
+Two of the three came from an adversarial review of the change, one from measuring
+while making it. All three only ever showed at the **three-column** density a phone
+customer can choose; the default is two.
+
+- **The size tray covered the button that closes it.** The tray and the action column
+  are siblings at the same z-index with the tray later in the tree, so the tray
+  hit-tested on top. Making the bag button visible made opening the tray routine, and
+  making both it and its sizes finger-sized grew the tray from ~101px to 124px over a
+  130px photograph — closing the ~21px strip of the close button that had still been
+  reachable. The X stayed VISIBLE through the tray's transparent top, so it looked
+  live and did nothing; with no outside-tap and no Escape on a phone, the card was a
+  dead end whose only exits were buying a size or a 6px strip of photograph. The
+  action column is `z-20` now. **This is the shape to watch for: making a
+  hover-only surface reachable on touch turns everything inside it into a touch
+  surface, and the interactions between the parts are what break, not the parts.**
+- **The drawn control clipped the "Low stock" badge** to "Low s" on a 104px tile. A
+  badge states its status in words and the tint is only reinforcement (A11Y-06), so a
+  covered word is a covered message. The badge strip is bounded away from the action
+  column at every width; it wraps inside its own pill instead. Nothing changes at one
+  or two columns.
+- **The tray's own size buttons were 22px**, under WCAG 2.2's 24px minimum, on a
+  control where a mis-tap buys the wrong size. 2rem now, with the tray's padding
+  trimmed to 0.5rem so three rows still fit inside the photograph.
+
+Verified: typecheck, lint, **432 tests** and the production build pass. Measured in
+the running store rather than eyeballed — every width above; `.card-action` at
+opacity 1 and 36×36 on touch while `.card-frame-control` stays hidden with its
+pointer events off; quick add driven end to end on a phone (tray, size M, one item in
+the bag); 16px on all five checkout fields, sign-in, the search panel, the fabric
+calculator's select and all eleven studio fields, with desktop still 14px; the
+breadcrumb 33px and the topmost element at its top edge; "View all" 36px hit-tested
+at top, middle and bottom with its section head still 28px; the close button 36×36;
+0px badge overlap at three columns; and the topmost element at the centre of the
+tray's X being the X, which then closes the tray.
+
 ## Deliberate gaps — do not "fix" these
 
 - **Product imagery is now the client's own.** Fourteen photographs in
@@ -2281,6 +2365,50 @@ out, and `/order/AA100001` still renders on a fresh load.
   **When feedback repeats after a fix, the fix addressed the wrong thing — go
   back and measure the proportions before touching the drawing again.**
 
+- **A grid that declares columns only at a breakpoint has an AUTO track below it,
+  and an auto track is sized to its contents.** `grid lg:grid-cols-2` looks like it
+  says "one column, then two"; it says "a column as wide as whatever is in it, then
+  two". Anything intrinsically wide in that column sets the page width and everything
+  beside it inherits it — which is invisible on a desktop, where the breakpoint
+  applies, and breaks every phone. **A scroller inside does not protect you**: an
+  auto track measures what is inside the scroller, not the scroller, so the product
+  page's `overflow-x-auto` thumbnail strip was the thing setting the width. State the
+  base count (`grid-cols-1`, i.e. `minmax(0, 1fr)`) on every responsive grid.
+- **A phone widens its LAYOUT VIEWPORT to fit an overflowing page, so `100%` on a
+  fixed element stops meaning "the screen".** The bag panel measured 456px on a 375px
+  screen and read as a second, separate bug; it was the product page's overflow,
+  seen through a panel that was sizing itself correctly. Fix the page before
+  believing a fixed overlay is broken.
+- **Vertical padding grows a tap target for free on an INLINE box and is real layout
+  on a FLEX ITEM.** The same `py-2` made a 17px breadcrumb link a 33px target without
+  moving anything (the `<a>` is inline inside its `<li>`), and made a rail's section
+  head 8px taller with its heading's baseline shifted (the `<a>` is a direct child of
+  a flex container, so it is blockified). Pair it with `-my-2` in the second case.
+  Two reviewers caught the comment claiming otherwise; the measurement settled it.
+- **Making a hover-only surface reachable on touch turns everything inside it into a
+  touch target.** Drawing the card's quick add on phones promoted a whole tray nobody
+  had ever tapped: its size buttons were 22px, under the 24px minimum, and the taller
+  tray then covered its own close button — which stayed visible through the tray's
+  transparent top and silently did nothing, because equal z-index plus later in the
+  tree wins the hit test. Neither a test nor a screenshot would have shown it; an
+  adversarial review did, and only at the three-column density. **When a control
+  becomes reachable somewhere new, re-examine everything it opens, not just itself.**
+- **`:not(a, b)` is Selectors 4 and takes the whole rule down with it where it is not
+  parsed.** A selector list inside `:not()` that a browser cannot read invalidates
+  the entire rule, including the perfectly ordinary selectors beside it. For a rule
+  whose whole purpose is protecting an OLD browser, write the Level 3 form —
+  `:not(a):not(b)`.
+- **MSW died twice more, both times within minutes of a fresh start and after one or
+  two edits** — one of them a comment. The probe pair ended the hunt in seconds each
+  time: `/api/quick-add?slug=x` answering 502 and `/catalogue` rendering 0
+  `<article>`. Read the probes BEFORE suspecting what was just written.
+- **A `ref` from `find` is stale the moment the layout changes, and it clicks by
+  PIXEL.** Switching the catalogue from two columns to three moved every card; clicks
+  on refs captured before the switch landed on the photograph and navigated to a
+  product page twice in a row, which reads exactly like a broken handler. Re-`find`
+  after any layout change — and to test whether a tap REACHES a control, ask
+  `document.elementFromPoint` at the control's own centre, which is the hit test
+  itself rather than a proxy for it.
 - **A `prefers-reduced-motion: reduce` override loses to the rule that STARTS the
   animation, if that rule is more specific.** `.measure-line { animation: none }`
   is (0,1,0) and `.group:hover > .measure-line` is (0,3,0); a media query adds no
