@@ -5,7 +5,8 @@ import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
 
 /**
- * DATA-08 — §34.4 `saveProfile`: always a new version, never an overwrite.
+ * DATA-08 — §34.4 `saveProfile`: a new version when anything changed, never an
+ * overwrite.
  *
  * It attaches the one thing the browser must not state for itself — who the
  * profile belongs to — from the session, or from this device's token (A2-5,

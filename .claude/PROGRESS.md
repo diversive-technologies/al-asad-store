@@ -7,11 +7,12 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-16, on `main`, with account plan phases 1 to 6 done — a
+Last updated: 2026-09-17, on `main`, with ALL SEVEN account plan phases done — a
 saved profile read back into the studio, `/account`, the saved items moved off the
 browser and onto the account, an address book offered at checkout, an order
-history, and a made-to-measure line the bag can hold and the order can carry — and
-with all six Made-to-Measure plan phases done
+history, a made-to-measure line the bag can hold and the order can carry, and "get
+it tailored" from a product and on the card — and with all six Made-to-Measure
+plan phases done
 — the client's order, the list served as content, a real save with a review, the
 tailor's-card path, finishing choices that decide what is asked, and the tailor's
 rules as rows. Every rule row, bound and card convention is FIXTURE until the
@@ -325,7 +326,9 @@ ids with `useId` so the two copies cannot collide.
   subtracting active reservations. Taking the last unit makes a size read sold
   out for everyone, with no job having run. Previously stock was a status
   pattern with no number, so `Unavailable` could never actually fire.
-- **Contract** — `bag.schema.ts`. Every money figure arrives computed, the line
+- **Contract** — `bag.schema.ts` (the bag as it IS: summary, lines, pricing) and,
+  since account plan Phase 7, `bag-write.schema.ts` (the requests, and the
+  `Ok | Unavailable | MeasurementsRefused` answers). Every money figure arrives computed, the line
   total included; `Ok | Unavailable(piece)` is a discriminated union; and the
   summary carries NO cart id, because the id is a capability that stays in the
   httpOnly cookie.
@@ -1593,10 +1596,7 @@ choices once had. **The Urdu still needs a native tailor's review before any dem
 
 ## Made-to-Measure — what is left
 
-**The card badge.** A product card still does not say that it can be made to
-measure. That needs the offer on the CARD projection, not only on the product
-page, and the card is the most reused component in the store — so it is its own
-change rather than a rider on the entry points.
+**The card badge** is built (account plan Phase 7) — as words, not a badge.
 
 **The body path**, which §34.8 defers and §34.6a keeps deferred. The same set,
 the same kinds, the same bounds and the same instructions drive it; what differs
@@ -1794,9 +1794,120 @@ captions and the saved-on line in Urdu and nothing past the viewport; the header
 menu reads "Your account", "Saved items", "Sign out"; and the studio's save
 confirmation offers "See your saved measurements".
 
-**Phase 7 is not started.** The product entry — "Get it tailored" travelling from a
-product into the studio and back, with the reuse and the mark on the card — is all
-that is left.
+## Account and tailored-from-a-product — plan Phase 7: get it tailored, from a product and on the card
+
+**The plan is finished.** A customer can see on a CARD that a garment can be cut to
+measure, follow the product's fork into the studio with the garment named, measure
+or reuse what is saved, and put that garment in the bag from the confirmation.
+
+- **The card says it, in words and not as a badge.** "Can be stitched to size" sits
+  under fabric and colour. Badge precedence shows only "Sold out" once stock runs
+  out, which is exactly when a customer wants to hear this — and the mark is
+  verified on the sold-out tiles. No gold: most tiles carry it, so the studio's
+  dashed rule would be a texture over the grid (and `measure-line` is a 1px rule
+  that would have collapsed the words). `isMadeToMeasure` is a boolean on the card
+  projection, not the offer.
+- **One declaration of which garments are cut.** `src/lib/mocks/stitching-offers.ts`
+  holds the table the card and the product page both read, keyed by the closed
+  `GarmentKey` union (`garment-kinds.ts`), so a new kind does not compile until it
+  says whether it is cut. A test holds every card's mark to its page's fork.
+- **The product travels as `?product=<slug>`.** `ROUTES.stitchedWith` takes a
+  REQUIRED `product` beside style and source, so no caller can forget it. The
+  studio reads the product through the catalogue barrel (`api/tailored-product.ts`)
+  in the same `Promise.all` as the offers and the words, and the product SETTLES
+  THE STYLE (`lib/studio-product.ts` `settleStudioStyle`): a product is cut as one
+  style, so an address contradicting it is overruled rather than obeyed, the style
+  chooser is not drawn, and no fallback sentence appears. A product that cannot be
+  read, no longer exists, is not cut, or is cut as a style no longer offered leaves
+  the plain public studio — only the last is logged, as a content inconsistency.
+- **A banner names the garment**, with its photograph (two garments share a name and
+  differ only in cloth) and one link back, "Back to this garment". It is in the
+  focus-mode hide list — the fourth piece of studio furniture, and the first added
+  there on the first attempt. Switching capture path keeps the product.
+- **Add to bag is the BAG's own button** (`TailoredAddToBag` wraps `AddToBagButton`
+  through the bag's contract barrel), so the latch, the refusal wording, the cache
+  set and the panel all come with it. `isSoldOut` is false on purpose: a cut line
+  takes nothing off the shelf.
+
+**Two Phase 6 defects surfaced while verifying, both on this phase's path, both fixed:**
+
+- **The bag BFF dropped the owner on its stale-cart retry**, so a made-to-measure
+  add from a browser whose cart had lapsed (a restart, a sweep) was refused on the
+  retry for naming measurements that belonged to nobody. Found by pressing Add to
+  bag after a dev restart.
+- **A refused profile came back as NOT_FOUND — the same answer as a missing cart —
+  and the BFF answers NOT_FOUND by throwing the cart cookie away.** A made-to-measure
+  add refused for any reason (not yours, wrong garment) therefore silently emptied
+  the customer's real bag. `addToBagResultSchema` has a third kind,
+  `MEASUREMENTS_REFUSED`, answered 200 like `UNAVAILABLE`; `updateQuantityResultSchema`
+  is its own two-kind union, because a line change names no profile. Verified: a
+  refused add answers 200 and the bag keeps its line.
+
+**The phase's review** (three lenses, every finding put to an independent skeptic;
+11 of 14 stood, eight distinct defects) found one that all three lenses reached:
+
+- **Two garments of the same style could never be ordered together.** Every studio
+  add follows a save, and every save minted a new version even of identical
+  figures — superseding the version the FIRST bag line named, which placement then
+  refused, correctly, under ADR 18. The refusal's advice meant another save, which
+  broke the other line; the bag showed nothing to say which line was out of date.
+  Fixed without weakening ADR 18: a save that RECORDS nothing new answers with the
+  current version (`src/lib/mocks/profile-sameness.ts` — recorded millimetres, how
+  each was read, choices, list and rule-set versions and acknowledgements compared;
+  typed text and unit are not, so "40 in" and "101.6 cm" are the same save). The
+  SAVED outcome carries `replaced`, so "These replace…" is said only when something
+  was replaced. A bag line carries `measurementsChanged` from the backend and says
+  so on the line, and checkout's refusal now names a step the bag offers.
+- The rest: `bag.schema.ts` crossed MOD-03's 300-line ceiling (split into the read
+  projection and `bag-write.schema.ts`); two doc comments sat on the wrong
+  declaration; the garment-kind table had been widened to `Record<string>`,
+  losing the compile-time check; a no-offer product was logged at error level;
+  `productBagDone` was dead copy; addStitched's and the add handler's comments still
+  described the NOT_FOUND mapping this phase removed.
+
+**A second review checked the fixes** (one verifier per fix plus a fresh-eyes
+regression hunt, every claim put to a skeptic; the run was resumed after a network
+outage killed four agents). All four fixes were confirmed — the same-figures
+comparison was probed with defaults sent and omitted, entries and acknowledgements
+reordered, and both capture paths — and it found one real follow-on, reported twice:
+**nothing re-read the bag** after a save that superseded a line's version, or after
+checkout refused one, so "in your bag it is marked" could point at a mark the
+cached summary did not have. A replacing save and those two checkout refusals now
+invalidate the bag query; verified by adding, changing and saving again, then
+opening the panel with no reload — the line is marked. The line and checkout copy
+also now say "saved your measurements again" rather than "saved different
+measurements", which a NEWER LIST superseding identical figures would make false
+once a real backend versions its lists. Five more comments claiming every save
+mints a version were corrected.
+
+**Deliberately NOT fixed here, and offered separately:**
+
+- **Function bodies already past MOD-03's 60-line hard ceiling grew a little**:
+  `ProductCard` +6, `ProductCardActions` +5, `AddToBagButton` +3, the bag BFF's
+  `POST` +1; and mock files already past 300 lines: `bag-db.ts` 733 → 745,
+  `handlers.ts` 515 → 522, `catalogue-db.ts` 354 → 359. (`product-detail-db.ts`
+  went DOWN, 661 → 635, and `bag.schema.ts` is now 192.) Splitting the card or the
+  §7.1 cart store is its own change (BOT-04).
+- **The danger red fails contrast in dark mode store-wide**: 3.88:1 at 12px on the
+  panel, against A11Y-07's 4.5:1, in about 25 error and notice lines. The new
+  line notice uses full ink instead; the token is a separate task.
+- **A stock add can still be answered NOT_FOUND for an unknown product or an
+  incomplete size cover**, which the BFF also reads as a dead cart. Older than this
+  work (M4), and reachable only by a malformed client.
+
+Verified: typecheck, lint, **505 tests** and the production build pass. In the
+running store, as a guest AND signed in: the mark on 22 of 24 tiles including both
+sold-out ones, absent on the two boys' kurtas, one line at 104px in Urdu and two in
+English; the fork's href carries the product; the studio names the garment, hides
+the style chooser, keeps the product across a switch to the card path, and opens
+the waistcoat suit's 14 fields for a waistcoat product whatever `?style=` says; an
+unknown or uncut product leaves the plain studio; save then Add to bag works for a
+sold-out garment and against a stale cart cookie; two kameez shalwars measured with
+the SAME figures went into one bag naming one version and were PLACED as AA100001
+by card; a real change then read "These replace…", marked exactly the older line,
+and checkout refused with "…In your bag it is marked — remove it, then add it again
+from its page."; a refused profile answers 200 and the bag keeps its line; in Urdu
+at 375px the banner reads right to left with no sideways scroll.
 
 ## Account and tailored-from-a-product — plan Phase 6: a made-to-measure line in the bag
 
@@ -3239,6 +3350,29 @@ out, and `/order/AA100001` still renders on a fresh load.
   offsets — a phantom RTL overflow. Set an explicit size with `resize_window`
   (1280×800, or the mobile preset) before any overflow probe, and print
   `clientWidth` beside the result.
+- **A status that triggers RECOVERY must mean exactly one thing.** The bag BFF
+  replaces the cart when an add answers NOT_FOUND, which is right for a cart the
+  backend lost. The mock also answered NOT_FOUND for "those measurements are not
+  yours", so a refusal quietly threw away a customer's real bag and retried into an
+  empty one — and the retry dropped the owner header, so it was refused again. Any
+  answer a caller recovers from by DISCARDING something needs its own kind; every
+  other refusal is a value in the union.
+- **An append-only rule plus a flow that writes on every pass is a loop.** Every
+  save minted a version, every add needed a save, and placement refuses a line
+  whose version was superseded — each rule correct alone, and together two garments
+  of one style could never be ordered. Three lenses found it independently. When
+  a write is append-only, ask what happens when the SAME write is made twice.
+- **Every `/api/*` route rendered the HTML not-found page** on a dev server started
+  seconds after `preview_stop`, while every page rendered fine — and
+  `/api/quick-add?slug=x` answering 404 read as "the mock is alive", because that
+  is the probe's healthy answer too. The route's own 404 has NO content type; the
+  not-found page is `text/html`. Wait for port 3000 to free and a few seconds more
+  before starting again, and read the content type beside the status.
+- **A fetch interceptor installed from the console can leave the studio in a state
+  a customer never reaches**: a save went through with the interceptor in place
+  and the page came back with an empty form, and the same steps without it showed
+  the saved step every time. Prefer the store's own routes, called directly, over
+  wrapping `window.fetch` mid-flow.
 
 ## Commands
 

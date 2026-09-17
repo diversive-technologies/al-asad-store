@@ -74,9 +74,14 @@ export function ProductCardActions({ product, isSoldOut, messages }: ProductCard
         }),
       ),
     onSuccess: (result) => {
-      if (result.kind === 'UNAVAILABLE') {
-        // §7.1 names the piece that failed rather than refusing generically.
-        setNotice(`${result.pieceName} · ${result.sizeLabel}`);
+      if (result.kind !== 'ADDED') {
+        // §7.1 names the piece that failed. A quick add names no measurements, so
+        // a refusal of them is not expected here — but it must never read as added.
+        setNotice(
+          result.kind === 'UNAVAILABLE'
+            ? `${result.pieceName} · ${result.sizeLabel}`
+            : t.quickAddFailed,
+        );
         return;
       }
 

@@ -9,6 +9,7 @@ import { MeasurementFormBody } from './MeasurementFormBody';
 import { MeasurementReview } from './MeasurementReview';
 import { MeasurementSaved } from './MeasurementSaved';
 import { StudioIntro } from './StudioIntro';
+import { TailoredAddToBag } from './TailoredAddToBag';
 import type { StudioFlow } from './studio-flow';
 
 export interface MeasurementPanelProps {
@@ -67,8 +68,14 @@ export function MeasurementPanel({
         {step.kind === 'SAVED' ? (
           <MeasurementSaved
             profile={step.profile}
+            replaced={step.replaced}
             /* The saved profile's own style, by the name the chooser gives it. */
             styleLabel={styleLabelOf(choice.options, step.profile.garmentStyle)}
+            bag={
+              choice.product === null ? null : (
+                <TailoredAddToBag product={choice.product} profile={step.profile} />
+              )
+            }
             onMeasureAgain={() => {
               onChange(null);
             }}

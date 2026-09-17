@@ -335,8 +335,8 @@ export function placeOrder(
    * Step 1b, and it is §34.7's whole point: a line is cut to the figures the
    * customer CONFIRMED, not to whatever is current when they pay.
    *
-   * A profile saved again between the bag and the checkout mints a new version,
-   * and the line still names the old one. ADR 18 says the numbers are taken live
+   * A profile saved again with anything changed between the bag and the checkout
+   * mints a new version, and the line still names the old one. ADR 18 says the numbers are taken live
    * at placement and that a later edit must never rewrite what the workshop was
    * told — read together, that means the placement must stop rather than quietly
    * cut to figures nobody reviewed. Cloth gets cut; this is the one place the

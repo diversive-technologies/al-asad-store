@@ -173,7 +173,16 @@ export const measurementProfileSchema = z.object({
 export const measurementProfilesSchema = z.array(measurementProfileSchema).max(32);
 
 export const saveOutcomeSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('SAVED'), profile: measurementProfileSchema }),
+  z.object({
+    kind: z.literal('SAVED'),
+    profile: measurementProfileSchema,
+    /**
+     * Whether this save superseded a version. A save of figures already on file
+     * answers with the version it matched and supersedes nothing, so the version
+     * NUMBER cannot say it — v2 saved again unchanged is still v2.
+     */
+    replaced: z.boolean(),
+  }),
   z.object({ kind: z.literal('REJECTED'), findings: z.array(findingSchema).min(1) }),
 ]);
 

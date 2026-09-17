@@ -12,7 +12,8 @@ import { unwrap } from '@/lib/result';
 import { formatMoneyMinor, formatTemplate } from '@/lib/utils/format';
 
 import { applyBagCode, removeBagCode } from '../api/bag-browser';
-import type { ApplyCodeResult, BagSummary } from '../schemas/bag.schema';
+import type { ApplyCodeResult } from '../schemas/bag-write.schema';
+import type { BagSummary } from '../schemas/bag.schema';
 import { useBag } from './BagProvider';
 
 export interface BagTotalsProps {

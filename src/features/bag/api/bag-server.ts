@@ -13,12 +13,13 @@ import type { Result } from '@/lib/result';
 import {
   addToBagResultSchema,
   applyCodeResultSchema,
-  bagSummarySchema,
+  updateQuantityResultSchema,
   type AddToBagRequest,
   type AddToBagResult,
   type ApplyCodeResult,
-  type BagSummary,
-} from '../schemas/bag.schema';
+  type UpdateQuantityResult,
+} from '../schemas/bag-write.schema';
+import { bagSummarySchema, type BagSummary } from '../schemas/bag.schema';
 
 /**
  * DATA-04 — the server side of architecture §16.
@@ -93,10 +94,10 @@ export function updateQuantity(
   lineId: CartLineId,
   quantity: number,
   locale: Locale,
-): Promise<Result<AddToBagResult, ApiError>> {
+): Promise<Result<UpdateQuantityResult, ApiError>> {
   return apiRequest({
     path: ENDPOINTS.bag.line(cartId, lineId),
-    schema: addToBagResultSchema,
+    schema: updateQuantityResultSchema,
     method: 'PATCH',
     body: { quantity },
     searchParams: { locale },
@@ -114,10 +115,10 @@ export function removeItem(
   cartId: CartId,
   lineId: CartLineId,
   locale: Locale,
-): Promise<Result<AddToBagResult, ApiError>> {
+): Promise<Result<UpdateQuantityResult, ApiError>> {
   return apiRequest({
     path: ENDPOINTS.bag.lineRemoval(cartId, lineId),
-    schema: addToBagResultSchema,
+    schema: updateQuantityResultSchema,
     method: 'POST',
     body: {},
     searchParams: { locale },

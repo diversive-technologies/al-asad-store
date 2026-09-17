@@ -27,6 +27,7 @@ import type {
   OptionValue,
   SetPiece,
 } from '../schemas/measurement-set.schema';
+import type { StudioProduct } from './studio-product';
 
 export interface StudioPiece extends SetPiece {
   readonly label: string;
@@ -74,6 +75,15 @@ export interface StyleChoice {
    * path served to say so.
    */
   readonly requestedSource: CaptureSource | null;
+  /**
+   * §34 — the product the studio was opened from, once the loader has decided it
+   * is one the workshop cuts. It travels with every link the studio draws, so
+   * switching how the figures are taken does not lose the garment they are for.
+   *
+   * It lives on the CHOICE rather than beside it because it is part of the same
+   * answer: what the address asked for, and what it got.
+   */
+  readonly product: StudioProduct | null;
 }
 
 /**

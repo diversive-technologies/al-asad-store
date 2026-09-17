@@ -14,7 +14,8 @@ import { unwrap } from '@/lib/result';
 import { formatTemplate } from '@/lib/utils/format';
 
 import { removeBagLine, updateLineQuantity } from '../api/bag-browser';
-import type { AddToBagResult, BagLine } from '../schemas/bag.schema';
+import type { UpdateQuantityResult } from '../schemas/bag-write.schema';
+import type { BagLine } from '../schemas/bag.schema';
 import { BagLineRow } from './BagLineRow';
 import { StitchingNudge } from './StitchingNudge';
 import { useBag } from './BagProvider';
@@ -46,7 +47,7 @@ export function BagContents({ locale, messages }: BagContentsProps) {
     mutationFn: ({ lineId, quantity }: LineChange) =>
       // DATA-03a: `unwrap` is the only Result→throw adapter used at a call site.
       unwrap(quantity === null ? removeBagLine(lineId) : updateLineQuantity(lineId, quantity)),
-    onSuccess: (result: AddToBagResult) => {
+    onSuccess: (result: UpdateQuantityResult) => {
       /*
        * §7.1 — raising a quantity runs the same reservation transaction as
        * adding, so it can come back `UNAVAILABLE`. The bag is left exactly as

@@ -57,6 +57,17 @@ export const productCardSchema = z.object({
   metreage: z.number().positive().nullable(),
   /** Backend-owned: "new" is a launch-date rule, not a client computation. */
   isNew: z.boolean(),
+  /**
+   * §34 — whether the workshop will cut this garment to a customer's measurements.
+   *
+   * A BOOLEAN and not the offer: a card says that the thing is possible, and the
+   * charge and the lead time belong on the product page where somebody is
+   * deciding. Twenty-four cards do not need a price list.
+   *
+   * Backend-owned, like `isNew`. Nothing here infers it from the garment kind —
+   * which garments the workshop cuts is the workshop's answer (DATA-13).
+   */
+  isMadeToMeasure: z.boolean(),
 });
 
 export type ProductCard = z.infer<typeof productCardSchema>;

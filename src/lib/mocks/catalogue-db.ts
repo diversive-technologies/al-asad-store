@@ -1,5 +1,8 @@
 import type { Locale } from '@/i18n/locales';
 
+import type { GarmentKey } from './garment-kinds';
+import { isMadeToMeasureGarment } from './stitching-offers';
+
 /**
  * D1 — the catalogue fixture, large enough to exercise the things a four-item
  * fixture cannot: pagination, facet counts that actually vary, and filter
@@ -38,8 +41,6 @@ type ColourKey =
   | 'taupe'
   | 'rust'
   | 'navy';
-
-type GarmentKey = 'waistcoat' | 'kameez' | 'kurta' | 'boys-kurta';
 
 /**
  * Section 22: fabric and colour are closed vocabularies with fixed Urdu forms
@@ -325,6 +326,7 @@ export interface ProductCardPayload {
   pricing: { currentMinor: number; originalMinor: number | null };
   metreage: number | null;
   isNew: boolean;
+  isMadeToMeasure: boolean;
 }
 
 /** TS-08: an exported function declares its return type. */
@@ -350,5 +352,8 @@ export function toProductCard(record: CatalogueRecord, locale: Locale): ProductC
     pricing: { currentMinor: record.currentMinor, originalMinor: record.originalMinor },
     metreage: record.metreage,
     isNew: record.isNew,
+    /* §34 — the same declaration the product page's fork reads, so a card and
+       the page it opens can never disagree about whether a garment is cut. */
+    isMadeToMeasure: isMadeToMeasureGarment(record.garment),
   };
 }

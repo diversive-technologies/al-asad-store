@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+
+import { queryKeys } from '@/lib/api/query-keys';
 
 import type { StudioSet } from '../lib/studio-set';
 import {
@@ -46,6 +49,7 @@ export function useProfileSave(
   sink: FindingsSink,
 ): UseProfileSaveResult {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const key = keyOf(studio, preferences);
   const [shown, setShown] = useState<{ key: string; step: StudioStep['kind'] }>({
     key,
@@ -104,6 +108,10 @@ export function useProfileSave(
              and taking it would put the older figures back over the new ones. The
              figures on screen are the form's and survive the refresh. */
           router.refresh();
+          /* The same is true of the BAG, which the page does not render: a line
+             naming the version this save replaced is now marked on the server,
+             and the cached summary would go on showing it unmarked. */
+          if (result.replaced) void queryClient.invalidateQueries({ queryKey: queryKeys.bag.all });
           return setShown({ key: sentKey(sent), step: 'SAVED' });
         }
         // A changed list stays on the review, which says so and offers the new one.

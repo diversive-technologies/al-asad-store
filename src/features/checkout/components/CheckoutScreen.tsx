@@ -109,6 +109,12 @@ export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
        */
       setOutcome(result);
       if (result.kind === 'PRICE_CHANGED') void quote.refetch();
+      /* Both send the customer to the bag, and the bag they find there has to be
+         the backend's answer NOW — the lapsed lines gone, the changed line marked —
+         not the summary cached when they last touched it. */
+      if (result.kind === 'RESERVATION_EXPIRED' || result.kind === 'MEASUREMENTS_CHANGED') {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.bag.all });
+      }
     },
     onError: () => {
       setOutcome({ kind: 'PAYMENT_FAILED', reason: t.failed });

@@ -2,7 +2,7 @@ import type { Locale } from '@/i18n/locales';
 import type { StyleOffer } from '@/lib/domain/style-offer';
 
 import { CATALOGUE, frameUrls, vocabularyLabel, type CatalogueRecord } from './catalogue-db';
-import { styleOfferFor } from './measurement-sets-db';
+import { stitchingOfferForGarment } from './stitching-offers';
 
 /**
  * D1 — the product-page fixture, derived from the SAME `CATALOGUE` records the
@@ -381,32 +381,6 @@ export interface ProductDetailPayload {
   isNew: boolean;
 }
 
-/**
- * §34 — which style the workshop cuts each garment as, and so which offer, lead
- * time and measurement list the product's fork opens. The backend's rule, stood
- * in for here; the offer itself comes from the studio's own table, so the product
- * page and the studio quote the same days.
- *
- * Each product opens a list with as many garments as it has pieces — a kurta is
- * one garment, so it opens KURTA and is never asked for a shalwar it is not
- * buying. `served-sets.test.ts` pins that.
- *
- * A boy's kurta is NOT offered. Every bound on the served lists is an adult's, so
- * the studio would refuse a boy's figures — and a fork that opens a form nobody
- * can complete is worse than no fork. It returns when a boys' set is served.
- */
-const STITCHING_STYLE: Readonly<Record<CatalogueRecord['garment'], string | null>> = {
-  waistcoat: 'WAISTCOAT_SUIT',
-  kameez: 'KAMEEZ_SHALWAR',
-  kurta: 'KURTA',
-  'boys-kurta': null,
-};
-
-function stitchingOfferFor(record: CatalogueRecord): ProductDetailPayload['stitching'] {
-  const style = STITCHING_STYLE[record.garment];
-  return style === null ? null : styleOfferFor(style);
-}
-
 const FABRIC_KEYS = ['wash-n-wear', 'boski', 'karandi', 'cotton'] as const;
 
 function sizeOptionsFor(record: CatalogueRecord, locale: Locale): { id: string; label: string }[] {
@@ -501,7 +475,7 @@ export function toProductDetail(record: CatalogueRecord, locale: Locale): Produc
       .slice(0, 10),
     infoSections: [...INFO_SECTIONS[locale]],
     fabricCalculator: fabricCalculatorOfferFor(record, locale),
-    stitching: stitchingOfferFor(record),
+    stitching: stitchingOfferForGarment(record.garment),
     isNew: record.isNew,
   };
 }

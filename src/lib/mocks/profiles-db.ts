@@ -3,6 +3,7 @@ import { versionsOf, type SetRow, type SourceRow } from './measurement-sets-db';
 import { settleAcknowledgements } from './profile-acknowledgements';
 import { checkEntries } from './profile-rule-eval';
 import { currentRuleSet, type RulesNow } from './profile-rule-rows';
+import { recordsSameAs } from './profile-sameness';
 import {
   refused,
   type AcknowledgementRow,
@@ -17,10 +18,12 @@ import {
  * A2-8), standing in for Java. The derivation and the rules are
  * `profile-rules.ts`; this is the store, and who may write to it.
  *
- * A profile is never updated in place (§34.7, D6). A save is a NEW version, and
- * the version it replaces is marked superseded and kept. Profiles belong to an
- * owner of a KIND — an account, or a device token this module issued — and the
- * kind is part of the key, so no device can ever name an account's profiles.
+ * A profile is never updated in place (§34.7, D6). A save that records anything
+ * new is a NEW version, and the version it replaces is marked superseded and
+ * kept; one that records nothing new answers with the current version. Profiles
+ * belong to an owner of a KIND — an account, or a device token this module
+ * issued — and the kind is part of the key, so no device can ever name an
+ * account's profiles.
  */
 
 import { ownerKeyOf, type ProfileOwnerRow } from './profile-owners';
@@ -74,8 +77,10 @@ interface ProfileRecord {
 
 export type SavedProfileRow = Omit<ProfileRecord, 'ownerKey' | 'supersededBy'>;
 
+/** `replaced` — whether this save superseded a version, which is what the page says. */
 export type SaveOutcomeRow =
-  { kind: 'SAVED'; profile: SavedProfileRow } | { kind: 'REJECTED'; findings: FindingRow[] };
+  | { kind: 'SAVED'; profile: SavedProfileRow; replaced: boolean }
+  | { kind: 'REJECTED'; findings: FindingRow[] };
 
 /** Where a style's versions for one path come from — the served lists, or a test's own. */
 export type SetsFor = (garmentStyle: string, source: SourceRow) => readonly SetRow[];
@@ -193,7 +198,7 @@ function projection(record: ProfileRecord): SavedProfileRow {
   };
 }
 
-/** §34.4 `saveProfile` — a new version, or the findings that refused it. */
+/** §34.4 `saveProfile` — a new version, the version already on file, or the findings that refused it. */
 export function saveProfile(
   owner: ProfileOwnerRow,
   submission: SubmissionRow,
@@ -245,11 +250,16 @@ export function saveProfile(
     supersededBy: null,
   };
 
-  // D6 — the version this replaces is MARKED, and both are kept.
   const current = mine.find((profile) => profile.supersededBy === null);
+  /* Figures already on file ARE the current version (`profile-sameness.ts`):
+     minting another would supersede the one a bag line names, for nothing. */
+  if (current !== undefined && recordsSameAs(current, record)) {
+    return { kind: 'SAVED', profile: projection(current), replaced: false };
+  }
+  // D6 — the version this replaces is MARKED, and both are kept.
   if (current !== undefined) current.supersededBy = record.id;
   PROFILES.push(record);
-  return { kind: 'SAVED', profile: projection(record) };
+  return { kind: 'SAVED', profile: projection(record), replaced: current !== undefined };
 }
 
 /** One owner's versions of one style, taken the same WAY — what a save supersedes. */

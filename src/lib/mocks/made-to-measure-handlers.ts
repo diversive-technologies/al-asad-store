@@ -69,7 +69,8 @@ export const madeToMeasureHandlers = [
   }),
 
   /*
-   * §34.4 `saveProfile` — always a NEW version. The owner arrives in a header the
+   * §34.4 `saveProfile` — a NEW version whenever it records anything the current
+   * one does not, and the current one when it does not. The owner arrives in a header the
    * BFF attached, never in the body; a save without one, or naming a device token
    * this module never issued, is refused.
    */

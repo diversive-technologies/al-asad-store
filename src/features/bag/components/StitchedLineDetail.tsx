@@ -62,12 +62,19 @@ export function StitchedLineDetail({
         <bdi>{formatPlural(t.figures, stitching.figureCount, locale)}</bdi>
       </p>
 
+      {/* ADR 18 — said on the LINE, so the refusal at checkout has a line to
+          point at. Words and weight in full ink, not the danger red: that measured
+          3.88:1 on the dark panel at this size, under A11Y-07's 4.5:1. */}
+      {stitching.measurementsChanged ? (
+        <p className="text-fg font-semibold">{t.measurementsChanged}</p>
+      ) : null}
+
       {/*
-        * The garment's own price beside the charge, so the three figures close.
-        * With only "Stitching · Rs 2,500" beside a line total of Rs 11,998, a
-        * reader at quantity two had no way to see that the charge is per garment
-        * — which is exactly what a LINE COMPONENT means.
-        */}
+       * The garment's own price beside the charge, so the three figures close.
+       * With only "Stitching · Rs 2,500" beside a line total of Rs 11,998, a
+       * reader at quantity two had no way to see that the charge is per garment
+       * — which is exactly what a LINE COMPONENT means.
+       */}
       <p>
         {t.garmentPrice} · {formatMoneyMinor(unitPriceMinor, locale)}
       </p>

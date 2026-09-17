@@ -10,7 +10,7 @@ import { unwrap } from '@/lib/result';
 import { formatTemplate } from '@/lib/utils/format';
 
 import { addToBag } from '../api/bag-browser';
-import type { AddToBagRequest, AddToBagResult } from '../schemas/bag.schema';
+import type { AddToBagRequest, AddToBagResult } from '../schemas/bag-write.schema';
 import { useBag } from './BagProvider';
 
 export interface AddToBagButtonProps {
@@ -66,6 +66,9 @@ export function AddToBagButton({
         );
         return;
       }
+
+      // §34 — said as what to DO; the reason is deliberately not sent.
+      if (result.kind === 'MEASUREMENTS_REFUSED') return setNotice(t.measurementsRefused);
 
       setNotice(null);
       /*

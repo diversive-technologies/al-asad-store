@@ -146,7 +146,7 @@ export const ENDPOINTS = {
      * Stores nothing, so the studio's review can ask before anything is saved.
      */
     validation: '/api/v1/made-to-measure/validations',
-    /** §34.4 `saveProfile` (A2-5, A2-8) — always a NEW version; there is no update. */
+    /** §34.4 `saveProfile` (A2-5, A2-8) — a NEW version when anything changed; never an update. */
     profiles: '/api/v1/made-to-measure/profiles',
     /**
      * A guest's device token — the owner of their profiles until they sign in —

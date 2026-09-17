@@ -11,32 +11,34 @@
  * there. Route Handlers are free to import from both, and do.
  */
 export {
-  addToBagRequestSchema,
-  addToBagResultSchema,
-  applyCodeRequestSchema,
-  applyCodeResultSchema,
   bagLinePieceSchema,
   bagLineSchema,
   bagPricingSchema,
   bagSummarySchema,
   freeDeliveryProgressSchema,
-  sizeSelectionSchema,
-  updateQuantityRequestSchema,
-  updateQuantityResultSchema,
-  type AddToBagRequest,
-  type AddToBagResult,
   type AppliedCode,
-  type ApplyCodeRequest,
-  type ApplyCodeResult,
   type BagLine,
   type BagLinePiece,
   type BagPricing,
   type BagSummary,
   type FreeDeliveryProgress,
+} from './schemas/bag.schema';
+export {
+  addToBagRequestSchema,
+  addToBagResultSchema,
+  applyCodeRequestSchema,
+  applyCodeResultSchema,
+  sizeSelectionSchema,
+  updateQuantityRequestSchema,
+  updateQuantityResultSchema,
+  type AddToBagRequest,
+  type AddToBagResult,
+  type ApplyCodeRequest,
+  type ApplyCodeResult,
   type SizeSelection,
   type UpdateQuantityRequest,
   type UpdateQuantityResult,
-} from './schemas/bag.schema';
+} from './schemas/bag-write.schema';
 
 export { EMPTY_BAG } from './lib/empty-bag';
 

@@ -4,7 +4,7 @@ import { styleOffersSchema } from '@/lib/domain/style-offer';
 import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
 
 import { measurementCopySchema, type MeasurementCopy } from '../schemas/measurement-copy.schema';
-import { requestedSource, requestedStyle } from './studio-params';
+import { requestedProduct, requestedSource, requestedStyle } from './studio-params';
 import { joinCopy } from './studio-set';
 import { servedSet } from './test-support';
 
@@ -91,5 +91,16 @@ describe('what a /stitched address asks for', () => {
     expect(requestedStyle('')).toBeNull();
     expect(requestedStyle('kameez shalwar')).toBeNull();
     expect(requestedStyle('../admin')).toBeNull();
+  });
+
+  it('reads the product it was opened from as a slug, and nothing that cannot be one', () => {
+    expect(requestedProduct('plain-waistcoat-suit-1')).toBe('plain-waistcoat-suit-1');
+    expect(requestedProduct('  plain-waistcoat-suit-1 ')).toBe('plain-waistcoat-suit-1');
+    expect(requestedProduct(undefined)).toBeNull();
+    expect(requestedProduct('')).toBeNull();
+    expect(requestedProduct('   ')).toBeNull();
+    expect(requestedProduct(['a', 'b'])).toBeNull();
+    // SEC-02: the length of a query value is untrusted input.
+    expect(requestedProduct('x'.repeat(121))).toBeNull();
   });
 });

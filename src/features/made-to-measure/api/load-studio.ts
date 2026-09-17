@@ -7,9 +7,11 @@ import { err, ok, type Result } from '@/lib/result';
 import { logApiError, logContentIssue } from '@/lib/utils/log';
 
 import { sanitizeMarks } from '../lib/marks';
+import { settleStudioStyle } from '../lib/studio-product';
 import { joinCopy, type StudioSet, type StyleChoice } from '../lib/studio-set';
 import type { CaptureSource } from '../schemas/measurement-set.schema';
 import { fetchMeasurementCopy, fetchMeasurementSet, fetchStyleOffers } from './fetch-studio';
+import { tailoredProduct } from './tailored-product';
 
 const CONTEXT = 'made-to-measure';
 
@@ -17,6 +19,8 @@ const CONTEXT = 'made-to-measure';
 export interface StudioRequest {
   readonly style: GarmentStyleId | null;
   readonly source: CaptureSource | null;
+  /** §34 — the product this was opened from, as a slug. */
+  readonly product: string | null;
 }
 
 export interface StudioData {
@@ -47,6 +51,13 @@ function unavailable(problem: ApiError | string): Result<never, StudioUnavailabl
  * the style does not offer is a 404 on its own read, and falls back the same way,
  * to the style's first path. Every read is cached, so a wait is a cache lookup.
  *
+ * A PRODUCT in play settles the style itself, ahead of `?style=` and ahead of the
+ * fallback: the workshop cuts a given garment as one style, so the two can only
+ * ever disagree by somebody editing the address — and a list the product's own
+ * profile could never be added against is worse than no product at all. A product
+ * whose style the workshop has since stopped offering is therefore dropped rather
+ * than opened on the wrong list, and reported.
+ *
  * A mark that falls off its drawing, or a style with no name, is dropped and
  * reported, and the page still renders. A garment or point with no wording is not
  * — a field with no name cannot be filled in — so the page shows its error state.
@@ -55,12 +66,21 @@ export async function loadStudio(
   requested: StudioRequest,
   locale: Locale,
 ): Promise<Result<StudioData, StudioUnavailable>> {
-  const [offers, copy] = await Promise.all([fetchStyleOffers(), fetchMeasurementCopy(locale)]);
+  /* PERF-02 — three independent reads, one wait. The product is the catalogue's
+     and has nothing to say about which offers exist. */
+  const [offers, copy, product] = await Promise.all([
+    fetchStyleOffers(),
+    fetchMeasurementCopy(locale),
+    tailoredProduct(requested.product, locale),
+  ]);
   if (!offers.ok) return unavailable(offers.error);
   if (!copy.ok) return unavailable(copy.error);
 
-  const offered = offers.value.find((offer) => offer.garmentStyle === requested.style);
-  const style = offered?.garmentStyle ?? offers.value[0].garmentStyle;
+  const settled = settleStudioStyle(offers.value, requested.style, product);
+  if (settled.productDropped && product !== null) {
+    logContentIssue(CONTEXT, `${product.slug} is cut as ${product.garmentStyle}, not offered`);
+  }
+  const { style } = settled;
 
   /* A path the style does not offer: its first path instead. The page compares
      what was asked with what was served to say so (`SourceChooser`). */
@@ -86,8 +106,9 @@ export async function loadStudio(
     studio: joined.value.studio,
     choice: {
       options: joined.value.styles,
-      fellBack: requested.style !== null && offered === undefined,
+      fellBack: settled.fellBack,
       requestedSource: requested.source,
+      product: settled.product,
     },
   });
 }

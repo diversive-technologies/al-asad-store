@@ -6,12 +6,13 @@ import type { z } from 'zod';
 import {
   addToBagResultSchema,
   applyCodeResultSchema,
-  bagSummarySchema,
+  updateQuantityResultSchema,
   type AddToBagRequest,
   type AddToBagResult,
   type ApplyCodeResult,
-  type BagSummary,
-} from '../schemas/bag.schema';
+  type UpdateQuantityResult,
+} from '../schemas/bag-write.schema';
+import { bagSummarySchema, type BagSummary } from '../schemas/bag.schema';
 
 /**
  * The browser side of §16: reads and writes our own BFF, never Java directly.
@@ -75,8 +76,8 @@ export function addToBag(request: AddToBagRequest): Promise<Result<AddToBagResul
 export function updateLineQuantity(
   lineId: CartLineId,
   quantity: number,
-): Promise<Result<AddToBagResult, BagError>> {
-  return send(ROUTES.api.bagLine(lineId), addToBagResultSchema, {
+): Promise<Result<UpdateQuantityResult, BagError>> {
+  return send(ROUTES.api.bagLine(lineId), updateQuantityResultSchema, {
     method: 'PATCH',
     body: JSON.stringify({ quantity }),
   });
@@ -88,8 +89,8 @@ export function updateLineQuantity(
  * D6: a POST that records the removal. Nothing in this application issues a
  * DELETE, because nothing in this system is destroyed.
  */
-export function removeBagLine(lineId: CartLineId): Promise<Result<AddToBagResult, BagError>> {
-  return send(ROUTES.api.bagLineRemoval(lineId), addToBagResultSchema, {
+export function removeBagLine(lineId: CartLineId): Promise<Result<UpdateQuantityResult, BagError>> {
+  return send(ROUTES.api.bagLineRemoval(lineId), updateQuantityResultSchema, {
     method: 'POST',
     body: JSON.stringify({}),
   });

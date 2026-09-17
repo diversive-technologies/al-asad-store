@@ -22,6 +22,7 @@ function makeProduct(overrides: Partial<ProductCard> = {}): ProductCard {
     pricing: { currentMinor: 1_249_900, originalMinor: null },
     metreage: null,
     isNew: false,
+    isMadeToMeasure: true,
     ...overrides,
   };
 }
@@ -38,6 +39,7 @@ describe('deriveProductBadges', () => {
   it('shows only Sold out, suppressing New and Sale', () => {
     const product = makeProduct({
       isNew: true,
+      isMadeToMeasure: true,
       pricing: { currentMinor: 900_000, originalMinor: 1_249_900 },
     });
 
@@ -47,6 +49,7 @@ describe('deriveProductBadges', () => {
   it('combines New, Sale and Low stock', () => {
     const product = makeProduct({
       isNew: true,
+      isMadeToMeasure: true,
       pricing: { currentMinor: 900_000, originalMinor: 1_249_900 },
     });
 

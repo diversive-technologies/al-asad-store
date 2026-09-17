@@ -10,6 +10,8 @@ import type { StitchingOffer } from '../schemas/product-detail.schema';
 
 export interface StitchingForkProps {
   offer: StitchingOffer;
+  /** The product this fork is on — it travels into the studio and back out. */
+  slug: string;
   locale: Locale;
   messages: Messages;
 }
@@ -36,13 +38,15 @@ export interface StitchingForkProps {
  * button). That makes a generous target on a phone, and reads to a screen reader
  * as one sentence rather than a heading, a paragraph and a detached "go".
  */
-export function StitchingFork({ offer, locale, messages }: StitchingForkProps) {
+export function StitchingFork({ offer, slug, locale, messages }: StitchingForkProps) {
   const t = messages.product;
 
   return (
-    /* Straight to the list for the style this product is cut as. */
+    /* Straight to the list for the style this product is cut as — carrying the
+       PRODUCT as well, so the studio can say which garment is being measured for,
+       send the customer back to it, and put it in the bag at the end. */
     <Link
-      href={ROUTES.stitchedFor(offer.garmentStyle)}
+      href={ROUTES.stitchedWith({ style: offer.garmentStyle, source: null, product: slug })}
       className="group rounded-card flex flex-col items-start gap-4"
     >
       {/* The measure line: `ellipse.gf-mark` unrolled. The studio marks a

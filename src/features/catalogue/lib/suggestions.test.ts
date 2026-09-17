@@ -22,6 +22,7 @@ function productFixture(id: string, name: string): ProductCard {
     pricing: { currentMinor: 349_900, originalMinor: null },
     metreage: null,
     isNew: false,
+    isMadeToMeasure: true,
   };
 }
 

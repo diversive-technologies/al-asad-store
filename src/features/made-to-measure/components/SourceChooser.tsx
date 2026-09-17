@@ -16,6 +16,11 @@ export interface SourceChooserProps {
   readonly studio: Pick<StudioSet, 'garmentStyle' | 'source' | 'sources'>;
   /** The way of measuring the address asked for, if any. */
   readonly requested: CaptureSource | null;
+  /**
+   * The product being measured for, if any — carried on every path, so changing
+   * how the figures are taken does not lose the garment they are for.
+   */
+  readonly product: string | null;
 }
 
 /**
@@ -28,7 +33,7 @@ export interface SourceChooserProps {
  * was served — never inferred from how the backend answered — and in the paths'
  * own names, so the sentence holds whichever way round the fallback went.
  */
-export function SourceChooser({ studio, requested }: SourceChooserProps) {
+export function SourceChooser({ studio, requested, product }: SourceChooserProps) {
   const t = useMessages().madeToMeasure;
   const isChoice = studio.sources.length > 1;
   const missing = requested !== null && requested !== studio.source ? requested : null;
@@ -43,7 +48,7 @@ export function SourceChooser({ studio, requested }: SourceChooserProps) {
           hint={t.sourceHint}
           items={studio.sources.map((source) => ({
             key: source,
-            href: ROUTES.stitchedWith({ style: studio.garmentStyle, source }),
+            href: ROUTES.stitchedWith({ style: studio.garmentStyle, source, product }),
             label: pathNameOf(source, t),
             isCurrent: source === studio.source,
           }))}

@@ -52,9 +52,10 @@ export type BagLinePiece = z.infer<typeof bagLinePieceSchema>;
  * price stays the garment's price, and a customer can see what the stitching
  * costs rather than being shown a bigger number for the same cloth.
  *
- * The profile is named by ID, and an id names one VERSION — every save mints a
- * new one (§34.5). That is what lets the order refuse rather than quietly cut to
- * figures the customer never confirmed.
+ * The profile is named by ID, and an id names one VERSION — a save that records
+ * anything new mints a new one (§34.5), and one that records nothing new answers
+ * with the version on file. That is what lets the order refuse rather than
+ * quietly cut to figures the customer never confirmed.
  */
 export const bagLineStitchingSchema = z.object({
   garmentStyle: garmentStyleIdSchema,
@@ -64,6 +65,14 @@ export const bagLineStitchingSchema = z.object({
   /** When those measurements were saved — what makes them recognisable. */
   savedAt: z.iso.datetime(),
   figureCount: z.number().int().positive(),
+  /**
+   * The customer has saved different figures since this line was added, so
+   * placement will refuse it (ADR 18). The backend says so on the line, because
+   * only the backend knows which version is current — and two lines of one
+   * garment otherwise read identically, leaving nothing to tell which one the
+   * refusal is about.
+   */
+  measurementsChanged: z.boolean(),
   chargeMinor: z.number().int().nonnegative(),
   leadTimeDays: z.number().int().positive(),
 });
@@ -181,109 +190,3 @@ export const bagSummarySchema = z.object({
 });
 
 export type BagSummary = z.infer<typeof bagSummarySchema>;
-
-/**
- * The size chosen for one piece, on the way in.
- *
- * §16's signature is `{piece_id -> size}`. A list of pairs rather than a keyed
- * object because TS-12 identifiers are branded, and a branded type does not
- * survive as a `Record` key — the pair keeps both ids branded at the boundary.
- */
-export const sizeSelectionSchema = z.object({
-  pieceId: pieceIdSchema,
-  sizeId: sizeIdSchema,
-});
-
-export type SizeSelection = z.infer<typeof sizeSelectionSchema>;
-
-/** §16 `addItem(cart, product_id, {piece_id -> size}, qty)`. */
-export const addToBagRequestSchema = z
-  .object({
-    productId: productIdSchema,
-    /**
-     * §16 invariant: "A line cannot exist without a size selected for every
-     * piece of its product." The refinement below is the schema's share of
-     * that; the backend owns the real check, because only it knows how many
-     * pieces the product has — and a made-to-measure line is the one case the
-     * invariant does not govern, because it has no size to select.
-     */
-    selections: z.array(sizeSelectionSchema),
-    quantity: z.number().int().positive(),
-    /**
-     * §34 — cut to this saved profile instead of picked off the shelf.
-     *
-     * An id names one VERSION of a profile. The backend resolves WHOSE it is
-     * from the owner it already knows — the session, or the device cookie — so
-     * naming somebody else's id here buys nothing.
-     */
-    madeToMeasureProfileId: profileIdSchema.optional(),
-  })
-  .refine(
-    (request) =>
-      request.madeToMeasureProfileId === undefined
-        ? request.selections.length > 0
-        : request.selections.length === 0,
-    { error: 'Give sizes for a stock item, or a profile for a made-to-measure one.' },
-  );
-
-export type AddToBagRequest = z.infer<typeof addToBagRequestSchema>;
-
-/**
- * §16 `-> Ok | Unavailable(piece)`, as a discriminated union (TS-06).
- *
- * §7.1 is emphatic that "failure is specific, not generic. The response names
- * the piece that failed, so the interface can mark 'Trouser — L' rather than
- * telling the customer the set is unavailable and leaving them to guess." A
- * boolean plus an optional message would lose exactly that.
- *
- * The success case carries the whole summary so one round trip both reserves
- * the stock and refreshes the bag (DATA-06).
- */
-export const addToBagResultSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('ADDED'), summary: bagSummarySchema }),
-  z.object({
-    kind: z.literal('UNAVAILABLE'),
-    pieceId: pieceIdSchema,
-    pieceName: z.string().min(1),
-    sizeLabel: z.string().min(1),
-  }),
-]);
-
-export type AddToBagResult = z.infer<typeof addToBagResultSchema>;
-
-/** §16 `updateQuantity(cart, line, qty)` — 0 is not valid; removal is its own call. */
-export const updateQuantityRequestSchema = z.object({
-  quantity: z.number().int().positive(),
-});
-
-export type UpdateQuantityRequest = z.infer<typeof updateQuantityRequestSchema>;
-
-/**
- * The result of changing a line.
- *
- * Raising a quantity can fail on stock exactly as adding can (§7.1 runs the
- * same transaction), so this is the same shaped answer rather than a bare
- * summary. Lowering it or removing a line always succeeds and releases the
- * reservation immediately, per §16's fourth invariant.
- */
-export const updateQuantityResultSchema = addToBagResultSchema;
-
-export type UpdateQuantityResult = AddToBagResult;
-
-/** §16 `applyCode(cart, code)`. */
-export const applyCodeRequestSchema = z.object({
-  code: z.string().min(1),
-});
-
-export type ApplyCodeRequest = z.infer<typeof applyCodeRequestSchema>;
-
-/**
- * Whether a code is valid, what it is worth, and why it was refused are all
- * Pricing's answers (DATA-13). The frontend never inspects the string.
- */
-export const applyCodeResultSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('APPLIED'), summary: bagSummarySchema }),
-  z.object({ kind: z.literal('REJECTED'), reason: z.string().min(1) }),
-]);
-
-export type ApplyCodeResult = z.infer<typeof applyCodeResultSchema>;

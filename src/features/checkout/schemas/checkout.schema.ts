@@ -262,8 +262,8 @@ export type Order = z.infer<typeof orderSchema>;
  *   customer at payment." The new totals come back for explicit confirmation,
  *   and the customer re-submits or leaves.
  * - **`MEASUREMENTS_CHANGED`** — §34.7's equivalent for cloth. A garment to be
- *   cut names the measurements it was added against; saving them again mints a
- *   new version, and cutting to figures the customer never confirmed is the one
+ *   cut names the measurements it was added against; saving them again with
+ *   anything changed mints a new version, and cutting to figures the customer never confirmed is the one
  *   mistake this whole feature exists to avoid. The garments are named, for the
  *   reason §7.1 names the piece that failed.
  */

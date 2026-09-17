@@ -7,6 +7,7 @@ import { formatNumber, formatTemplate } from '@/lib/utils/format';
 
 import type { StudioSet, StyleChoice } from '../lib/studio-set';
 import { pathNameOf, SourceChooser } from './SourceChooser';
+import { StudioProductBanner } from './StudioProductBanner';
 import { StyleChooser } from './StyleChooser';
 
 export interface StudioIntroProps {
@@ -38,6 +39,11 @@ export function StudioIntro({ studio, choice, locale }: StudioIntroProps) {
       </nav>
 
       <h1 className="mm-title">{t.pageTitle}</h1>
+
+      {/* Above the lead, because the lead is an instruction and this is what the
+          instruction is FOR. */}
+      {choice.product === null ? null : <StudioProductBanner product={choice.product} />}
+
       <p className="mm-lead">{studio.source === 'TAILOR_CARD' ? t.pageLeadCard : t.pageLead}</p>
 
       {/* The customer's chosen path travels with every style, served or not. */}
@@ -46,7 +52,11 @@ export function StudioIntro({ studio, choice, locale }: StudioIntroProps) {
         current={studio.garmentStyle}
         source={choice.requestedSource ?? studio.source}
       />
-      <SourceChooser studio={studio} requested={choice.requestedSource} />
+      <SourceChooser
+        studio={studio}
+        requested={choice.requestedSource}
+        product={choice.product?.slug ?? null}
+      />
 
       {styleLabel === undefined ? null : (
         <p role="status" className="sr-only">

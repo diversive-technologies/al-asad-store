@@ -218,7 +218,47 @@ describe('what the server refuses', () => {
   });
 });
 
-describe('every save is a new version (§34.7, D6)', () => {
+describe('a save that records something new is a new version (§34.7, D6)', () => {
+  it('answers a save of the figures already on file with that version, and replaces nothing', () => {
+    const owner = device('same-again');
+    const first = saveProfile(owner, submission());
+    // The same length typed in centimetres records the same millimetre.
+    const again = saveProfile(owner, submission({ kameezLength: { raw: '101.6', unit: 'CM' } }));
+    if (first.kind !== 'SAVED' || again.kind !== 'SAVED') throw new Error('expected two saves');
+
+    expect(first.replaced).toBe(false);
+    expect(again.profile.id).toBe(first.profile.id);
+    expect(again.profile.version).toBe(1);
+    expect(again.replaced).toBe(false);
+    // Nothing was written: one version on file, still current.
+    expect(profilesFor(owner, 'KAMEEZ_SHALWAR').map((profile) => profile.supersededBy)).toEqual([
+      null,
+    ]);
+  });
+
+  it('says a save REPLACED earlier figures only when it did', () => {
+    const owner = device('replaced');
+    saveProfile(owner, submission());
+    const changed = saveProfile(owner, submission({ kameezLength: { raw: '41', unit: 'IN' } }));
+    if (changed.kind !== 'SAVED') throw new Error('expected a save');
+
+    expect(changed.replaced).toBe(true);
+    expect(changed.profile.version).toBe(2);
+  });
+
+  it('treats a different finishing choice as different measurements', () => {
+    const owner = device('choice-differs');
+    const first = saveProfile(owner, submission());
+    const plain = saveProfile(
+      owner,
+      submission({}, { preferences: [{ group: 'sleeveFinish', value: 'PLAIN' }] }),
+    );
+    if (first.kind !== 'SAVED' || plain.kind !== 'SAVED') throw new Error('expected two saves');
+
+    expect(plain.profile.id).not.toBe(first.profile.id);
+    expect(plain.replaced).toBe(true);
+  });
+
   it('keeps both versions, and marks the first rather than replacing it', () => {
     const owner = device('two-saves');
     const first = saveProfile(owner, submission());

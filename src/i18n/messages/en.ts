@@ -48,6 +48,13 @@ export const en = {
     stitchingForkBody:
       'Measure a garment you already own, and we will cut this one to the same fit. Ready in about {days} days.',
     stitchingForkCta: 'Take my measurements',
+    /* §34 — on the CARD. Not a badge: badge precedence would hide it behind
+       "Sold out", which is when a customer wants it most.
+       The store's own short name for the feature, so a customer meets the same
+       words in the header, on the card and in the buy box — with "can be" in
+       front, because on a tile this is an OFFER and not a claim about the
+       garment in the photograph. It has to fit a 104px tile at three columns. */
+    madeToMeasureMark: 'Can be stitched to size',
     newBadge: 'New',
     discountBadge: 'Sale',
     lowStockBadge: 'Low stock',
@@ -204,6 +211,10 @@ export const en = {
     /* §7.1: the refusal names the piece, so the copy has a slot for it. */
     unavailable: '{piece} in size {size} is no longer available.',
     addFailed: 'We could not add that. Please try again.',
+    /* §34 — a made-to-measure add the backend refused. What to do, not why:
+       the reason is not sent, and in every case the answer is the same. */
+    measurementsRefused:
+      'We could not use those measurements for this garment. Check them, save them again, then add it.',
     updateFailed: 'We could not update your bag. Please try again.',
     unreachable: 'We could not reach your bag.',
     /* §28.2's durable hold, stated plainly rather than as a countdown. */
@@ -285,7 +296,7 @@ export const en = {
     cutCutoffLeadTime: 'Allow about {days} days for it to be made, on top of delivery.',
     measurementsChangedTitle: 'Your measurements were saved again',
     measurementsChangedBody:
-      'Since {items} went into your bag you have saved those measurements again. We will not cut to figures you have not checked — open your bag and add it again from the measurements you want.',
+      'You saved your measurements again after {items} went into your bag, and we will not cut it without you adding it again. In your bag it is marked — remove it, then add it again from its page.',
   },
   order: {
     title: 'Order confirmed',
@@ -396,6 +407,9 @@ export const en = {
     leadTime: 'About {days} days to make',
     /* §34.7 again, where the garment is listed rather than priced. */
     noReturns: 'Cannot be returned once cutting starts',
+    /* The line placement will refuse. What to do, in a step the bag offers. */
+    measurementsChanged:
+      'You saved your measurements again after adding this. Remove it, then add it again from its page.',
   },
   /** §28.3's saved items. */
   wishlist: {
@@ -700,6 +714,16 @@ export const en = {
     savedReplaced: 'These replace the {style} measurements you saved before.',
     savedAccount: 'They are kept with your account.',
     savedDevice: 'They are saved for this browser only, and are not linked to an account.',
+    /* §34 — the product the studio was opened from. Two lines rather than one
+       sentence: the picture and the name answer "which garment", and the link
+       under them answers "how do I get back", which are different questions. */
+    productFor: 'Measuring for',
+    /* Not "Back to {product}": the name is on the line above, inside the same
+       link, so a screen reader would read the garment out twice. */
+    productBack: 'Back to this garment',
+    /* The way into the bag, at the end. It says what the charge is FOR rather
+       than repeating the button — the button is the bag's own. */
+    productBagHint: 'This will be cut to the measurements you have just saved.',
     savedOnward: 'Browse the collection',
     savedSeeAll: 'See your saved measurements',
     measureAgain: 'Change and save again',

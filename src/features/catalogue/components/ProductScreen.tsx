@@ -128,7 +128,12 @@ export function ProductScreen({
            * garments the workshop will cut (DATA-13).
            */}
           {product.stitching === null ? null : (
-            <StitchingFork offer={product.stitching} locale={locale} messages={messages} />
+            <StitchingFork
+              offer={product.stitching}
+              slug={product.slug}
+              locale={locale}
+              messages={messages}
+            />
           )}
 
           {tryOn}

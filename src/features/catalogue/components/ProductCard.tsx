@@ -213,6 +213,12 @@ export function ProductCard({
             </bdi>
           )}
         </div>
+
+        {/* §34 — words, not a badge: badge precedence would hide it behind "Sold
+            out", exactly when it matters. No gold: most tiles carry it. */}
+        {product.isMadeToMeasure ? (
+          <p className="text-fg-muted text-xs">{t.madeToMeasureMark}</p>
+        ) : null}
       </div>
     </article>
   );

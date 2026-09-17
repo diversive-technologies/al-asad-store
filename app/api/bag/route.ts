@@ -87,12 +87,8 @@ export async function POST(request: Request): Promise<Response> {
    */
   const owner = parsed.data.madeToMeasureProfileId === undefined ? null : await readProfileOwner();
 
-  let result = await addItem(
-    cartId.value,
-    parsed.data,
-    locale,
-    owner === null ? undefined : `${owner.keptWith}:${owner.key}`,
-  );
+  const ownerHeader = owner === null ? undefined : `${owner.keptWith}:${owner.key}`;
+  let result = await addItem(cartId.value, parsed.data, locale, ownerHeader);
 
   /*
    * The cookie can name a cart the backend no longer has: swept for age, lost
@@ -114,7 +110,10 @@ export async function POST(request: Request): Promise<Response> {
       return new Response(null, { status: 502 });
     }
 
-    result = await addItem(replacement.value, parsed.data, locale);
+    /* With the SAME owner. The retry used to drop it, so a made-to-measure add
+       from a browser whose cart had lapsed — a restart, a sweep — was refused on
+       the retry for naming measurements that belonged to nobody. */
+    result = await addItem(replacement.value, parsed.data, locale, ownerHeader);
   }
 
   if (!result.ok) {
@@ -125,7 +124,9 @@ export async function POST(request: Request): Promise<Response> {
   /*
    * 200 whichever way it went. `Unavailable(piece)` is an expected answer the
    * panel renders as "Kameez — L is gone", not a failure of this request
-   * (§7.1); the union in the body carries which.
+   * (§7.1), and so is a refused set of measurements; the union in the body
+   * carries which. Neither is a NOT_FOUND, which is what keeps the retry above
+   * from mistaking either for a dead cart.
    */
   return Response.json(result.value, { headers: NO_STORE });
 }

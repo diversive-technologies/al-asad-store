@@ -289,14 +289,19 @@ export const handlers = [
   }),
 
   /*
-   * §16 `addItem` -> `Ok | Unavailable(piece)`.
+   * §16 `addItem` -> `Ok | Unavailable(piece) | MeasurementsRefused`.
    *
-   * Both outcomes are 200, and that is deliberate. `Unavailable(piece)` is an
-   * EXPECTED answer, not a transport failure — someone else took the last one —
-   * so it travels as a value in a discriminated union (ERR-01), which is also
-   * the only shape `apiRequest` can deliver: it turns every non-2xx into an
-   * `ApiError` and the body, with the name of the piece in it, would be lost.
-   * A 4xx is reserved for the cart genuinely not existing.
+   * ADDED is 201; UNAVAILABLE and MEASUREMENTS_REFUSED are 200, and that is
+   * deliberate. Both are EXPECTED answers, not transport failures — someone else
+   * took the last one; the measurements named cannot cut this garment — so they
+   * travel as values in a discriminated union (ERR-01), which is also the only
+   * shape `apiRequest` can deliver: it turns every non-2xx into an `ApiError`
+   * and the body would be lost.
+   *
+   * A 404 means the request cannot be made against this cart at all — no such
+   * cart, or a product or size cover the cart cannot take. The BFF answers a 404
+   * by replacing the cart cookie, which is why a refused set of measurements must
+   * NEVER be one: it would throw a perfectly good bag away.
    */
   http.post(`*${ENDPOINTS.bag.items(':cartId')}`, async ({ params, request }) => {
     /*
@@ -330,7 +335,9 @@ export const handlers = [
     );
 
     if (result.kind === 'NOT_FOUND') return new HttpResponse(null, { status: 404 });
-    if (result.kind === 'UNAVAILABLE') return HttpResponse.json(result);
+    if (result.kind === 'UNAVAILABLE' || result.kind === 'MEASUREMENTS_REFUSED') {
+      return HttpResponse.json(result);
+    }
     return HttpResponse.json({ kind: 'ADDED', summary: result.summary }, { status: 201 });
   }),
 

@@ -24,3 +24,21 @@ export function requestedSource(value: string | string[] | undefined): CaptureSo
   const parsed = captureSourceSchema.safeParse(value.trim());
   return parsed.success ? parsed.data : null;
 }
+
+/* SEC-02 — well above any slug the catalogue mints. */
+const SLUG_MAX = 120;
+
+/**
+ * The product the studio was opened FROM, as a slug.
+ *
+ * A slug is not a code — it is free-form text the catalogue owns — so this does
+ * not judge its shape beyond refusing what could not be one: the length is
+ * untrusted input. Whether it names a product the workshop will cut is the
+ * BACKEND's answer, and the loader asks it.
+ */
+export function requestedProduct(value: string | string[] | undefined): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > SLUG_MAX) return null;
+  return trimmed;
+}

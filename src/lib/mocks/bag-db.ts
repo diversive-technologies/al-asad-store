@@ -4,7 +4,7 @@ import { CATALOGUE, type CatalogueRecord } from './catalogue-db';
 import { expiryFor, release, releaseCart, reserve, type ReservationKey } from './bag-reservations';
 import { styleLabelFor } from './measurement-sets-db';
 import { toProductDetail } from './product-detail-db';
-import { profileById, type ProfileOwnerRow } from './profiles-db';
+import { isCurrentProfile, profileById, type ProfileOwnerRow } from './profiles-db';
 
 /**
  * D1 — architecture §16 `CartService`, standing in for the Java module.
@@ -207,6 +207,7 @@ export interface BagLinePayload {
     profileId: string;
     savedAt: string;
     figureCount: number;
+    measurementsChanged: boolean;
     chargeMinor: number;
     leadTimeDays: number;
   } | null;
@@ -323,6 +324,7 @@ function toStitchedPayload(
       profileId: profile.id,
       savedAt: profile.createdAt,
       figureCount: profile.values.length,
+      measurementsChanged: !isCurrentProfile(profile.id),
       chargeMinor: offer.stitchingChargeMinor,
       leadTimeDays: offer.leadTimeDays,
     },
@@ -436,6 +438,13 @@ export type CartWriteResult =
   | { kind: 'UNAVAILABLE'; pieceId: string; pieceName: string; sizeLabel: string }
   | { kind: 'NOT_FOUND' };
 
+/**
+ * An ADD can also be refused on its measurements (§34). Kept apart from
+ * NOT_FOUND on purpose: that one means "no such cart", and the BFF answers it by
+ * replacing the cart — which is exactly wrong for a cart that is fine.
+ */
+export type AddItemResult = CartWriteResult | { kind: 'MEASUREMENTS_REFUSED' };
+
 /** Names the piece that failed, in the customer's language (§7.1). */
 function unavailable(
   productId: string,
@@ -464,7 +473,7 @@ export function addItem(
   locale: Locale,
   stitchingProfileId: string | null = null,
   stitchingOwner: ProfileOwnerRow | null = null,
-): CartWriteResult {
+): AddItemResult {
   const cart = CARTS.get(cartId);
   const record = CATALOGUE.find((entry) => entry.id === productId);
   if (cart === undefined || cart.status !== 'ACTIVE' || record === undefined) {
@@ -535,9 +544,10 @@ export function addItem(
  * for one to DIFFERENT figures makes its own line, because it is a different
  * garment however alike the two look.
  *
- * A profile the store does not know is NOT_FOUND. That covers a forged id and a
- * profile lost to a restart alike, and neither is a state worth telling apart in
- * a mock that keeps everything in memory.
+ * A profile that is unknown, not this owner's, or taken for a different garment
+ * than the product is cut as is MEASUREMENTS_REFUSED — never NOT_FOUND. That one
+ * means "no such cart", and the BFF answers it by throwing the cart cookie away
+ * and starting a new cart, which is exactly wrong for a cart that is fine.
  */
 function addStitched(
   cartId: string,
@@ -547,15 +557,15 @@ function addStitched(
   stitchingOwner: ProfileOwnerRow | null,
   quantity: number,
   locale: Locale,
-): CartWriteResult {
+): AddItemResult {
   /*
    * WHOSE measurements, before anything else. The id comes from a browser and
    * what it buys is cloth cut to those figures, so "does this exist" is not the
    * question — "is it yours" is. No owner at all is no.
    */
-  if (stitchingOwner === null) return { kind: 'NOT_FOUND' };
+  if (stitchingOwner === null) return { kind: 'MEASUREMENTS_REFUSED' };
   const profile = profileById(stitchingProfileId, stitchingOwner);
-  if (profile === null) return { kind: 'NOT_FOUND' };
+  if (profile === null) return { kind: 'MEASUREMENTS_REFUSED' };
 
   /*
    * And WHETHER THIS GARMENT is cut at all, and as what.
@@ -568,7 +578,9 @@ function addStitched(
    * reason: only the backend knows what the product is.
    */
   const offer = toProductDetail(record, locale).stitching;
-  if (offer === null || offer.garmentStyle !== profile.garmentStyle) return { kind: 'NOT_FOUND' };
+  if (offer === null || offer.garmentStyle !== profile.garmentStyle) {
+    return { kind: 'MEASUREMENTS_REFUSED' };
+  }
 
   const productId = record.id;
   const existing = activeLines(cart).find(

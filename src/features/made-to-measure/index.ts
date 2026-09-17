@@ -8,7 +8,7 @@
 export { AccountMeasurements } from './components/AccountMeasurements';
 export { StitchedScreen } from './components/StitchedScreen';
 export { StudioSkeleton } from './components/StudioSkeleton';
-export { requestedSource, requestedStyle } from './lib/studio-params';
+export { requestedProduct, requestedSource, requestedStyle } from './lib/studio-params';
 
 // §34.4 `validate` and `saveProfile`, for the BFF routes.
 export { checkMeasurements } from './api/profile-server';

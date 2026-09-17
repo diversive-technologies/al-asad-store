@@ -39,20 +39,28 @@ const ENTRIES = [
   { pointId: 'shalwarPaincha', raw: '7.5', unit: 'IN' as const },
 ];
 
-function submission(): SubmissionRow {
+/* `kameezLength` is the figure varied to make DIFFERENT measurements: a length is
+   judged against no other point, so changing it cannot raise a note that would
+   stop the save. */
+function submission(kameezLength = '40'): SubmissionRow {
   return {
     garmentStyle: 'KAMEEZ_SHALWAR',
     source: 'GARMENT_COPY',
     version: 1,
-    entries: ENTRIES,
+    entries: ENTRIES.map((entry) =>
+      entry.pointId === 'kameezLength' ? { ...entry, raw: kameezLength } : entry,
+    ),
     preferences: [],
     acknowledgedFindings: [],
   };
 }
 
-/** A saved profile version, and the id that names it. */
-function savedProfileId(): string {
-  const outcome = saveProfile(OWNER, submission());
+/**
+ * The version a save of these figures names. Saving the SAME figures again
+ * answers with the same version; a different length makes a new one.
+ */
+function savedProfileId(kameezLength = '40'): string {
+  const outcome = saveProfile(OWNER, submission(kameezLength));
   if (outcome.kind !== 'SAVED') throw new Error('Expected the fixture profile to save.');
   return outcome.profile.id;
 }
@@ -82,6 +90,19 @@ function uncuttableProductId(): string {
 }
 
 const KAMEEZ_PRODUCT = (): string => productCutAs('KAMEEZ_SHALWAR');
+
+/* A SECOND product cut as the same style — the fixture offers every garment in
+   two cloths, so an order of two kameez shalwars is an ordinary basket. */
+function anotherKameezProduct(): string {
+  const first = KAMEEZ_PRODUCT();
+  const record = CATALOGUE.find(
+    (entry) =>
+      entry.id !== first &&
+      toProductDetail(entry, 'en').stitching?.garmentStyle === 'KAMEEZ_SHALWAR',
+  );
+  if (record === undefined) throw new Error('The fixture has only one kameez shalwar.');
+  return record.id;
+}
 
 beforeEach(() => {
   resetCarts();
@@ -131,9 +152,30 @@ describe('a made-to-measure bag line', () => {
     expect(summaryFor(cartId, 'en')?.lines).toHaveLength(1);
     expect(summaryFor(cartId, 'en')?.lines[0]?.quantity).toBe(2);
 
-    // A second save is different figures, so it is a different garment.
+    // Saving the same figures again names the same version, so it merges too.
     addItem(cartId, productId, [], 1, 'en', savedProfileId(), OWNER);
+    expect(summaryFor(cartId, 'en')?.lines).toHaveLength(1);
+
+    // Different figures are a different garment, however alike the two look.
+    addItem(cartId, productId, [], 1, 'en', savedProfileId('41'), OWNER);
     expect(summaryFor(cartId, 'en')?.lines).toHaveLength(2);
+  });
+
+  it('marks the line whose measurements changed since it was added, and only that one', () => {
+    const cartId = createCart();
+    const earlier = KAMEEZ_PRODUCT();
+    const later = anotherKameezProduct();
+
+    addItem(cartId, earlier, [], 1, 'en', savedProfileId(), OWNER);
+    addItem(cartId, later, [], 1, 'en', savedProfileId('41'), OWNER);
+
+    const lines = summaryFor(cartId, 'en')?.lines ?? [];
+    const flagOf = (productId: string) =>
+      lines.find((line) => line.productId === productId)?.stitching?.measurementsChanged;
+    // The refusal at checkout names a product; this is what lets the bag say
+    // which LINE it means when two lines are the same garment.
+    expect(flagOf(earlier)).toBe(true);
+    expect(flagOf(later)).toBe(false);
   });
 
   it('refuses a profile belonging to somebody ELSE', () => {
@@ -143,11 +185,17 @@ describe('a made-to-measure bag line', () => {
 
     // The id is real and the garment is right; it is simply not theirs. An id
     // arrives from a browser, and what it buys is cloth cut to those figures.
-    expect(addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', mine, stranger).kind).toBe('NOT_FOUND');
+    expect(addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', mine, stranger).kind).toBe(
+      'MEASUREMENTS_REFUSED',
+    );
     // A device cannot name an account's profile either — the KIND is part of it.
     const device: ProfileOwnerRow = { keptWith: 'DEVICE', key: OWNER.key };
-    expect(addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', mine, device).kind).toBe('NOT_FOUND');
-    expect(addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', mine, null).kind).toBe('NOT_FOUND');
+    expect(addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', mine, device).kind).toBe(
+      'MEASUREMENTS_REFUSED',
+    );
+    expect(addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', mine, null).kind).toBe(
+      'MEASUREMENTS_REFUSED',
+    );
   });
 
   it('refuses a profile for a DIFFERENT garment than the product is cut as', () => {
@@ -160,20 +208,34 @@ describe('a made-to-measure bag line', () => {
      * kameez's style label, and the workshop was sent a kameez's figures for a
      * waistcoat — all of it looking perfectly well-formed.
      */
-    expect(addItem(cartId, waistcoat, [], 1, 'en', savedProfileId(), OWNER).kind).toBe('NOT_FOUND');
+    expect(addItem(cartId, waistcoat, [], 1, 'en', savedProfileId(), OWNER).kind).toBe(
+      'MEASUREMENTS_REFUSED',
+    );
   });
 
   it('refuses a garment the backend does not offer stitching for', () => {
     const cartId = createCart();
     // A boy's kurta maps to null deliberately: every served bound is an adult's.
     const result = addItem(cartId, uncuttableProductId(), [], 1, 'en', savedProfileId(), OWNER);
-    expect(result.kind).toBe('NOT_FOUND');
+    expect(result.kind).toBe('MEASUREMENTS_REFUSED');
   });
 
   it('refuses a profile the store does not hold', () => {
     const cartId = createCart();
     const result = addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', 'not-a-profile', OWNER);
-    expect(result.kind).toBe('NOT_FOUND');
+    expect(result.kind).toBe('MEASUREMENTS_REFUSED');
+  });
+
+  it('keeps a refused profile apart from a missing cart, the only thing the BFF replaces a cart for', () => {
+    // A real cart, refused on its measurements: an answer about the profile.
+    const cartId = createCart();
+    expect(addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', 'not-a-profile', OWNER).kind).toBe(
+      'MEASUREMENTS_REFUSED',
+    );
+    // No such cart, whatever the measurements: that, and only that, is NOT_FOUND.
+    expect(
+      addItem('no-such-cart', KAMEEZ_PRODUCT(), [], 1, 'en', savedProfileId(), OWNER).kind,
+    ).toBe('NOT_FOUND');
   });
 
   it('changes quantity and is removed without touching a hold it never took', () => {
@@ -238,10 +300,10 @@ describe('a made-to-measure line at checkout', () => {
     addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', savedProfileId(), OWNER);
     const input = inputFor(cartId);
 
-    // The customer measures again. That mints a new version and supersedes the
-    // one the line names — so the order must stop rather than cut to figures
-    // nobody has looked at.
-    savedProfileId();
+    // The customer measures again, differently. That mints a new version and
+    // supersedes the one the line names — so the order must stop rather than cut
+    // to figures nobody has looked at.
+    savedProfileId('41');
 
     const outcome = placeOrder(cartId, input, 'en');
     expect(outcome.kind).toBe('MEASUREMENTS_CHANGED');
@@ -249,6 +311,25 @@ describe('a made-to-measure line at checkout', () => {
       expect(outcome.restitchedItems).toHaveLength(1);
       expect(outcome.restitchedItems[0]?.length).toBeGreaterThan(0);
     }
+  });
+
+  it('places two garments of one style, each added after its own save of the same figures', () => {
+    /*
+     * The review's reproduction, and the ordinary way this happens: measure for
+     * one kameez shalwar and add it; open a second, take the saved figures, check
+     * them, save, add. Every add goes through a save, and a save used to mint a
+     * version every time — so the second add superseded the first line's version
+     * and the order could never be placed, whatever the customer did.
+     */
+    const cartId = createCart();
+    addItem(cartId, KAMEEZ_PRODUCT(), [], 1, 'en', savedProfileId(), OWNER);
+    addItem(cartId, anotherKameezProduct(), [], 1, 'en', savedProfileId(), OWNER);
+
+    expect(summaryFor(cartId, 'en')?.lines).toHaveLength(2);
+    // By card: two garments with their stitching pass the Cash on Delivery cap,
+    // which is its own refusal and not the one under test.
+    const input = { ...inputFor(cartId), paymentMethodId: 'card' };
+    expect(placeOrder(cartId, input, 'en').kind).toBe('PLACED');
   });
 
   it('leaves a stock line in the same bag untouched by any of it', () => {

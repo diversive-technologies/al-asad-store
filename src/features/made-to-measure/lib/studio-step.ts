@@ -30,11 +30,15 @@ export type ReviewingStep = {
 export type StudioStep =
   | { readonly kind: 'EDITING'; readonly isChecking: boolean; readonly problem: SaveProblem | null }
   | ReviewingStep
-  | { readonly kind: 'SAVED'; readonly profile: MeasurementProfile };
+  | {
+      readonly kind: 'SAVED';
+      readonly profile: MeasurementProfile;
+      readonly replaced: boolean;
+    };
 
 /** A save's outcome, judged as it lands. */
 export type SaveResult =
-  | { readonly kind: 'SAVED'; readonly profile: MeasurementProfile }
+  | { readonly kind: 'SAVED'; readonly profile: MeasurementProfile; readonly replaced: boolean }
   | { readonly kind: 'REJECTED'; readonly verdict: Stopped };
 
 /** What the step is read from — a TanStack mutation result satisfies it as it is. */
@@ -113,7 +117,7 @@ export function stepOf(
   saving: RequestState<SaveResult>,
 ): StudioStep {
   if (shown === 'SAVED' && saving.data?.kind === 'SAVED') {
-    return { kind: 'SAVED', profile: saving.data.profile };
+    return { kind: 'SAVED', profile: saving.data.profile, replaced: saving.data.replaced };
   }
   const sent = checking.variables;
   if (shown === 'REVIEWING' && checking.data?.kind === 'PASSED' && sent !== undefined) {

@@ -10,21 +10,25 @@ export const ROUTES = {
   /** §34 — the measurement studio, usable without buying anything. */
   stitched: '/stitched',
   /**
-   * §34 — the studio opened on one garment style, as a product's fork opens it.
-   * A style id is letters, digits and underscores (`garmentStyleIdSchema`), so it
-   * needs no escaping.
+   * §34 — the studio at any address it reads: a style, a way of measuring, a
+   * product it was opened from, any of them or none.
+   *
+   * Named rather than positional, so a style can never be passed as a source, and
+   * EVERY field is stated rather than optional — a caller that simply forgot the
+   * product would drop the customer's garment on the floor silently, which is
+   * exactly what a required `null` makes impossible. Built with `URLSearchParams`,
+   * so nothing relies on a caller's value needing no escaping; a slug is the one
+   * of the three that is not a plain code.
    */
-  stitchedFor: (garmentStyle: string) => `/stitched?style=${garmentStyle}`,
-  /**
-   * §34 — the studio at any address it reads: a style, a way of measuring, both
-   * or neither. Named rather than positional, so a style can never be passed as a
-   * source, and built with `URLSearchParams`, so nothing relies on a caller's
-   * value needing no escaping.
-   */
-  stitchedWith: (query: { readonly style: string | null; readonly source: string | null }) => {
+  stitchedWith: (query: {
+    readonly style: string | null;
+    readonly source: string | null;
+    readonly product: string | null;
+  }) => {
     const params = new URLSearchParams();
     if (query.style !== null) params.set('style', query.style);
     if (query.source !== null) params.set('source', query.source);
+    if (query.product !== null) params.set('product', query.product);
     const search = params.toString();
     return search === '' ? '/stitched' : `/stitched?${search}`;
   },
@@ -70,7 +74,7 @@ export const ROUTES = {
     addressDefault: '/api/addresses/default',
     /** §34.4 `validate`, for the studio's review before a save. Stores nothing. */
     measurementCheck: '/api/made-to-measure/check',
-    /** §34.4 `saveProfile` — each save a new version, never an overwrite (D6). */
+    /** §34.4 `saveProfile` — a new version when anything changed, never an overwrite (D6). */
     measurementProfiles: '/api/made-to-measure/profiles',
     /** §16 — GET the summary, POST to add a line. */
     bag: '/api/bag',

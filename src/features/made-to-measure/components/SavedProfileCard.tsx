@@ -64,7 +64,13 @@ export function SavedProfileCard({ view, locale, messages }: SavedProfileCardPro
 
       <p className="mt-4">
         <Link
-          href={ROUTES.stitchedWith({ style: profile.garmentStyle, source: profile.source })}
+          href={ROUTES.stitchedWith({
+            style: profile.garmentStyle,
+            source: profile.source,
+            /* The account is not a product page: nothing is being measured FOR
+               anything here, and naming a garment would be inventing one. */
+            product: null,
+          })}
           className="text-fg py-2 text-sm underline underline-offset-4"
         >
           {t.openMeasurements}
