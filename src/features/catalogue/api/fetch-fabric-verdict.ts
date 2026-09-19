@@ -1,11 +1,16 @@
 import { ROUTES } from '@/config/routes';
+import { fetchWithContract } from '@/lib/api/browser-fetch';
 import { err, ok, type Result } from '@/lib/result';
 
-import {
-  fabricVerdictSchema,
-  type FabricQuery,
-  type FabricVerdict,
-} from '../schemas/fabric-calculator.schema';
+import type { FabricQuery, FabricVerdict } from '../schemas/fabric-calculator.schema';
+
+/*
+ * Deliberate code split (IMP-01a, PERF-10): a static import of the verdict's
+ * schema made Zod first-load JavaScript on every product page, for a read made
+ * only once a height is entered. It arrives beside the response instead
+ * (`fetchWithContract` has the reasoning).
+ */
+const loadSchema = () => import('../schemas/fabric-calculator.schema');
 
 /** The browser side of §25: reads our own BFF, never the Java service directly. */
 export async function fetchFabricVerdict(
@@ -17,16 +22,14 @@ export async function fetchFabricVerdict(
   url.searchParams.set('heightCm', String(query.heightCm));
   url.searchParams.set('styleId', query.styleId);
 
-  // ERR-05(1) / ERR-01: the rejection becomes a value; no try/catch for flow.
-  const response = await fetch(url, {
-    signal: signal ?? null,
-    headers: { Accept: 'application/json' },
-  }).then<Response | null, null>(
-    (result) => result,
-    () => null,
+  // ERR-05(1) / ERR-01: a rejection becomes a value; no try/catch for flow.
+  const [response, contract] = await fetchWithContract(
+    url,
+    { signal: signal ?? null, headers: { Accept: 'application/json' } },
+    loadSchema,
   );
 
-  if (response === null || !response.ok) return err({ kind: 'UNAVAILABLE' });
+  if (response === null || !response.ok || contract === null) return err({ kind: 'UNAVAILABLE' });
 
   const payload: unknown = await response.json().then<unknown, null>(
     (value: unknown) => value,
@@ -34,6 +37,6 @@ export async function fetchFabricVerdict(
   );
 
   // DATA-02: our own route is a network boundary like any other.
-  const parsed = fabricVerdictSchema.safeParse(payload);
+  const parsed = contract.fabricVerdictSchema.safeParse(payload);
   return parsed.success ? ok(parsed.data) : err({ kind: 'UNAVAILABLE' });
 }

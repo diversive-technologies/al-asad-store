@@ -3,18 +3,18 @@
 import { useState } from 'react';
 
 import Link from 'next/link';
-import { AnimatePresence, motion } from 'motion/react';
 
 import { ROUTES } from '@/config/routes';
-import { useMediaQuery } from '@/hooks/use-media-query';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { formatMetres, formatMoneyMinor } from '@/lib/utils/format';
 
 import { deriveProductBadges, type ProductCardWithAvailability } from '../lib/product-card';
-import { ProductBadge } from './ProductBadge';
+import type { ProductCard as ProductCardPayload } from '../schemas/product-card.schema';
 import { ProductCardActions } from './ProductCardActions';
+import { ProductCardBadges } from './ProductCardBadges';
 import { ProductCardFrames } from './ProductCardFrames';
+import { ProductCardReveal } from './ProductCardReveal';
+import { ProductCardStrip } from './ProductCardStrip';
 
 export interface ProductCardProps {
   entry: ProductCardWithAvailability;
@@ -27,9 +27,13 @@ export interface ProductCardProps {
    * a four-up grid does not request the same image as one in a two-up rail.
    */
   sizes?: string;
+  /**
+   * What the page does once the quick add has put this product in the bag. Absent,
+   * the bag panel opens; the saved-items page passes one, because an add there
+   * MOVES the product off its list.
+   */
+  onAddedToBag?: ((product: ProductCardPayload) => void) | undefined;
 }
-
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 /**
  * Section 28.1's card: image, hover image, work + fabric line, name, colour,
@@ -42,10 +46,22 @@ const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
  * weight beneath the photograph, which read as a paragraph rather than a product
  * and took half the tile from the image.
  *
- * PERF-01, stated plainly: this is now a Client Component, and every card on a
- * 24-item page carries that cost. It buys the sprung reveal below. If motion is
- * not used for anything else, the same reveal is achievable with `group-hover`
- * in pure CSS and this boundary should be reconsidered.
+ * The actions sit inside the IMAGE box, not the card: they are absolutely
+ * positioned, so their containing block decides where they land, and while they
+ * sat directly under the `<article>` the size tray covered the name and price
+ * instead of the photograph. They stay outside the `<Link>`, because a `<button>`
+ * inside an `<a>` is invalid HTML whose clicks navigate before their own handler
+ * runs.
+ *
+ * The link is therefore an OVERLAY rather than a wrapper, and it is passed INTO
+ * the frames rather than rendered beside them: the frames listen for a swipe,
+ * and a touch that lands on the anchor only bubbles to the anchor's own
+ * ancestors. As a sibling the overlay swallowed every gesture before the
+ * carousel could see it; as a child, the gesture reaches it.
+ *
+ * PERF-01, stated plainly: this is a Client Component, and every card on a
+ * 24-item page carries that cost. It buys the reveal on intent, the frame
+ * carousel, the heart and the quick add; the reveal's motion itself is CSS.
  */
 export function ProductCard({
   entry,
@@ -53,71 +69,40 @@ export function ProductCard({
   messages,
   hasPriorityImage = false,
   sizes = '(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
+  onAddedToBag,
 }: ProductCardProps) {
   const { product, availability } = entry;
   const badges = deriveProductBadges(product, availability);
   const isSoldOut = availability?.status === 'SOLD_OUT';
-  const t = messages.product;
-
   const [isRevealed, setIsRevealed] = useState(false);
-  // A11Y-10: a reader who asked for less motion gets the panel without the slide.
-  const prefersReducedMotion = useMediaQuery(REDUCED_MOTION_QUERY);
+  const reveal = (): void => setIsRevealed(true);
+  const conceal = (): void => setIsRevealed(false);
 
   return (
+    // A11Y-02: keyboard users reach the reveal too, not only pointers.
     <article
       className="product-card group relative flex flex-col"
-      onMouseEnter={() => {
-        setIsRevealed(true);
-      }}
-      onMouseLeave={() => {
-        setIsRevealed(false);
-      }}
-      // A11Y-02: keyboard users reach the reveal too, not only pointers.
-      onFocus={() => {
-        setIsRevealed(true);
-      }}
-      onBlur={() => {
-        setIsRevealed(false);
-      }}
+      onMouseEnter={reveal}
+      onMouseLeave={conceal}
+      onFocus={reveal}
+      onBlur={conceal}
     >
       <div className="relative">
-        {/*
-         * Inside the IMAGE box, not the card.
-         *
-         * These are absolutely positioned, so their containing block decides
-         * where they land — and while they sat directly under the `<article>`
-         * the size tray's `inset-block-end: 0` resolved against the whole card
-         * and the tray covered the name and price instead of the photograph.
-         *
-         * Still outside the `<Link>`: a `<button>` inside an `<a>` is invalid
-         * HTML whose clicks navigate before their own handler runs.
-         */}
-        <ProductCardActions product={product} isSoldOut={isSoldOut} messages={messages} />
-
+        <ProductCardActions
+          product={product}
+          isSoldOut={isSoldOut}
+          locale={locale}
+          messages={messages}
+          onAddedToBag={onAddedToBag}
+        />
         <ProductCardFrames
-          images={product.images}
-          alt={product.name}
+          product={product}
           isActive={isRevealed}
           isSoldOut={isSoldOut}
           messages={messages}
           hasPriorityImage={hasPriorityImage}
           sizes={sizes}
         >
-          {/*
-           * The link is an OVERLAY rather than a wrapper.
-           *
-           * A card carries real controls now — two arrows, a heart, a quick add
-           * — and a `<button>` inside an `<a>` is invalid HTML whose clicks
-           * navigate before their own handler runs. Covering the image with the
-           * anchor instead keeps the whole tile clickable while leaving every
-           * control a sibling that sits above it.
-           *
-           * It is passed INTO the frames rather than rendered beside them
-           * because the frames listen for a swipe, and a touch that lands on
-           * this anchor only bubbles to the anchor's own ancestors. As a
-           * sibling the overlay swallowed every gesture before the carousel
-           * could see it; as a child, the gesture reaches it.
-           */}
           <Link
             href={ROUTES.catalogue.detail(product.slug)}
             className="rounded-card focus-visible:ring-brand-500 absolute inset-0 z-[1] focus-visible:ring-2 focus-visible:outline-none"
@@ -125,101 +110,17 @@ export function ProductCard({
             <span className="sr-only">{product.name}</span>
           </Link>
         </ProductCardFrames>
-
-        {badges.length > 0 ? (
-          /*
-           * I18N-04: `start-3` is logical — badges hug the reading-start corner.
-           *
-           * `end-12` keeps the strip clear of the action column at EVERY tile
-           * width: 2rem of inset and disc plus a gap. A badge states its status
-           * in words and the tint is only reinforcement (A11Y-06), so a word
-           * disappearing under the disc is the message disappearing — and the
-           * discs are drawn permanently on touch. At three columns on a 375px
-           * screen a tile is 104px, and "Low stock" was reading as "Low s"
-           * under the blur. Bounded, it wraps inside its own pill instead.
-           * Wider tiles have room to spare and look exactly as they did.
-           */
-          <ul className="absolute start-3 end-12 top-3 flex flex-wrap gap-1">
-            {badges.map((badge) => (
-              <li key={badge}>
-                <ProductBadge kind={badge} messages={messages} />
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {/*
-         * The reveal sits OVER the lower image rather than below it, so showing
-         * it costs no layout height and the grid never reflows on hover.
-         */}
-        <AnimatePresence>
-          {isRevealed ? (
-            <motion.div
-              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-              className="from-media-scrim/90 absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent p-3 pt-10"
-            >
-              <dl className="text-on-media/90 flex flex-wrap gap-x-3 text-xs">
-                <div>
-                  <dt className="sr-only">{t.pieceCountLabel}</dt>
-                  <dd>{product.type === 'SET' ? t.setLabel : t.singleLabel}</dd>
-                </div>
-                {product.metreage === null ? null : (
-                  <div>
-                    <dt className="sr-only">{t.metreageLabel}</dt>
-                    <dd>
-                      <bdi>{formatMetres(product.metreage, locale)}</bdi>
-                    </dd>
-                  </div>
-                )}
-              </dl>
-
-              {/*
-               * §28.2's quick add is a real control now — the bag button in
-               * `ProductCardActions` — so this line no longer announces one.
-               * Only the sold-out state still needs saying here.
-               */}
-              {!isSoldOut ? null : (
-                <p className="text-on-media mt-2 text-xs font-medium">{t.soldOutBadge}</p>
-              )}
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+        <ProductCardBadges badges={badges} messages={messages} />
+        <ProductCardReveal
+          product={product}
+          isRevealed={isRevealed}
+          isSoldOut={isSoldOut}
+          locale={locale}
+          messages={messages}
+        />
       </div>
 
-      {/* The persistent strip: the two facts a grid is scanned for. */}
-      <div className="mt-3 flex flex-col gap-1 text-start">
-        <div className="card-line flex items-baseline justify-between gap-3">
-          <h3 className="text-fg truncate text-sm font-medium">{product.name}</h3>
-          <bdi className="text-fg shrink-0 text-sm font-medium">
-            {formatMoneyMinor(product.pricing.currentMinor, locale)}
-          </bdi>
-        </div>
-
-        <div className="card-line text-fg-muted flex items-baseline justify-between gap-3 text-xs">
-          {/* I18N-06: independent nouns as separate nodes, not one string. */}
-          <p className="truncate">
-            <span>{product.fabricName}</span>
-            <span aria-hidden> · </span>
-            <span>{product.colourName}</span>
-          </p>
-
-          {product.pricing.originalMinor === null ? null : (
-            <bdi className="shrink-0 line-through">
-              <span className="sr-only">{t.originalPriceLabel}: </span>
-              {formatMoneyMinor(product.pricing.originalMinor, locale)}
-            </bdi>
-          )}
-        </div>
-
-        {/* §34 — words, not a badge: badge precedence would hide it behind "Sold
-            out", exactly when it matters. No gold: most tiles carry it. */}
-        {product.isMadeToMeasure ? (
-          <p className="text-fg-muted text-xs">{t.madeToMeasureMark}</p>
-        ) : null}
-      </div>
+      <ProductCardStrip product={product} locale={locale} messages={messages} />
     </article>
   );
 }

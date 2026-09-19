@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { RELATED_PRODUCTS_LIMIT } from '../schemas/related-products.schema';
 import { DEFAULT_PAGE_SIZE } from '../schemas/search.schema';
 import {
   DEFAULT_MOBILE_COLUMNS,
@@ -21,7 +22,8 @@ describe('page size divides by every column count', () => {
 
   it('rejects a count the page size cannot fill', () => {
     // The guard itself, checked against the count that was actually removed:
-    // 24 / 5 = 4.8, so a five-column grid ended each page four tiles short.
+    // 24 / 5 = 4.8 at the page size it was removed at, so a five-column grid
+    // ended each page four tiles short.
     expect(DEFAULT_PAGE_SIZE % 5).not.toBe(0);
     expect(GRID_COLUMN_COUNTS).not.toContain(5);
   });
@@ -30,6 +32,17 @@ describe('page size divides by every column count', () => {
     for (const option of MOBILE_COLUMN_OPTIONS) {
       expect(GRID_COLUMN_COUNTS).toContain(option);
     }
+  });
+});
+
+/**
+ * §28.2's "You may also like" is drawn in the same grid, so the number it asks
+ * for carries the same property: a product with more related products than that
+ * must still end on a full row at every width.
+ */
+describe('the related-products limit divides by every column count', () => {
+  it.each(GRID_COLUMN_COUNTS)('fills every row at %i columns', (columns) => {
+    expect(RELATED_PRODUCTS_LIMIT % columns).toBe(0);
   });
 });
 

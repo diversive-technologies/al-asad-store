@@ -16,7 +16,14 @@
  * SEC-01: no password is logged, echoed back, or put in a URL. SEC-10: the
  * fixture credential below is obviously fake and exists only in this mock
  * layer, which is not bundled once `API_MOCKING` is off.
+ *
+ * A mobile is compared in its canonical form (`canonicalMobile`) everywhere
+ * below, as Java will: the number names an account, so `0300 1234567` and
+ * `03001234567` must reach the same one, and a stand-in for the backend trusts
+ * no caller to have normalised it first.
  */
+
+import { canonicalMobile } from '@/lib/domain/mobile';
 
 /** §11 "sign-in codes … expire". */
 const CODE_TTL_MS = 5 * 60 * 1000;
@@ -93,6 +100,12 @@ function sessionFor(account: Account): SessionPayload {
   return { displayName: account.displayName, email: account.email, mobile: account.mobile };
 }
 
+/** The account holding this number, compared canonically on both sides. */
+function accountByMobile(mobile: string): Account | undefined {
+  const wanted = canonicalMobile(mobile);
+  return [...ACCOUNTS.values()].find((entry) => canonicalMobile(entry.mobile) === wanted);
+}
+
 /** §11 `authenticate(email, password) -> Session`. */
 export function authenticate(email: string, password: string): AuthOutcome {
   const now = Date.now();
@@ -126,14 +139,18 @@ export function authenticate(email: string, password: string): AuthOutcome {
  */
 export function issueCode(mobile: string): string {
   const code = String(Math.floor(100_000 + Math.random() * 900_000));
-  CODES.set(mobile.trim(), { code, expiresAt: Date.now() + CODE_TTL_MS, isSpent: false });
+  CODES.set(canonicalMobile(mobile), {
+    code,
+    expiresAt: Date.now() + CODE_TTL_MS,
+    isSpent: false,
+  });
   return code;
 }
 
 /** §11 `authenticateByCode(mobile, code) -> Session`. */
 export function authenticateByCode(mobile: string, code: string): AuthOutcome {
   const now = Date.now();
-  const identifier = mobile.trim();
+  const identifier = canonicalMobile(mobile);
 
   if (isLocked(identifier, now)) return { kind: 'RATE_LIMITED' };
 
@@ -153,7 +170,7 @@ export function authenticateByCode(mobile: string, code: string): AuthOutcome {
   CODES.set(identifier, { ...issued, isSpent: true });
   FAILURES.delete(identifier);
 
-  const account = [...ACCOUNTS.values()].find((entry) => entry.mobile === identifier);
+  const account = accountByMobile(identifier);
 
   /*
    * A code proves possession of the number, so an unknown mobile signs in as a
@@ -193,7 +210,7 @@ export function register(input: {
   const account: Account = {
     displayName: input.fullName.trim(),
     email,
-    mobile: input.mobile.trim(),
+    mobile: canonicalMobile(input.mobile),
     password: input.password,
   };
 
@@ -214,6 +231,23 @@ export function requestPasswordReset(email: string): void {
    * answer is identical whether or not the address has an account.
    */
   void email;
+}
+
+/**
+ * The address an ACCOUNT is written to, or `null` when it has none on file.
+ *
+ * Looked up by the key the BFF names the account with (`accountKeyOf`: the
+ * email when there is one, the mobile otherwise), and by nothing else. It is the
+ * only way into this store for a module that writes to customers, and it cannot
+ * be asked whether a TYPED address belongs to an account — that question stays
+ * unanswerable from outside, as §11 requires. A customer who signed in by code
+ * with a mobile nobody registered has no account row, and so no address.
+ */
+export function contactEmailFor(accountKey: string): string | null {
+  const key = accountKey.trim();
+  const account = ACCOUNTS.get(key.toLowerCase()) ?? accountByMobile(key);
+
+  return account === undefined || account.email.length === 0 ? null : account.email;
 }
 
 /** Test seam. */

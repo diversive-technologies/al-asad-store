@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
+import { en } from '@/i18n/messages/en';
+import { ur } from '@/i18n/messages/ur';
 import type { ProductId } from '@/lib/domain/ids';
 
 import type { ProductCard } from '../schemas/product-card.schema';
-import type { Suggestions } from '../schemas/search.schema';
-import { NO_ACTIVE_OPTION, nextActiveIndex, toSuggestionOptions } from './suggestions';
+import { suggestionsSchema, type Suggestions } from '../schemas/search.schema';
+import {
+  EMPTY_SUGGESTIONS,
+  NO_ACTIVE_OPTION,
+  nextActiveIndex,
+  productsShownStatus,
+  toSuggestionOptions,
+} from './suggestions';
 
 function productFixture(id: string, name: string): ProductCard {
   return {
@@ -26,7 +34,7 @@ function productFixture(id: string, name: string): ProductCard {
   };
 }
 
-const EMPTY: Suggestions = { terms: [], products: [], refinements: [] };
+const EMPTY: Suggestions = { terms: [], products: [], refinements: [], collection: null };
 
 describe('toSuggestionOptions', () => {
   it('returns nothing for an empty payload', () => {
@@ -109,5 +117,38 @@ describe('nextActiveIndex', () => {
   it('steps normally in the middle', () => {
     expect(nextActiveIndex(0, 1, 3)).toBe(1);
     expect(nextActiveIndex(2, -1, 3)).toBe(1);
+  });
+});
+
+describe('EMPTY_SUGGESTIONS', () => {
+  /* The BFF's answer for an unreachable index. It must pass the schema the panel
+     parses it with, or a down index reads as a broken contract. */
+  it('satisfies the suggestions schema', () => {
+    expect(suggestionsSchema.safeParse(EMPTY_SUGGESTIONS).success).toBe(true);
+  });
+});
+
+/**
+ * §30.3 — the search panel's live region. It used to say "0 results" while the
+ * answer was on its way, "1 results" for one match, and the number of cards drawn
+ * as if it were every match.
+ */
+describe('productsShownStatus', () => {
+  const four = ['p1', 'p2', 'p3', 'p4'].map((id) => productFixture(id, `Suit ${id}`));
+
+  it.each([
+    ['nothing while the answer is on its way, or could not be had', undefined, 'en', ''],
+    [
+      'the one product shown, in the singular',
+      { products: four.slice(0, 1) },
+      'en',
+      '1 product shown',
+    ],
+    ['how many are shown, not how many matched', { products: four }, 'en', '4 products shown'],
+    ['the count in Urdu, in its own words', { products: four }, 'ur', '4 مصنوعات دکھائی گئیں'],
+  ] as const)('says %s', (_case, suggestions, locale, expected) => {
+    const forms = { en, ur }[locale].search.resultCount;
+
+    expect(productsShownStatus(suggestions, forms, locale)).toBe(expected);
   });
 });

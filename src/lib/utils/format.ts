@@ -51,6 +51,32 @@ export function formatDate(isoDate: string, locale: Locale): string {
   }).format(new Date(isoDate));
 }
 
+/*
+ * A fixed week to read day names and clock times off, in UTC so the server's own
+ * time zone never shifts a Monday into a Sunday: 1 January 2024 was a Monday, so
+ * ISO weekday `n` falls on the `n`th of that month.
+ */
+const REFERENCE_YEAR = 2024;
+const REFERENCE_MONTH = 0;
+
+/** A day of the week by its ISO number (1 is Monday, 7 is Sunday), in the reader's language. */
+export function formatWeekday(isoWeekday: number, locale: Locale): string {
+  return new Intl.DateTimeFormat(tagFor(locale), { weekday: 'long', timeZone: 'UTC' }).format(
+    new Date(Date.UTC(REFERENCE_YEAR, REFERENCE_MONTH, isoWeekday)),
+  );
+}
+
+/** A 24-hour `HH:MM` time of day, written the way the reader's locale writes clock times. */
+export function formatClockTime(time: string, locale: Locale): string {
+  const [hours = 0, minutes = 0] = time.split(':').map(Number);
+
+  return new Intl.DateTimeFormat(tagFor(locale), {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(REFERENCE_YEAR, REFERENCE_MONTH, 1, hours, minutes)));
+}
+
 /** Metreage for unstitched fabric, which is sold by length rather than by size. */
 export function formatMetres(metres: number, locale: Locale): string {
   return new Intl.NumberFormat(tagFor(locale), {

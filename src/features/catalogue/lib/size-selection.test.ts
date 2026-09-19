@@ -6,10 +6,12 @@ import type { ProductDetailAvailability } from '../schemas/piece-availability.sc
 import type { Piece, ProductDetail } from '../schemas/product-detail.schema';
 import {
   applyUnifiedSize,
+  bagSelectionsOf,
   initialSelection,
   isSelectionComplete,
   setPieceSize,
   sizeStatus,
+  soldOutSizes,
   unifiedSizeOf,
 } from './size-selection';
 
@@ -181,6 +183,31 @@ describe('sizeStatus', () => {
   });
 });
 
+describe('soldOutSizes', () => {
+  const LARGE = 'size-l' as SizeId;
+  const sizes = [SMALL, MEDIUM, LARGE].map((id) => ({ id, label: id }));
+  const statuses = new Map([
+    [SMALL, 'SOLD_OUT'],
+    [MEDIUM, 'LOW_STOCK'],
+    [LARGE, 'SOLD_OUT'],
+  ] as const);
+
+  /* §28.2's Notify Me is offered on exactly these, so they must be the sizes the
+     selector itself shows as gone — in the order it draws them. */
+  it('keeps the sizes reported sold out, in the order they are drawn', () => {
+    expect(soldOutSizes(sizes, (id) => statuses.get(id) ?? null).map((size) => size.id)).toEqual([
+      SMALL,
+      LARGE,
+    ]);
+  });
+
+  /* §30.2: a page whose overlay could not be read offers Notify Me on nothing,
+     rather than on every size it could not check. */
+  it('offers nothing when no status is known', () => {
+    expect(soldOutSizes(sizes, () => null)).toEqual([]);
+  });
+});
+
 describe('availability-aware selection', () => {
   // The trouser's small is gone; the shirt's is not.
   const isSelectable = (pieceId: PieceId, sizeId: SizeId): boolean =>
@@ -220,5 +247,24 @@ describe('availability-aware selection', () => {
     // §30.2: a degraded overlay must not refuse every size.
     const next = applyUnifiedSize(SET, initialSelection(SET), SMALL);
     expect(next.trouser).toBe(SMALL);
+  });
+});
+
+describe('bagSelectionsOf', () => {
+  it('sends the chosen size for every piece that has one', () => {
+    const chosen = applyUnifiedSize(SET, initialSelection(SET), MEDIUM);
+
+    expect(bagSelectionsOf(SET, chosen)).toEqual([
+      { pieceId: 'shirt', sizeId: MEDIUM },
+      { pieceId: 'trouser', sizeId: MEDIUM },
+    ]);
+  });
+
+  /* It used to send `''` for a one-size piece: an id that names no size, which
+     the add's own schema then refused as malformed. */
+  it('sends nothing for a one-size piece rather than an empty size id', () => {
+    const chosen = applyUnifiedSize(SET, initialSelection(SET), SMALL);
+
+    expect(bagSelectionsOf(SET, chosen).map((pair) => pair.sizeId)).not.toContain('');
   });
 });

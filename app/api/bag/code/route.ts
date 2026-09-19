@@ -3,6 +3,8 @@ import { applyCodeRequestSchema } from '@/features/bag/contract';
 import { getLocale } from '@/i18n';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
+import { isSameOrigin } from '@/lib/utils/request';
+import { NO_STORE, readJsonBody } from '@/lib/utils/route';
 
 /**
  * §16 `applyCode(cart, code)`. D6 — lifting it is its own route, at `./removal`.
@@ -13,27 +15,23 @@ import { logApiError } from '@/lib/utils/log';
  */
 export const dynamic = 'force-dynamic';
 
-const NO_STORE = { 'Cache-Control': 'no-store' } as const;
-
 export async function POST(request: Request): Promise<Response> {
   await ensureMockServer();
 
+  // SEC-08 — a write, so another origin is refused.
+  if (!isSameOrigin(request)) return new Response(null, { status: 403, headers: NO_STORE });
+
   const cartId = await readCartId();
-  if (cartId === null) return new Response(null, { status: 404 });
+  if (cartId === null) return new Response(null, { status: 404, headers: NO_STORE });
 
-  const body: unknown = await request.json().then<unknown, null>(
-    (value: unknown) => value,
-    () => null,
-  );
-
-  const parsed = applyCodeRequestSchema.safeParse(body);
-  if (!parsed.success) return new Response(null, { status: 400 });
+  const parsed = applyCodeRequestSchema.safeParse(await readJsonBody(request));
+  if (!parsed.success) return new Response(null, { status: 400, headers: NO_STORE });
 
   const result = await applyCode(cartId, parsed.data.code, await getLocale());
 
   if (!result.ok) {
     logApiError('api:bag:code:post', result.error); // ERR-10
-    return new Response(null, { status: 502 });
+    return new Response(null, { status: 502, headers: NO_STORE });
   }
 
   // A refused code is a 200 carrying `REJECTED`, for the same reason

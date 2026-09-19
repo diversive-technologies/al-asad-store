@@ -8,15 +8,17 @@ import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
 import { API_HEADERS } from '@/lib/api/headers';
 import { cartIdSchema, type CartId, type CartLineId } from '@/lib/domain/ids';
-import type { Result } from '@/lib/result';
+import { ok, type Result } from '@/lib/result';
 
 import {
   addToBagResultSchema,
   applyCodeResultSchema,
+  moveToWishlistResultSchema,
   updateQuantityResultSchema,
   type AddToBagRequest,
   type AddToBagResult,
   type ApplyCodeResult,
+  type MoveToWishlistResult,
   type UpdateQuantityResult,
 } from '../schemas/bag-write.schema';
 import { bagSummarySchema, type BagSummary } from '../schemas/bag.schema';
@@ -46,6 +48,26 @@ export function createCart(): Promise<Result<{ id: CartId }, ApiError>> {
     body: {},
     next: { revalidate: 0 },
   });
+}
+
+/**
+ * Whether the backend still holds this cart as a bag — `true`, `false`, or an
+ * error when it could not say.
+ *
+ * A HEAD: nothing is priced and no lapsed line is settled. It exists so the BFF
+ * can CONFIRM a cart is gone before it throws the cookie naming it away, rather
+ * than inferring that from a 404 on some other request.
+ */
+export async function isCartLive(cartId: CartId): Promise<Result<boolean, ApiError>> {
+  const result = await apiRequest({
+    path: ENDPOINTS.bag.cart(cartId),
+    schema: z.null(),
+    method: 'HEAD',
+    next: { revalidate: 0 },
+  });
+
+  if (result.ok) return ok(true);
+  return result.error.kind === 'NOT_FOUND' ? ok(false) : result;
 }
 
 /** §16 `summary(cart)`. */
@@ -121,6 +143,31 @@ export function removeItem(
     schema: updateQuantityResultSchema,
     method: 'POST',
     body: {},
+    searchParams: { locale },
+    next: { revalidate: 0 },
+  });
+}
+
+/**
+ * §16 `moveToWishlist(cart, line)` — the line leaves the bag and its product joins
+ * the account's saved items, in one backend step.
+ *
+ * `accountKey` is read from the SESSION by the caller and attached as the same
+ * header the saved items travel under (`API_HEADERS.accountKey`); nothing in the
+ * request the browser sent can name whose list it is.
+ */
+export function moveToWishlist(
+  cartId: CartId,
+  lineId: CartLineId,
+  accountKey: string,
+  locale: Locale,
+): Promise<Result<MoveToWishlistResult, ApiError>> {
+  return apiRequest({
+    path: ENDPOINTS.bag.lineWishlistMove(cartId, lineId),
+    schema: moveToWishlistResultSchema,
+    method: 'POST',
+    body: {},
+    headers: { [API_HEADERS.accountKey]: accountKey },
     searchParams: { locale },
     next: { revalidate: 0 },
   });

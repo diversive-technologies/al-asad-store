@@ -28,6 +28,7 @@ export {
   addToBagResultSchema,
   applyCodeRequestSchema,
   applyCodeResultSchema,
+  moveToWishlistResultSchema,
   sizeSelectionSchema,
   updateQuantityRequestSchema,
   updateQuantityResultSchema,
@@ -35,17 +36,20 @@ export {
   type AddToBagResult,
   type ApplyCodeRequest,
   type ApplyCodeResult,
+  type MoveToWishlistResult,
   type SizeSelection,
   type UpdateQuantityRequest,
   type UpdateQuantityResult,
 } from './schemas/bag-write.schema';
 
 export { EMPTY_BAG } from './lib/empty-bag';
+export { addNoticeFor, type AddRefusalWords } from './lib/add-notice';
 
 export { AddToBagButton, type AddToBagButtonProps } from './components/AddToBagButton';
 export { BagContents, type BagContentsProps } from './components/BagContents';
 export { BagPageScreen, type BagPageScreenProps } from './components/BagPageScreen';
-export { BagPanel, type BagPanelProps } from './components/BagPanel';
+export { BagPageSkeleton } from './components/BagPageSkeleton';
+export { BagPanel, preloadBagPanel, type BagPanelProps } from './components/BagPanel';
 export { BagProvider, useBag } from './components/BagProvider';
 /*
  * STRUCT-04 — the catalogue's card adds to the bag from inside a grid tile, and

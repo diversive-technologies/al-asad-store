@@ -28,9 +28,25 @@ export const savedAddressSchema = addressDetailSchema.extend({
   isDefault: z.boolean(),
 });
 
-export const addressBookSchema = z.object({
-  addresses: z.array(savedAddressSchema).max(MAX_SAVED_ADDRESSES),
-});
+export const addressBookSchema = z
+  .object({
+    addresses: z.array(savedAddressSchema).max(MAX_SAVED_ADDRESSES),
+  })
+  /*
+   * DATA-02 — the invariant above, held at the boundary rather than trusted. A
+   * non-empty book with no default (or two) is a CONTRACT VIOLATION, reported as
+   * a book that could not be read — not read as "no default", which `/account`
+   * then put into words as "You have not saved an address yet" beside a book
+   * that holds several.
+   */
+  .refine(
+    ({ addresses }) =>
+      addresses.length === 0 || addresses.filter((entry) => entry.isDefault).length === 1,
+    {
+      error: 'A non-empty address book has exactly one default (§28.3).',
+      path: ['addresses'],
+    },
+  );
 
 /** What the browser asks to save, or to revise when it names an id. */
 export const addressWriteSchema = z.object({

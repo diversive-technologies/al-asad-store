@@ -1,4 +1,4 @@
-import { http, HttpResponse, passthrough } from 'msw';
+import { http, HttpResponse } from 'msw';
 
 import { ENDPOINTS } from '@/lib/api/endpoints';
 
@@ -8,12 +8,17 @@ import { pageFor } from './pages-db';
 import { localeOf } from './request-bodies';
 
 /**
- * D1 — §21 Content, §22 Localisation and the newsletter.
- * On backend-integration branch: Stage 1 endpoints pass through to real Java backend.
+ * D1 — §21 Content, §22 Localisation and the newsletter, standing in for Java.
+ * Split out of `handlers.ts` (MOD-03), one handler module per module.
+ *
+ * The locale arrives as a query parameter rather than a header so that every
+ * cache between the page and the backend keys the two languages separately.
  */
 export const contentHandlers = [
-  /* Section 21 serves the homepage from real Java backend (Stage 1). */
-  http.get(`*${ENDPOINTS.content.homepage}`, () => passthrough()),
+  /* Section 21 serves the homepage per locale. */
+  http.get(`*${ENDPOINTS.content.homepage}`, ({ request }) =>
+    HttpResponse.json(homepageFor(localeOf(request))),
+  ),
 
   /*
    * Section 21 `page(slug, locale)`. A missing page is a 404, the same as a
@@ -33,7 +38,7 @@ export const contentHandlers = [
     HttpResponse.json(measurementCopyFor(localeOf(request))),
   ),
 
-  /* Newsletter subscription handled by real Java backend (Stage 1 Block LP-08). */
-  http.post(`*${ENDPOINTS.newsletter.subscribe}`, () => passthrough()),
+  http.post(`*${ENDPOINTS.newsletter.subscribe}`, () =>
+    HttpResponse.json(NEWSLETTER_SUBSCRIPTION, { status: 201 }),
+  ),
 ];
-

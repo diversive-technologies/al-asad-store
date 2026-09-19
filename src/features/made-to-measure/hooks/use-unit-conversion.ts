@@ -44,7 +44,8 @@ export interface ConvertedLists {
  * Switching between inches and centimetres without ever rewriting what was typed
  * — in every field the form holds, including figures kept from another style, a
  * finishing choice or the other way of measuring. The rules are `switchUnit`'s
- * and `typedEntriesOf`'s; this keeps what they need between switches.
+ * and `typedEntriesOf`'s; this keeps what they need between switches, and judges
+ * the fields again in the new unit once a check has been asked for.
  */
 export function useUnitConversion(
   form: UseFormReturn<MeasurementEntry>,
@@ -63,6 +64,17 @@ export function useUnitConversion(
       ...lists.served.map((point) => [point.id, point] as const),
     ]);
   }, [lists.served]);
+
+  /* STATE-04 — a unit switch changes what every figure means to the schema, so
+     once a check has been asked for, the errors on screen are judged again in the
+     new unit. An effect because the resolver that judges them is the NEXT
+     render's; the ref only remembers which unit was last judged. */
+  const judgedUnit = useRef(unit);
+  useEffect(() => {
+    if (judgedUnit.current === unit) return;
+    judgedUnit.current = unit;
+    if (form.formState.isSubmitted) void form.trigger();
+  }, [unit, form]);
 
   return {
     changeUnit: (next: Unit): void => {

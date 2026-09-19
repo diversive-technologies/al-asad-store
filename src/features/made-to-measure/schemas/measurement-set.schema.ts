@@ -8,6 +8,7 @@ import {
   optionValueIdSchema,
 } from '@/lib/domain/ids';
 
+import { piecesLeftUnasked } from '../lib/choice-coverage';
 import { DRAWING_IDS } from '../lib/garment-drawings';
 
 /**
@@ -198,7 +199,8 @@ function checkPoints(set: ShapedSet, issue: Issue): void {
     }
     furthestPiece = Math.max(furthestPiece, at);
 
-    if (point.minMm >= point.maxMm) issue('The minimum must be below the maximum.', ['points', index]);
+    if (point.minMm >= point.maxMm)
+      issue('The minimum must be below the maximum.', ['points', index]);
     /* A girth is halved across the flat garment, and a card halves a WIDTH — the
        teera, half the shoulder. A length is never written as a half. */
     if (point.enteredAs === 'HALF' && point.kind === 'LENGTH') {
@@ -221,17 +223,23 @@ export const measurementSetSchema = measurementSetShape.superRefine((set, contex
   const pointIds = set.points.map((point) => point.id);
   if (new Set(pointIds).size !== pointIds.length) issue('A point is declared twice.', ['points']);
 
-  if (new Set(set.sources).size !== set.sources.length) issue('A path is offered twice.', ['sources']);
-  if (!set.sources.includes(set.source)) issue('The list served is not a path offered.', ['source']);
+  if (new Set(set.sources).size !== set.sources.length)
+    issue('A path is offered twice.', ['sources']);
+  if (!set.sources.includes(set.source))
+    issue('The list served is not a path offered.', ['source']);
 
   checkPoints(set, issue);
   checkOptions(set, issue);
 
   // A garment with nothing to measure would draw a tab, an unmarked drawing and
-  // an empty fieldset.
+  // an empty fieldset — and so would one the finishing choices can empty, only
+  // later, once a customer picked the choice that does it (`choice-coverage`).
+  const emptied = new Set(piecesLeftUnasked(set));
   set.pieces.forEach((piece, index) => {
     if (!set.points.some((point) => point.pieceId === piece.id)) {
       issue('A piece is declared with nothing to measure on it.', ['pieces', index]);
+    } else if (emptied.has(index)) {
+      issue('The finishing choices can leave a piece with nothing to measure.', ['pieces', index]);
     }
   });
 });

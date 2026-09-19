@@ -32,7 +32,15 @@ export default defineConfig({
      * schema to parse, not fixtures: no test asserts against them, and the
      * try-on provider key is deliberately absent so the suite exercises the
      * unconfigured path that §28.5 describes.
+     *
+     * The app URL joined them when the product page began building its own
+     * canonical address to share (`absoluteUrl`): every module that imports the
+     * catalogue barrel now reaches `env.client.ts`, including ones that only want
+     * a schema from it.
      */
-    env: { JAVA_API_BASE_URL: 'http://localhost:8080' },
+    env: {
+      JAVA_API_BASE_URL: 'http://localhost:8080',
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+    },
   },
 });

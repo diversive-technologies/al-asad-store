@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    The browser-tab icon, deliberately NEUTRAL: a tailor's tape ring, which is the
+    product's own motif, in plain ink rather than any client's colours or initial.
+
+    D5: it is an asset a deployment replaces, listed in `src/config/client.ts`'s
+    onboarding list. A favicon is fetched and drawn outside the page, so it cannot
+    read the `@theme` tokens; copying a brand colour in here would be a second copy
+    of `globals.css` (PD-01). A client's own mark replaces this file once clean
+    artwork of it exists.
+
+    The ink follows the browser's own light or dark chrome.
+  -->
+  <style>
+    .ink { fill: none; stroke: #1f1f1f; }
+    @media (prefers-color-scheme: dark) {
+      .ink { stroke: #f2f2f2; }
+    }
+  </style>
+  <circle class="ink" cx="16" cy="16" r="12" stroke-width="3" />
+  <circle class="ink" cx="16" cy="16" r="5.5" stroke-width="2.5" stroke-dasharray="2.4 1.9" />
+</svg>

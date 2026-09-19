@@ -1,4 +1,4 @@
-import { http, HttpResponse, passthrough } from 'msw';
+import { http, HttpResponse } from 'msw';
 
 import { DEFAULT_LOCALE } from '@/i18n/locales';
 import { ENDPOINTS } from '@/lib/api/endpoints';
@@ -11,6 +11,7 @@ import {
   searchCatalogue,
   suggestCatalogue,
 } from './catalogue-search';
+import { sitemapProductsAt } from './catalogue-sitemap';
 import { evaluateFabric } from './fabric-calculator-db';
 import { findProductBySlug } from './product-detail-db';
 import { localeOf } from './request-bodies';
@@ -33,9 +34,15 @@ function idsOf(request: Request): string[] | null {
 
 export const catalogueHandlers = [
   /*
-   * Availability is served by the real Java backend (Stage 1 Block LP-03).
+   * The card overlay of §8.2, answered from the same live ledger as the product
+   * page's — so a card and its page cannot disagree. It answers only for the ids
+   * it was asked about and does NOT invent an entry for a product it holds no
+   * record of; that absence is what exercises the "availability unknown" path
+   * in the interface (DATA-13a).
    */
-  http.get(`*${ENDPOINTS.catalogue.availability}`, () => passthrough()),
+  http.get(`*${ENDPOINTS.catalogue.availability}`, ({ request }) =>
+    HttpResponse.json(cardAvailabilityFor(idsOf(request), localeOf(request))),
+  ),
 
   /*
    * Section 15 `search`. This genuinely filters, sorts, pages and computes
@@ -102,6 +109,14 @@ export const catalogueHandlers = [
    */
   http.get(`*${ENDPOINTS.catalogue.byIds}`, ({ request }) =>
     HttpResponse.json(findRecordsByIds(idsOf(request) ?? [], localeOf(request))),
+  ),
+
+  /*
+   * §30.5's sitemap feed: every LAUNCHED product, in one unpaged read. Which
+   * products are launched is decided in `catalogue-sitemap.ts`, not by the caller.
+   */
+  http.get(`*${ENDPOINTS.catalogue.sitemap}`, () =>
+    HttpResponse.json(sitemapProductsAt(Date.now())),
   ),
 
   /*

@@ -7,6 +7,8 @@ import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
 import { err, ok, type Result } from '@/lib/result';
 
+import { authFailureOf } from './lib/auth-failure';
+import { SESSION_COOKIE } from './lib/session-cookie';
 import {
   codeIssuedSchema,
   codeRequestSchema,
@@ -15,6 +17,7 @@ import {
   passwordSignInSchema,
   sessionSchema,
   signUpSchema,
+  voidReplySchema,
   type Session,
 } from './schemas/auth.schema';
 
@@ -36,7 +39,6 @@ import {
  * before it goes anywhere, exactly as a route handler's would be.
  */
 
-const SESSION_COOKIE = 'session';
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
 /** The one shape every failure in this file collapses to (ERR-03). */
@@ -101,7 +103,7 @@ export async function requestCodeAction(input: unknown): Promise<Result<string |
   });
 
   if (!result.ok) return result;
-  return ok(result.value.devCode ?? null);
+  return ok(result.value?.devCode ?? null);
 }
 
 /** §11 `authenticateByCode(mobile, code) -> Session`. */
@@ -155,22 +157,28 @@ export async function signUpAction(input: unknown): Promise<Result<Session, ApiE
 /**
  * §11 `resetPassword(email) -> void`.
  *
- * Always resolves ok, whatever the backend said. §11: "authentication responses
- * never reveal whether an account exists", and a reset form that failed
- * differently for an unknown address would answer exactly that question.
+ * Resolves ok whatever the backend ANSWERED. §11: "authentication responses never
+ * reveal whether an account exists", and a reset form that failed differently for
+ * an unknown address would answer exactly that question.
+ *
+ * Two failures are still returned, because neither says anything about an
+ * account: an address that is not an email at all (refused before it is sent),
+ * and a store that could not be reached — which used to be reported as "a reset
+ * link is on its way" to somebody who was then left waiting for nothing.
  */
 export async function requestPasswordResetAction(input: unknown): Promise<Result<null, ApiError>> {
   const parsed = passwordResetSchema.safeParse(input);
   if (!parsed.success) return err(invalid('email', 'Enter a valid email address.'));
 
-  await apiRequest({
+  const result = await apiRequest({
     path: ENDPOINTS.auth.resetPassword,
-    schema: sessionSchema.nullable(),
+    schema: voidReplySchema,
     method: 'POST',
     body: parsed.data,
     next: { revalidate: 0 },
   });
 
+  if (!result.ok && authFailureOf(result.error) === 'UNREACHABLE') return result;
   return ok(null);
 }
 

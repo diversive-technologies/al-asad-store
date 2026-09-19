@@ -1,7 +1,8 @@
 import { useState, type ChangeEvent, type ReactNode } from 'react';
 
-import Image from 'next/image';
-
+import { LoadingNotice } from '@/components/shared/LoadingNotice';
+import { OnDemand } from '@/components/shared/OnDemand';
+import { onDemandPart } from '@/hooks/use-on-demand';
 import type { UseObjectUrlResult } from '@/hooks/use-object-url';
 import { useMessages } from '@/i18n/use-messages';
 
@@ -9,54 +10,15 @@ import { SegmentedChoice } from './SegmentedChoice';
 
 type View = 'NOTE' | 'DRAWING';
 
-interface NotePhotoProps {
-  readonly url: string;
-}
-
 /*
- * The photo, fitted — or, pressed, at twice the width to pan across, because a
- * whole card at phone size is too small to copy from. A photo the browser cannot
- * show (an iPhone's HEIC, on a desktop) says so instead of a broken image.
+ * Deliberate code split (IMP-01a, PERF-06, PERF-10): the photo view — and with
+ * it `next/image`, which nothing else on the studio's first paint draws — exists
+ * only once a photo has been chosen on this device, so a page can never open on
+ * it. It is fetched when the customer reaches for the picker and drawn when a
+ * photo is in hand; a download that fails says so in its place with Try again,
+ * and the drawing is one press away (`useOnDemand`).
  */
-function NotePhoto({ url }: NotePhotoProps) {
-  const t = useMessages().madeToMeasure;
-  const [zoomed, setZoomed] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <p role="alert" className="text-danger-500 text-sm">
-        {t.noteUnreadable}
-      </p>
-    );
-  }
-
-  return (
-    <div className="mm-card-note-frame" data-zoomed={zoomed ? '' : undefined}>
-      <button
-        type="button"
-        className="mm-card-note-zoom"
-        aria-pressed={zoomed}
-        aria-label={t.noteZoomIn}
-        onClick={() => {
-          setZoomed((current) => !current);
-        }}
-      >
-        <Image
-          src={url}
-          alt={t.noteAlt}
-          width={1200}
-          height={1600}
-          unoptimized
-          onError={() => {
-            setFailed(true);
-          }}
-          className="mm-card-note-photo"
-        />
-      </button>
-    </div>
-  );
-}
+const photoView = onDemandPart(() => import('./CardNotePhoto'));
 
 export interface CardNoteProps {
   /** The photo in hand — held by the studio, so it survives a switch of style or path. */
@@ -77,7 +39,8 @@ export interface CardNoteProps {
  */
 export function CardNote({ photo, children }: CardNoteProps) {
   const t = useMessages().madeToMeasure;
-  const [view, setView] = useState<View>(photo.url === null ? 'DRAWING' : 'NOTE');
+  const { url } = photo;
+  const [view, setView] = useState<View>(url === null ? 'DRAWING' : 'NOTE');
 
   function choose(event: ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0];
@@ -89,14 +52,24 @@ export function CardNote({ photo, children }: CardNoteProps) {
   return (
     <div className="mm-card-note">
       <div className="mm-card-note-controls flex flex-col gap-1">
-        <label className="mm-review-change self-start has-[:focus-visible]:ring-brand-500 has-[:focus-visible]:rounded-sm has-[:focus-visible]:ring-2">
-          <input type="file" accept="image/*" onChange={choose} className="sr-only" />
-          {photo.url === null ? t.noteChoose : t.noteReplace}
+        <label
+          onPointerEnter={photoView.warm}
+          onTouchStart={photoView.warm}
+          className="mm-review-change has-[:focus-visible]:ring-brand-500 self-start has-[:focus-visible]:rounded-sm has-[:focus-visible]:ring-2"
+        >
+          <input
+            type="file"
+            accept="image/*"
+            onChange={choose}
+            onFocus={photoView.warm}
+            className="sr-only"
+          />
+          {url === null ? t.noteChoose : t.noteReplace}
         </label>
         <p className="text-fg-muted text-xs">{t.notePrivacy}</p>
       </div>
 
-      {photo.url === null ? null : (
+      {url === null ? null : (
         <SegmentedChoice
           legend={t.noteViewLabel}
           name="card-note-view"
@@ -109,7 +82,13 @@ export function CardNote({ photo, children }: CardNoteProps) {
         />
       )}
 
-      {photo.url !== null && view === 'NOTE' ? <NotePhoto key={photo.url} url={photo.url} /> : children}
+      {url !== null && view === 'NOTE' ? (
+        <OnDemand key={url} part={photoView} loading={<LoadingNotice />}>
+          {(loaded) => <loaded.CardNotePhoto url={url} />}
+        </OnDemand>
+      ) : (
+        children
+      )}
     </div>
   );
 }

@@ -1,33 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-
-import { useMutation } from '@tanstack/react-query';
-
-import { ButtonLink } from '@/components/ui/button';
-import { InfoPopover } from '@/components/ui/popover';
-import { ROUTES } from '@/config/routes';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import type { CartLineId } from '@/lib/domain/ids';
-import { unwrap } from '@/lib/result';
-import { formatTemplate } from '@/lib/utils/format';
 
-import { removeBagLine, updateLineQuantity } from '../api/bag-browser';
-import type { UpdateQuantityResult } from '../schemas/bag-write.schema';
-import type { BagLine } from '../schemas/bag.schema';
-import { BagLineRow } from './BagLineRow';
-import { StitchingNudge } from './StitchingNudge';
+import { useBagLineChanges } from '../hooks/use-bag-line-changes';
+import { BagEmptyState } from './BagEmptyState';
+import { BagLineList } from './BagLineList';
+import { BagLinesSkeleton } from './BagLinesSkeleton';
 import { useBag } from './BagProvider';
 
 export interface BagContentsProps {
   locale: Locale;
   messages: Messages;
-}
-
-interface LineChange {
-  lineId: CartLineId;
-  quantity: number | null;
 }
 
 /**
@@ -40,49 +24,9 @@ interface LineChange {
  */
 export function BagContents({ locale, messages }: BagContentsProps) {
   const t = messages.bag;
-  const { bag, onSummary } = useBag();
-  const [notice, setNotice] = useState<string | null>(null);
-
-  const change = useMutation({
-    mutationFn: ({ lineId, quantity }: LineChange) =>
-      // DATA-03a: `unwrap` is the only Result→throw adapter used at a call site.
-      unwrap(quantity === null ? removeBagLine(lineId) : updateLineQuantity(lineId, quantity)),
-    onSuccess: (result: UpdateQuantityResult) => {
-      /*
-       * §7.1 — raising a quantity runs the same reservation transaction as
-       * adding, so it can come back `UNAVAILABLE`. The bag is left exactly as
-       * it was and the customer is told WHICH piece ran out, rather than the
-       * number silently snapping back.
-       */
-      if (result.kind === 'UNAVAILABLE') {
-        setNotice(
-          formatTemplate(t.unavailable, { piece: result.pieceName, size: result.sizeLabel }),
-        );
-        return;
-      }
-
-      setNotice(null);
-      onSummary(result.summary);
-    },
-    onError: () => {
-      // ERR-11: our copy, never the upstream error text (SEC-07).
-      setNotice(t.updateFailed);
-    },
-  });
-
+  const { bag } = useBag();
+  const { actions, isBusy, notice, status, emptyStateRef } = useBagLineChanges(messages, locale);
   const summary = bag.data;
-  const isBusy = change.isPending;
-  /* Undefined when nothing in the bag is held — a bag of only cut garments. */
-  const heldUntil =
-    summary?.lines.find((line) => line.reservationExpiresAt !== null)?.reservationExpiresAt ?? null;
-
-  function onQuantityChange(line: BagLine, quantity: number): void {
-    change.mutate({ lineId: line.id, quantity });
-  }
-
-  function onRemove(line: BagLine): void {
-    change.mutate({ lineId: line.id, quantity: null });
-  }
 
   return (
     <>
@@ -95,86 +39,36 @@ export function BagContents({ locale, messages }: BagContentsProps) {
         {notice}
       </p>
 
-      {bag.isPending ? <p className="text-fg-muted text-sm">{messages.common.loading}</p> : null}
+      {/* What just happened — a removed line simply vanishes otherwise, and a
+          screen-reader user would be told nothing. Polite: it interrupts nothing. */}
+      <p role="status" className="text-fg-muted text-sm empty:hidden">
+        {status}
+      </p>
+
+      {/* NEXT-14 — the lines' own shape while the bag is read, not a bare line of
+          text; the wait is said in words beside it, since the shape is hidden. */}
+      {bag.isPending ? (
+        <>
+          <p role="status" className="sr-only">
+            {messages.common.loading}
+          </p>
+          <BagLinesSkeleton />
+        </>
+      ) : null}
 
       {bag.isError ? <p className="text-fg-muted text-sm">{t.unreachable}</p> : null}
 
-      {summary !== undefined && summary.lines.length === 0 ? (
-        <div className="py-8 text-center">
-          <p className="text-fg-muted text-sm">{t.emptyBody}</p>
-          <div className="mt-4">
-            <ButtonLink href={ROUTES.catalogue.list} variant="secondary">
-              {t.startShopping}
-            </ButtonLink>
-          </div>
-        </div>
-      ) : null}
-
-      {summary === undefined || summary.lines.length === 0 ? null : (
-        <>
-          <ul aria-busy={isBusy}>
-            {summary.lines.map((line) => (
-              <BagLineRow
-                key={line.id}
-                line={line}
-                locale={locale}
-                messages={messages}
-                isBusy={isBusy}
-                onQuantityChange={onQuantityChange}
-                onRemove={onRemove}
-              />
-            ))}
-          </ul>
-
-          {/*
-           * §7.3's hold, and ONLY for the lines that have one.
-           *
-           * A made-to-measure line holds nothing — it has taken no size off a
-           * shelf — so a time taken from `lines[0]` would be a claim about a hold
-           * that does not exist, and on a bag holding only cut garments it would
-           * have been an Invalid Date. The first line WITH a hold is the one
-           * this sentence is about.
-           */}
-          <div className="text-fg-muted mt-4 flex items-center gap-1.5 text-xs empty:hidden">
-            {heldUntil === null ? null : (
-              <>
-                {/*
-                 * §28.2's durable hold, shown as the time it lapses rather than a
-                 * ticking countdown: the countdown would imply the browser is what
-                 * frees the stock, and §7.3 is explicit that expiry is applied at
-                 * read time on the server whether this tab is open or not.
-                 *
-                 * The explanation beside it is not decoration. "Held until 2:51 PM"
-                 * states a time without saying what happens AT it, and the three
-                 * readings a customer flips between — do they leave my bag, do they
-                 * just go out of stock, are they actually reserved — have three
-                 * different answers. The popover gives all three.
-                 */}
-                <p>
-                  {formatTemplate(t.heldUntil, {
-                    time: new Date(heldUntil).toLocaleTimeString(locale, {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    }),
-                  })}
-                </p>
-
-                <InfoPopover
-                  label={t.heldInfoLabel}
-                  title={t.heldInfoTitle}
-                  closeLabel={messages.common.close}
-                >
-                  <p>{t.heldInfoReserved}</p>
-                  <p>{t.heldInfoExpiry}</p>
-                  <p>{t.heldInfoAction}</p>
-                  <p>{t.heldInfoExtend}</p>
-                </InfoPopover>
-              </>
-            )}
-          </div>
-
-          <StitchingNudge messages={messages} />
-        </>
+      {summary === undefined ? null : summary.lines.length === 0 ? (
+        <BagEmptyState messages={messages} ref={emptyStateRef} />
+      ) : (
+        <BagLineList
+          lines={summary.lines}
+          heldUntil={summary.heldUntil}
+          locale={locale}
+          messages={messages}
+          isBusy={isBusy}
+          actions={actions}
+        />
       )}
     </>
   );

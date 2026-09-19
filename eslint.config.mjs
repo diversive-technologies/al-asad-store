@@ -9,7 +9,18 @@ import nextTypescript from 'eslint-config-next/typescript';
  * reviewer would otherwise have to catch by eye.
  */
 const config = [
-  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'coverage/**'] },
+  {
+    ignores: [
+      '.next/**',
+      'node_modules/**',
+      'next-env.d.ts',
+      'coverage/**',
+      // Playwright's output: run results and an HTML report of bundled script.
+      'test-results/**',
+      'playwright-report/**',
+      'blob-report/**',
+    ],
+  },
   ...next,
   ...nextTypescript,
   {

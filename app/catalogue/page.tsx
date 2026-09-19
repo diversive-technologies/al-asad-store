@@ -4,16 +4,21 @@ import { ErrorState } from '@/components/shared/ErrorState';
 import { ROUTES } from '@/config/routes';
 import {
   CatalogueScreen,
-  fetchAvailability,
+  listingAvailabilities,
   parseCatalogueQuery,
   searchProducts,
 } from '@/features/catalogue';
 import { getLocale, getMessages } from '@/i18n';
+import { localeAlternates } from '@/lib/utils/locale-alternates';
 import { logApiError } from '@/lib/utils/log';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const messages = await getMessages();
-  return { title: messages.catalogue.title };
+  const [messages, locale] = await Promise.all([getMessages(), getLocale()]);
+  // §30.5 — every filtered, sorted or paged view names the listing as canonical.
+  return {
+    title: messages.catalogue.title,
+    alternates: localeAlternates(ROUTES.catalogue.list, locale),
+  };
 }
 
 export interface CataloguePageProps {
@@ -41,19 +46,17 @@ export default async function CataloguePage({ searchParams }: CataloguePageProps
     return <ErrorState className="m-gutter" message={messages.errors.network} />;
   }
 
-  const availability = await fetchAvailability(results.value.products.map((p) => p.id));
-
-  /*
-   * Section 30.2: a degraded dependency costs the stock badges, not the page.
-   * Every card then reports availability as unknown rather than guessing.
-   */
-  if (!availability.ok) logApiError('catalogue:availability', availability.error);
+  // §30.2: a degraded overlay costs the stock badges, not the page.
+  const availabilities = await listingAvailabilities(
+    results.value.products,
+    'catalogue:availability',
+  );
 
   return (
     <CatalogueScreen
       query={query}
       results={results.value}
-      availabilities={availability.ok ? availability.value : []}
+      availabilities={availabilities}
       basePath={ROUTES.catalogue.list}
       heading={messages.catalogue.title}
       locale={locale}

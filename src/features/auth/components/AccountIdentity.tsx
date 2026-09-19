@@ -29,7 +29,8 @@ export function AccountIdentity({ session, messages }: AccountIdentityProps) {
           {t.guestHeading}
         </h2>
         <p className="text-fg-muted">{t.guestBody}</p>
-        <ButtonLink href={ROUTES.signIn} variant="primary">
+        {/* Signing in comes back here, where the customer asked to (BUG-15). */}
+        <ButtonLink href={ROUTES.signInFrom(ROUTES.account)} variant="primary">
           {messages.auth.signInCta}
         </ButtonLink>
       </section>

@@ -1,8 +1,10 @@
 import { readCartId, removeItem } from '@/features/bag';
 import { getLocale } from '@/i18n';
-import type { CartLineId } from '@/lib/domain/ids';
+import { cartLineIdSchema } from '@/lib/domain/ids';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
+import { isSameOrigin } from '@/lib/utils/request';
+import { NO_STORE } from '@/lib/utils/route';
 
 /**
  * §16 `removeItem(cart, line)`.
@@ -19,27 +21,31 @@ import { logApiError } from '@/lib/utils/log';
  */
 export const dynamic = 'force-dynamic';
 
-const NO_STORE = { 'Cache-Control': 'no-store' } as const;
-
 interface RouteContext {
   /** NEXT-03: dynamic params are a Promise in Next.js 16. */
   params: Promise<{ lineId: string }>;
 }
 
-export async function POST(_request: Request, context: RouteContext): Promise<Response> {
+export async function POST(request: Request, context: RouteContext): Promise<Response> {
   // D1 — a Route Handler never renders the root layout, so it arms its own
   // module context or the first request after a hot reload hits a real socket.
   await ensureMockServer();
 
-  const cartId = await readCartId();
-  if (cartId === null) return new Response(null, { status: 404 });
+  // SEC-08 — a write that releases a hold, so another origin is refused.
+  if (!isSameOrigin(request)) return new Response(null, { status: 403, headers: NO_STORE });
 
-  const { lineId } = await context.params;
-  const result = await removeItem(cartId, lineId as CartLineId, await getLocale());
+  // SEC-02 / TS-03 — parsed as a line id, never cast to one.
+  const lineId = cartLineIdSchema.safeParse((await context.params).lineId);
+  if (!lineId.success) return new Response(null, { status: 400, headers: NO_STORE });
+
+  const cartId = await readCartId();
+  if (cartId === null) return new Response(null, { status: 404, headers: NO_STORE });
+
+  const result = await removeItem(cartId, lineId.data, await getLocale());
 
   if (!result.ok) {
     logApiError('api:bag:line:removal', result.error); // ERR-10
-    return new Response(null, { status: 502 });
+    return new Response(null, { status: 502, headers: NO_STORE });
   }
 
   return Response.json(result.value, { headers: NO_STORE });

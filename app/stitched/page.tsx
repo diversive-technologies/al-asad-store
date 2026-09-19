@@ -1,18 +1,22 @@
 import type { Metadata } from 'next';
 
+import { ROUTES } from '@/config/routes';
 import {
   requestedProduct,
   requestedSource,
   requestedStyle,
   StitchedScreen,
 } from '@/features/made-to-measure';
-import { getMessages } from '@/i18n';
+import { getLocale, getMessages } from '@/i18n';
+import { localeAlternates } from '@/lib/utils/locale-alternates';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const messages = await getMessages();
+  const [messages, locale] = await Promise.all([getMessages(), getLocale()]);
   return {
     title: messages.madeToMeasure.pageTitle,
     description: messages.madeToMeasure.pageLead,
+    // §30.5 — one studio, whichever style, path or product the address opens it on.
+    alternates: localeAlternates(ROUTES.stitched, locale),
   };
 }
 

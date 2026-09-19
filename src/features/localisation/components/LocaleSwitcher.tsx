@@ -37,7 +37,10 @@ export function LocaleSwitcher({ currentLocale }: LocaleSwitcherProps) {
            so it replaces that rather than both applying. */
         className="text-inherit hover:bg-transparent hover:opacity-70"
       >
-        {label}
+        {/* A11Y / I18N-05: the label is the OTHER language's own name ("English"
+            on an Urdu page), so it carries that language — a screen reader then
+            pronounces it in that language — and `bdi` isolates its direction. */}
+        <bdi lang={nextLocale}>{label}</bdi>
       </Button>
     </form>
   );

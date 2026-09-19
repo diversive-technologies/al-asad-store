@@ -4,7 +4,8 @@ import { addItem, createCart, resetCarts, summaryFor, updateQuantity } from './b
 import { allocatedQuantity, reservedQuantity, resetReservations } from './bag-reservations';
 import { CATALOGUE } from './catalogue-db';
 import { ordersFor, placeOrder, quoteFor, resetOrders, type PlaceInput } from './checkout-db';
-import { onHandFor, toProductDetail } from './product-detail-db';
+import { onHandFor } from './inventory-db';
+import { toProductDetail } from './product-detail-db';
 
 /**
  * Architecture §7.2 is the second of the two transactions §7 calls "the
@@ -191,6 +192,21 @@ describe('§7.2 placing an order', () => {
     }
   });
 
+  it.each([
+    ['payment method', { paymentMethodId: 'no-such-method' }],
+    ['delivery option', { deliveryOptionId: 'no-such-option' }],
+  ] as const)(
+    'refuses a %s the store does not offer as INVALID, never as "nothing to check out"',
+    (_label, override) => {
+      const { cartId, selections } = stockedCart();
+      const result = placeOrder(cartId, inputFor(cartId, override), 'en');
+
+      // NOT_FOUND is what the checkout route reads as an empty bag.
+      expect(result.kind).toBe('INVALID');
+      expect(allocatedQuantity(at(selections, 0).pieceId, at(selections, 0).sizeId)).toBe(0);
+    },
+  );
+
   it('refuses when the total has moved, and shows the new one', () => {
     /*
      * §7.2 step 2: "If the total has changed since it was displayed, ROLLBACK
@@ -275,6 +291,33 @@ describe('§7.2 placing an order', () => {
       expect(result.order.state).toBe(states.state);
       expect(result.order.paymentState).toBe(states.paymentState);
     }
+  });
+
+  /*
+   * The bank transfer method promised "the reference we issue" and the order
+   * carried no reference and no account, so the customer had nothing to pay
+   * into. The order states both now — for the method that needs them only, so
+   * the confirmation renders what it is given and never asks which method it was.
+   */
+  it('gives a bank transfer its reference and the account to pay into', () => {
+    const { cartId } = stockedCart();
+    const result = placeOrder(cartId, inputFor(cartId, { paymentMethodId: 'bank' }), 'en');
+
+    if (result.kind !== 'PLACED') throw new Error('Expected a bank transfer to place.');
+    expect(result.order.transferInstructions).toEqual({
+      reference: result.order.orderNumber,
+      bankName: expect.any(String),
+      accountTitle: expect.any(String),
+      accountNumber: expect.any(String),
+      iban: expect.stringMatching(/^PK\d{2}[A-Z]{4}\d{16}$/),
+    });
+  });
+
+  it.each(['cod', 'card', 'wallet'])('gives %s no transfer instructions', (methodId) => {
+    const { cartId } = stockedCart();
+    const result = placeOrder(cartId, inputFor(cartId, { paymentMethodId: methodId }), 'en');
+
+    expect(result.kind === 'PLACED' ? result.order.transferInstructions : 'not placed').toBeNull();
   });
 
   it('empties the bag once the order exists', () => {

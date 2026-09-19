@@ -33,7 +33,11 @@ export function SavedProfileCard({ view, locale, messages }: SavedProfileCardPro
 
   return (
     <article className="mm-saved-card border-border rounded-card border p-4">
-      <h3 className="text-fg text-base font-medium">{view.styleLabel}</h3>
+      {/* I18N-10: the style's name is '' when this language has none, and an empty
+          heading is never rendered — the card is still somebody's saved record. */}
+      <h3 className="text-fg text-base font-medium">
+        {view.styleLabel === '' ? t.savedMeasurementsUntitled : view.styleLabel}
+      </h3>
       <p className="text-fg-muted mt-1 text-sm">
         {formatTemplate(t.savedOn, { date: formatDate(profile.createdAt, locale), path })}
       </p>

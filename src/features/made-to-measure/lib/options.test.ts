@@ -5,7 +5,8 @@ import { styleOffersSchema } from '@/lib/domain/style-offer';
 import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
 
 import { measurementCopySchema } from '../schemas/measurement-copy.schema';
-import { buildMeasurementSchema, emptyEntry } from '../schemas/measurement.schema';
+import { buildMeasurementSchema } from '../schemas/measurement.schema';
+import { emptyEntry } from './entries';
 import { optionConditionSchema } from '../schemas/measurement-set.schema';
 import { detailOf, DRAWINGS } from './garment-drawings';
 import { KAMEEZ_VARIANTS, kameezVaried } from './kameez-variants';

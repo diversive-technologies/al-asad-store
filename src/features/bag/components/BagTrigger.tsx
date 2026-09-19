@@ -1,11 +1,15 @@
 'use client';
 
+import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
+import { formatNumber, formatPlural } from '@/lib/utils/format';
 import { ShoppingBag } from '@/lib/vendor/icons';
 
+import { preloadBagPanel } from './BagPanel';
 import { useBag } from './BagProvider';
 
 export interface BagTriggerProps {
+  locale: Locale;
   messages: Messages;
 }
 
@@ -17,7 +21,7 @@ export interface BagTriggerProps {
  * be an `<a>`). `/bag` still exists as a full page — it is the address a
  * customer can bookmark or land on, and the panel is the fast path.
  */
-export function BagTrigger({ messages }: BagTriggerProps) {
+export function BagTrigger({ locale, messages }: BagTriggerProps) {
   const t = messages.bag;
   const { open, bag } = useBag();
 
@@ -27,14 +31,23 @@ export function BagTrigger({ messages }: BagTriggerProps) {
   return (
     <button
       type="button"
-      onClick={open}
+      onClick={() => {
+        /* DATA-09 — opening the bag to look at it reads it again: the header's
+           copy may be half an hour old, with holds that have since lapsed. */
+        open();
+        void bag.refetch();
+      }}
+      // What the panel shows is fetched on first open; reaching for the button starts it early.
+      onPointerEnter={preloadBagPanel}
+      onFocus={preloadBagPanel}
+      onTouchStart={preloadBagPanel}
       /*
        * A11Y-04 — the accessible name carries the COUNT, so a screen reader
        * hears "Open bag, 2 items" rather than a bare "Open bag" with the number
-       * visible only as decoration. I18N-07: both plural forms come from the
-       * registry; nothing appends an "s".
+       * visible only as decoration. I18N-06: one parameterised message, not two
+       * strings joined here; I18N-07: its plural forms come from the registry.
        */
-      aria-label={`${t.open}, ${count === 1 ? t.itemsOne : t.itemsOther.replace('{count}', String(count))}`}
+      aria-label={formatPlural(t.openWithCount, count, locale)}
       /*
        * No `text-fg`. Over the hero the header sets `color: on-media`, and a
        * pinned colour does not inherit it — which left this icon in the theme's
@@ -61,7 +74,7 @@ export function BagTrigger({ messages }: BagTriggerProps) {
            */
           className="bg-brand-600 absolute end-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] leading-none font-medium text-white"
         >
-          {count}
+          {formatNumber(count, locale)}
         </span>
       )}
     </button>

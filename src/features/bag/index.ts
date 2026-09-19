@@ -10,9 +10,11 @@ export {
   applyCode,
   createCart,
   fetchBagSummary,
+  moveToWishlist,
   removeCode,
   removeItem,
   updateQuantity,
 } from './api/bag-server';
 
+export { addForCustomer } from './api/add-for-customer';
 export { clearCartId, ensureCartId, readCartId } from './api/cart-cookie';

@@ -100,6 +100,31 @@ describe('§11 authenticateByCode', () => {
     if (outcome.kind !== 'AUTHENTICATED') throw new Error('unreachable');
     expect(outcome.session.mobile).toBe(mobile);
   });
+
+  /*
+   * F2 — the number names the account. Typed with the space the field's own hint
+   * shows, the seeded customer used to sign in as a NEW, empty "Customer" keyed
+   * on "0300 1234567", with none of their addresses, saved items or orders.
+   */
+  it.each([
+    ['a space', '0300 1234567'],
+    ['a dash', '0300-1234567'],
+  ])('reaches the same account whether the number is written with %s or not', (_label, typed) => {
+    const outcome = authenticateByCode(typed, issueCode(TEST_CREDENTIALS.mobile));
+
+    expect(outcome.kind).toBe('AUTHENTICATED');
+    if (outcome.kind !== 'AUTHENTICATED') throw new Error('unreachable');
+    expect(outcome.session.displayName).toBe('Test Customer');
+    expect(outcome.session.email).toBe(TEST_CREDENTIALS.email);
+  });
+
+  it('names an unknown number by its digits alone, however it was typed', () => {
+    const outcome = authenticateByCode('0321 1234567', issueCode('0321-1234567'));
+
+    expect(outcome.kind).toBe('AUTHENTICATED');
+    if (outcome.kind !== 'AUTHENTICATED') throw new Error('unreachable');
+    expect(outcome.session.mobile).toBe('03211234567');
+  });
 });
 
 describe('registration', () => {
@@ -129,6 +154,24 @@ describe('registration', () => {
     });
 
     expect(outcome.kind).toBe('TAKEN');
+  });
+
+  it('keeps the mobile in its canonical form, so a code sign-in finds the account', () => {
+    register({
+      fullName: 'New Customer',
+      email: 'new@example.com',
+      mobile: '0300-7654321',
+      password: 'a-long-enough-password',
+    });
+    const outcome = authenticateByCode('03007654321', issueCode('0300 7654321'));
+
+    expect(outcome.kind).toBe('AUTHENTICATED');
+    if (outcome.kind !== 'AUTHENTICATED') throw new Error('unreachable');
+    expect(outcome.session).toEqual({
+      displayName: 'New Customer',
+      email: 'new@example.com',
+      mobile: '03007654321',
+    });
   });
 
   it('normalises the email so case cannot create a second account', () => {

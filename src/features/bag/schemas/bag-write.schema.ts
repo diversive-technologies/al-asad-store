@@ -34,10 +34,15 @@ export const addToBagRequestSchema = z
     productId: productIdSchema,
     /**
      * §16 invariant: "A line cannot exist without a size selected for every
-     * piece of its product." The refinement below is the schema's share of
-     * that; the backend owns the real check, because only it knows how many
-     * pieces the product has — and a made-to-measure line is the one case the
-     * invariant does not govern, because it has no size to select.
+     * piece of its product." The backend owns the check, because only it knows
+     * how many pieces the product has and which of them have a size set at all.
+     *
+     * A piece with NO size set (§6.1, `size_set_id` null) has no size to select,
+     * so it is not named here; §7.1's first step has the backend resolve its key.
+     * A product whose every piece is like that — a one-piece unstitched length —
+     * is therefore added with an EMPTY list, which is a real stock add and not
+     * a made-to-measure one. A made-to-measure line names no sizes either,
+     * because it has none to select; the profile is what tells the two apart.
      */
     selections: z.array(sizeSelectionSchema),
     quantity: z.number().int().positive(),
@@ -51,11 +56,8 @@ export const addToBagRequestSchema = z
     madeToMeasureProfileId: profileIdSchema.optional(),
   })
   .refine(
-    (request) =>
-      request.madeToMeasureProfileId === undefined
-        ? request.selections.length > 0
-        : request.selections.length === 0,
-    { error: 'Give sizes for a stock item, or a profile for a made-to-measure one.' },
+    (request) => request.madeToMeasureProfileId === undefined || request.selections.length === 0,
+    { error: 'A made-to-measure add names a profile and no sizes.' },
   );
 
 export type AddToBagRequest = z.infer<typeof addToBagRequestSchema>;
@@ -101,6 +103,20 @@ export const addToBagResultSchema = z.discriminatedUnion('kind', [
    * is not yours" is not a fact to hand to whoever is asking.
    */
   z.object({ kind: z.literal('MEASUREMENTS_REFUSED') }),
+  /**
+   * §16 — the backend would not take the product or the sizes named: a product
+   * it does not sell (withdrawn since the page was loaded), or a size cover that
+   * does not name every piece exactly once in a size that piece is offered in.
+   *
+   * An ANSWER, for the reason `MEASUREMENTS_REFUSED` is one. Both used to come
+   * back as the 404 a missing cart gets, and the BFF answers that 404 by throwing
+   * the cart cookie away — so an add the cart merely refused cost the customer the
+   * bag they already had. Only a cart the backend does not have is a 404 now.
+   *
+   * No reason travels, deliberately: the customer's move is the same whichever it
+   * was — look at the page again and choose again.
+   */
+  z.object({ kind: z.literal('SELECTION_REFUSED') }),
 ]);
 
 export type AddToBagResult = z.infer<typeof addToBagResultSchema>;
@@ -129,6 +145,32 @@ export const updateQuantityResultSchema = z.discriminatedUnion('kind', [
    so a refusal of one is not an answer this can give, and a handler forced to
    handle it would be handling something that cannot happen. */
 export type UpdateQuantityResult = z.infer<typeof updateQuantityResultSchema>;
+
+/**
+ * §16 `moveToWishlist(cart, line)` — every answer the move can get back.
+ *
+ * Nothing is sent but the line, in the path: WHOSE saved items the product joins
+ * is the session's to say, attached on the server side and never named here.
+ */
+export const moveToWishlistResultSchema = z.discriminatedUnion('kind', [
+  /** The product is in the saved items and the line has left the bag, together. */
+  z.object({ kind: z.literal('MOVED'), summary: bagSummarySchema }),
+  /**
+   * The line had already left the bag — another tab, or a lapse something else
+   * settled — so NOTHING was saved. The bag as it is comes back, so the line
+   * stops being shown rather than being offered again.
+   */
+  z.object({ kind: z.literal('NOT_IN_BAG'), summary: bagSummarySchema }),
+  /**
+   * A made-to-measure line, which the backend keeps in the bag: a saved item is
+   * a product and nothing else, so moving one would throw away the measurements
+   * it is cut to. The interface does not offer it; this is the answer when a
+   * request asks anyway.
+   */
+  z.object({ kind: z.literal('NOT_MOVABLE') }),
+]);
+
+export type MoveToWishlistResult = z.infer<typeof moveToWishlistResultSchema>;
 
 /** §16 `applyCode(cart, code)`. */
 export const applyCodeRequestSchema = z.object({

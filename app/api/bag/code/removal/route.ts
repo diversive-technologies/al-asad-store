@@ -2,6 +2,8 @@ import { readCartId, removeCode } from '@/features/bag';
 import { getLocale } from '@/i18n';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
+import { isSameOrigin } from '@/lib/utils/request';
+import { NO_STORE } from '@/lib/utils/route';
 
 /**
  * §16 — lifting the promotional code on the bag.
@@ -15,21 +17,22 @@ import { logApiError } from '@/lib/utils/log';
  */
 export const dynamic = 'force-dynamic';
 
-const NO_STORE = { 'Cache-Control': 'no-store' } as const;
-
-export async function POST(): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
   // D1 — a Route Handler never renders the root layout, so it arms its own
   // module context or the first request after a hot reload hits a real socket.
   await ensureMockServer();
 
+  // SEC-08 — a write, so another origin is refused.
+  if (!isSameOrigin(request)) return new Response(null, { status: 403, headers: NO_STORE });
+
   const cartId = await readCartId();
-  if (cartId === null) return new Response(null, { status: 404 });
+  if (cartId === null) return new Response(null, { status: 404, headers: NO_STORE });
 
   const result = await removeCode(cartId, await getLocale());
 
   if (!result.ok) {
     logApiError('api:bag:code:removal', result.error); // ERR-10
-    return new Response(null, { status: 502 });
+    return new Response(null, { status: 502, headers: NO_STORE });
   }
 
   return Response.json(result.value, { headers: NO_STORE });

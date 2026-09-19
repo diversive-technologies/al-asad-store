@@ -4,3 +4,4 @@
  */
 export { AccountOrders } from './components/AccountOrders';
 export { fetchAccountOrders, fetchOrder, fetchQuote, placeOrder } from './api/checkout-server';
+export { lookUpOrderFor, placeForCustomer, readOrderFor } from './api/order-access';

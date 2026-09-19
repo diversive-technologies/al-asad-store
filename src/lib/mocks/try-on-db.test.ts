@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { CATALOGUE } from './catalogue-db';
 import {
-  correctWhiteBalance,
   findTryOnProduct,
   generateTryOn,
   resetTryOnSessions,
   tryOnOffer,
   tryOnSessions,
 } from './try-on-db';
+import { correctWhiteBalance } from './try-on-images';
 
 /**
  * Architecture §24's invariants, tested rather than asserted in a comment.
@@ -265,6 +265,33 @@ describe('generateTryOn — server-side enforcement of the offer', () => {
 });
 
 /**
+ * D6 — every generation keeps its own record. Two customers pressing Generate a
+ * moment apart are both open before either closes, and ids taken from the number
+ * of records already closed gave both the same one, so the second overwrote the
+ * first.
+ */
+describe('generateTryOn — overlapping generations', () => {
+  beforeEach(() => {
+    resetTryOnSessions();
+  });
+
+  it('keeps one session record per generation when they overlap', async () => {
+    const record = CATALOGUE[0];
+    expect(record).toBeDefined();
+    if (record === undefined) return;
+
+    // Each waits on the white-balance step, so both are open before either closes.
+    const photo = { bytes: new TextEncoder().encode('not a photograph'), mimeType: 'image/jpeg' };
+    const policy = { sampleWhenUnconfigured: true };
+    await Promise.all([generateTryOn(record, photo, policy), generateTryOn(record, photo, policy)]);
+
+    const ids = tryOnSessions().map((session) => session.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+});
+
+/**
  * The DEMO placeholder, and the properties that keep it from lying.
  *
  * It exists so the interface can be shown before the external service does, and
@@ -290,8 +317,9 @@ describe('generateTryOn — the sample placeholder', () => {
       { sampleWhenUnconfigured: true },
     );
 
-    expect(outcome.status).toBe('READY');
-    if (outcome.status !== 'READY') return;
+    // SAMPLE on the wire as well as in the session, so no screen presents it as a generation.
+    expect(outcome.status).toBe('SAMPLE');
+    if (outcome.status !== 'SAMPLE') return;
 
     // The contract's own rule: an image comes back inline, never as a link to
     // something stored (§24).

@@ -1,7 +1,8 @@
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 
-import { toggleFacetValue, toQueryString } from '../lib/search-params';
+import { toggleFacetValue } from '../lib/query-changes';
+import { toQueryString } from '../lib/search-params';
 import type { CatalogueQuery, FacetEntry, FacetKey } from '../schemas/search.schema';
 import { FilterDisclosure } from './FilterDisclosure';
 import { FilterToggleLink } from './FilterToggleLink';

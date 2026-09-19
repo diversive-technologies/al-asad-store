@@ -17,11 +17,21 @@ export const quickAddSizeSchema = z.object({
   isAvailable: z.boolean(),
 });
 
-export const quickAddOfferSchema = z.object({
-  productId: productIdSchema,
-  /** Every piece the add must reserve — one for a SIMPLE, three for a suit. */
-  pieceIds: z.array(pieceIdSchema).min(1),
-  sizes: z.array(quickAddSizeSchema),
-});
+/** See `QuickAddOffer` in `lib/quick-add.ts` for the two shapes. */
+export const quickAddOfferSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('SIZED'),
+    productId: productIdSchema,
+    /** The pieces the chosen size is applied to — every piece with a size set. */
+    pieceIds: z.array(pieceIdSchema).min(1),
+    sizes: z.array(quickAddSizeSchema),
+  }),
+  z.object({
+    kind: z.literal('ONE_SIZE'),
+    productId: productIdSchema,
+    /** No piece has a size to choose; this says whether the product can be had. */
+    isAvailable: z.boolean(),
+  }),
+]);
 
 export type QuickAddOfferPayload = z.infer<typeof quickAddOfferSchema>;

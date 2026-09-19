@@ -1,8 +1,9 @@
-import { generateTryOn } from '@/features/try-on';
+import { fetchTryOnOffer, generateTryOn } from '@/features/try-on';
 import { productIdSchema } from '@/lib/domain/ids';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
+import { declaredLength, NO_STORE, readFormBody } from '@/lib/utils/route';
 
 /**
  * DATA-08 — the seventh BFF, and architecture §24's only footprint in `app/`.
@@ -23,7 +24,35 @@ import { isSameOrigin } from '@/lib/utils/request';
  */
 export const dynamic = 'force-dynamic';
 
-const NO_STORE = { 'Cache-Control': 'no-store' } as const;
+/**
+ * What a multipart body carries beyond the photograph itself: the boundary lines,
+ * each part's headers, the file name and the product id. A transport allowance,
+ * not a rule — the module still enforces the photograph's own ceiling.
+ */
+const MULTIPART_ALLOWANCE_BYTES = 64 * 1024;
+
+/**
+ * Refuses a body too large to be a photograph the module would accept, BEFORE any
+ * of it is read. An unguarded `formData()` buffers whatever arrives, so a declared
+ * length is checked against the offer's own ceiling first (DATA-13: the number is
+ * the backend's). A body that declares no length is not refused on that alone —
+ * a proxy between the browser and this function may drop the header — and the
+ * module still enforces the photograph's ceiling once it is read.
+ */
+async function refusedBySize(request: Request): Promise<Response | null> {
+  const length = declaredLength(request);
+  if (length === null) return null;
+
+  const offer = await fetchTryOnOffer();
+  if (!offer.ok) {
+    logApiError('api:try-on:offer', offer.error); // ERR-10
+    return new Response(null, { status: 502, headers: NO_STORE });
+  }
+
+  const ceiling = offer.value.maxPhotoBytes + MULTIPART_ALLOWANCE_BYTES;
+  // A refused photograph is the customer's to fix, so it is the route's 400.
+  return length > ceiling ? new Response(null, { status: 400, headers: NO_STORE }) : null;
+}
 
 export async function POST(request: Request): Promise<Response> {
   // D1 — a Route Handler never renders the root layout, so it arms its own
@@ -38,12 +67,15 @@ export async function POST(request: Request): Promise<Response> {
    */
   if (!isSameOrigin(request)) return new Response(null, { status: 403, headers: NO_STORE });
 
-  const form = await request.formData();
-  const productId = form.get('productId');
-  const photo = form.get('photo');
+  const oversized = await refusedBySize(request);
+  if (oversized !== null) return oversized;
+
+  // ERR-04 — a body that is not multipart, or arrives cut short, is a 400, never a 500.
+  const form = await readFormBody(request);
+  const photo = form?.get('photo') ?? null;
 
   // SEC-02: untrusted input, and a form entry is a File OR a string.
-  if (photo === null || typeof photo === 'string') {
+  if (form === null || photo === null || typeof photo === 'string') {
     return new Response(null, { status: 400, headers: NO_STORE });
   }
 
@@ -52,7 +84,7 @@ export async function POST(request: Request): Promise<Response> {
    * validates the shape and brands it, so what reaches the caller is a
    * `ProductId` and not a string that happens to look like one (TS-12).
    */
-  const parsedId = productIdSchema.safeParse(productId);
+  const parsedId = productIdSchema.safeParse(form.get('productId'));
   if (!parsedId.success) return new Response(null, { status: 400, headers: NO_STORE });
 
   const result = await generateTryOn(parsedId.data, photo);
@@ -61,8 +93,9 @@ export async function POST(request: Request): Promise<Response> {
     logApiError('api:try-on', result.error); // ERR-10
 
     /*
-     * A refused photograph is the customer's to fix and is passed through as a
-     * 400; everything else is ours and is not described to them (ERR-11,
+     * A refused photograph is the customer's to fix: the module answers the
+     * contract's 422, `apiRequest` reads it as VALIDATION, and it is passed on
+     * as a 400. Everything else is ours and is not described to them (ERR-11,
      * SEC-07). The interface has its own copy for both.
      */
     const status = result.error.kind === 'VALIDATION' ? 400 : 502;

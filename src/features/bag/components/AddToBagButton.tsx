@@ -1,17 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
-
-import { useMutation } from '@tanstack/react-query';
-
 import { Button } from '@/components/ui/button';
 import type { Messages } from '@/i18n/messages/en';
-import { unwrap } from '@/lib/result';
-import { formatTemplate } from '@/lib/utils/format';
 
-import { addToBag } from '../api/bag-browser';
-import type { AddToBagRequest, AddToBagResult } from '../schemas/bag-write.schema';
-import { useBag } from './BagProvider';
+import { useAddToBag } from '../hooks/use-add-to-bag';
+import type { AddToBagRequest } from '../schemas/bag-write.schema';
 
 export interface AddToBagButtonProps {
   /** `null` until every piece has a size — §16's first invariant, upstream. */
@@ -30,60 +23,13 @@ export interface AddToBagButtonProps {
  * so the bag exports this and the buy box renders it as a slot, exactly as the
  * header does with the catalogue's search field.
  */
-/**
- * A synchronous latch against double submission (FORM-06).
- *
- * `disabled={isPending}` is NOT enough on its own, and the gap is easy to miss:
- * `isPending` only becomes true after React re-renders, so two clicks landing
- * in the same tick — a double-click, an impatient tap, a trackpad that bounces —
- * both pass the check and both fire. Measured on the product page: one press
- * produced two identical POSTs and a quantity of 2.
- *
- * A ref flips synchronously, inside the handler, before either can proceed.
- */
 export function AddToBagButton({
   request,
   isSoldOut,
   messages,
   disabledHint,
 }: AddToBagButtonProps) {
-  const t = messages.bag;
-  const { open, onSummary } = useBag();
-  const [notice, setNotice] = useState<string | null>(null);
-  const inFlight = useRef(false);
-
-  const add = useMutation({
-    mutationFn: (body: AddToBagRequest) => unwrap(addToBag(body)),
-    onSuccess: (result: AddToBagResult) => {
-      /*
-       * §7.1 — the refusal names the piece, so the customer is told "Shalwar in
-       * size L is no longer available" rather than that the set is unavailable
-       * and left to work out which part.
-       */
-      if (result.kind === 'UNAVAILABLE') {
-        setNotice(
-          formatTemplate(t.unavailable, { piece: result.pieceName, size: result.sizeLabel }),
-        );
-        return;
-      }
-
-      // §34 — said as what to DO; the reason is deliberately not sent.
-      if (result.kind === 'MEASUREMENTS_REFUSED') return setNotice(t.measurementsRefused);
-
-      setNotice(null);
-      /*
-       * DATA-06 — the response IS the refreshed bag, so the cache is set from
-       * it rather than invalidated; no second round trip, and no window where
-       * the panel slides open showing the pre-add contents.
-       */
-      onSummary(result.summary);
-      open();
-    },
-    onError: () => {
-      // ERR-11 / SEC-07: our copy, never the upstream error text.
-      setNotice(t.addFailed);
-    },
-  });
+  const { add, isPending, notice } = useAddToBag(messages);
 
   return (
     <div className="flex flex-col gap-2">
@@ -91,16 +37,12 @@ export function AddToBagButton({
         type="button"
         size="lg"
         disabled={isSoldOut || request === null}
-        isLoading={add.isPending}
+        /* Busy but ENABLED: disabling it dropped the focus it held, so the bag
+           panel opened with nothing to hand focus back to on closing. The latch
+           in `useAddToBag` refuses a second press instead. */
+        isBusy={isPending}
         onClick={() => {
-          // See `inFlight` above: the guard is synchronous on purpose.
-          if (request === null || inFlight.current) return;
-          inFlight.current = true;
-          add.mutate(request, {
-            onSettled: () => {
-              inFlight.current = false;
-            },
-          });
+          if (request !== null) add(request);
         }}
       >
         {isSoldOut ? messages.product.productSoldOut : messages.product.addToBag}

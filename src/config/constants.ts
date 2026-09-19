@@ -12,6 +12,17 @@
 export const CATALOGUE_REVALIDATE_SECONDS = 300;
 
 /**
+ * §28.2's WhatsApp sharing: WhatsApp's own "click to chat" address, which opens a
+ * message with `?text=` already written and lets the customer choose who gets
+ * it. No number is named, so nothing is sent to the store and no script of
+ * WhatsApp's runs on the page — it is an ordinary link out.
+ *
+ * The Contact us page uses the same address with the store's own number after
+ * it, which opens a chat WITH the store instead (`contact-links.ts`).
+ */
+export const WHATSAPP_SHARE_URL = 'https://wa.me/';
+
+/**
  * How long the frontend waits for a try-on image, in milliseconds.
  *
  * The global `JAVA_API_TIMEOUT_MS` is 10s, which is right for every other call

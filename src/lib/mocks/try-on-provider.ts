@@ -130,6 +130,27 @@ function firstImagePart(payload: z.infer<typeof providerResponseSchema>): ImageP
   return null;
 }
 
+/** The vendor's request dialect: the instruction, then the customer, then the garment. */
+function requestBodyFor(request: RenderRequest) {
+  const inline = (image: ImagePayload) => ({
+    inlineData: { mimeType: image.mimeType, data: Buffer.from(image.bytes).toString('base64') },
+  });
+
+  return {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: `${INSTRUCTION}\n\nThe garment is: ${request.garmentDescription}.` },
+          inline(request.correctedPhoto),
+          inline(request.productImage),
+        ],
+      },
+    ],
+    generationConfig: { responseModalities: ['IMAGE'] },
+  };
+}
+
 /**
  * The adapter. It holds the credential, speaks the vendor's dialect, and
  * converts everything — transport failure, refusal, a well-formed response with
@@ -144,30 +165,6 @@ export const imageModelProvider: TryOnProvider = {
 
     const url = `${PROVIDER_ORIGIN}/v1beta/models/${serverEnv.TRY_ON_PROVIDER_MODEL}:generateContent`;
 
-    const body = {
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: `${INSTRUCTION}\n\nThe garment is: ${request.garmentDescription}.` },
-            {
-              inlineData: {
-                mimeType: request.correctedPhoto.mimeType,
-                data: Buffer.from(request.correctedPhoto.bytes).toString('base64'),
-              },
-            },
-            {
-              inlineData: {
-                mimeType: request.productImage.mimeType,
-                data: Buffer.from(request.productImage.bytes).toString('base64'),
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: { responseModalities: ['IMAGE'] },
-    };
-
     /*
      * ERR-05(1): fetch signals transport failure — and abort — only by
      * rejecting. Converted to a value here, never propagated as a throw.
@@ -175,7 +172,7 @@ export const imageModelProvider: TryOnProvider = {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestBodyFor(request)),
       signal,
     }).then<Response | null, null>(
       (result) => result,

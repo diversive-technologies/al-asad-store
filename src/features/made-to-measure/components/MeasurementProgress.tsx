@@ -39,8 +39,8 @@ export function MeasurementProgress({
         })}
       </p>
       <div className="bg-surface-strong rounded-pill h-px overflow-hidden">
-        {/* STY-01a — a continuous 0–100 runtime value, so it travels as a custom
-            property rather than as a style declaration. */}
+        {/* STY-01a — a continuous 0–100 runtime value travels as a custom
+            property; the `as` is TS-03(4), a custom property on `style`. */}
         <div
           className="mm-progress-fill"
           style={{ '--mm-progress': `${String((done / total) * 100)}%` } as CSSProperties}

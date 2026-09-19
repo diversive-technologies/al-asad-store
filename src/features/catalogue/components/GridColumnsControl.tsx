@@ -2,9 +2,10 @@
 
 import type { ComponentType } from 'react';
 
+import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 import { cn } from '@/lib/utils/cn';
-import { formatTemplate } from '@/lib/utils/format';
+import { formatNumber, formatTemplate } from '@/lib/utils/format';
 import { Columns2, Columns3, Square } from '@/lib/vendor/icons';
 
 import { MOBILE_COLUMN_OPTIONS, type MobileColumns } from '../lib/grid-columns';
@@ -36,7 +37,7 @@ const ICONS: Record<MobileColumns, ComponentType<{ className?: string }>> = {
  * views of one thing, which is what a radio group means, and it gives arrow-key
  * navigation between the options for free.
  */
-export function GridColumnsControl({ messages }: { messages: Messages }) {
+export function GridColumnsControl({ locale, messages }: { locale: Locale; messages: Messages }) {
   const t = messages.catalogue;
   const { columns, setColumns } = useGridColumns();
 
@@ -58,7 +59,7 @@ export function GridColumnsControl({ messages }: { messages: Messages }) {
             aria-checked={isActive}
             /* A11Y-04: an icon-only control still has to say what it does, and
                the count is what distinguishes the three. */
-            aria-label={formatTemplate(t.layoutOption, { count: String(option) })}
+            aria-label={formatTemplate(t.layoutOption, { count: formatNumber(option, locale) })}
             onClick={() => {
               setColumns(option);
             }}

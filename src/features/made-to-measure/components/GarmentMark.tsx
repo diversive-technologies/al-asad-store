@@ -33,8 +33,8 @@ export function GarmentMark({ garment }: GarmentMarkProps) {
     <svg
       viewBox={`0 0 ${String(drawing.width)} ${String(drawing.height)}`}
       className="garment-mark"
-      /* STY-01a — the ratio is the drawing's own viewBox, which is data, exactly
-         as `.gf-stage`'s `--gf-ratio` is. */
+      /* STY-01a — the ratio is the drawing's own viewBox, as `.gf-stage`'s
+         `--gf-ratio` is; the `as` is TS-03(4), a custom property on `style`. */
       style={
         {
           '--gm-ratio': `${String(drawing.width)} / ${String(drawing.height)}`,

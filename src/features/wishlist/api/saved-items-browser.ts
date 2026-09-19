@@ -1,7 +1,17 @@
 import { ROUTES } from '@/config/routes';
+import { fetchWithContract } from '@/lib/api/browser-fetch';
 import { err, ok, type Result } from '@/lib/result';
 
-import { savedItemsSchema, type SavedItems } from '../schemas/saved-items.schema';
+import type { SavedItems } from '../schemas/saved-items.schema';
+
+/*
+ * Deliberate code split (IMP-01a, PERF-10). A signed-in customer's saved list
+ * is read on every page, by the provider in the root layout that carries a
+ * browser's list into the account, so a static import of its schema made Zod
+ * first-load JavaScript on every route. It arrives with the request instead
+ * (`fetchWithContract` has the reasoning).
+ */
+const loadSchema = () => import('../schemas/saved-items.schema');
 
 export interface SavedItemsError {
   /** `SIGNED_OUT` — there is no account to hold a list; the browser keeps its own. */
@@ -18,24 +28,22 @@ export interface SavedItemsError {
  * ERR-05(1) / ERR-01 — a rejected fetch becomes a value; no try/catch for flow.
  */
 async function call(path: string, init: RequestInit): Promise<Result<SavedItems, SavedItemsError>> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { Accept: 'application/json', ...init.headers },
-  }).then<Response | null, null>(
-    (result) => result,
-    () => null,
+  const [response, contract] = await fetchWithContract(
+    path,
+    { ...init, headers: { Accept: 'application/json', ...init.headers } },
+    loadSchema,
   );
 
   if (response === null) return err({ kind: 'UNREACHABLE' });
   if (response.status === 401) return err({ kind: 'SIGNED_OUT' });
-  if (!response.ok) return err({ kind: 'UNREACHABLE' });
+  if (!response.ok || contract === null) return err({ kind: 'UNREACHABLE' });
 
   const payload: unknown = await response.json().then<unknown, null>(
     (value: unknown) => value,
     () => null,
   );
 
-  const parsed = savedItemsSchema.safeParse(payload);
+  const parsed = contract.savedItemsSchema.safeParse(payload);
   return parsed.success ? ok(parsed.data) : err({ kind: 'UNREACHABLE' });
 }
 

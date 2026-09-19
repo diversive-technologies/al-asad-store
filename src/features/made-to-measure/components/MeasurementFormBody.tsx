@@ -7,11 +7,10 @@ import { formView } from '../lib/form-view';
 import { requiredIds } from '../lib/measurement-set';
 import type { StudioSet } from '../lib/studio-set';
 import type { SaveProblem } from '../lib/studio-step';
-import { MeasurementErrorSummary } from './MeasurementErrorSummary';
 import { MeasurementFieldsets } from './MeasurementFieldsets';
 import { MeasurementProgress } from './MeasurementProgress';
 import { MeasurementStepper } from './MeasurementStepper';
-import { NoteSummary } from './NoteSummary';
+import { MeasurementSummaries } from './MeasurementSummaries';
 import { StudioProblemNotice } from './StudioProblemNotice';
 import type { StudioFlow } from './studio-flow';
 import { UnitToggle } from './UnitToggle';
@@ -55,7 +54,12 @@ export function MeasurementFormBody({
   );
 
   return (
-    <form onSubmit={flow.submitForCheck} noValidate className="mt-10 flex flex-col gap-8">
+    <form
+      onSubmit={flow.submitForCheck}
+      onFocus={measuring.warmUp}
+      noValidate
+      className="mt-10 flex flex-col gap-8"
+    >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <UnitToggle unit={measuring.unit} onChange={measuring.changeUnit} messages={messages} />
         <MeasurementProgress
@@ -66,25 +70,7 @@ export function MeasurementFormBody({
         />
       </div>
 
-      {view.errorGroups.length === 0 ? null : (
-        <MeasurementErrorSummary
-          groups={view.errorGroups}
-          onJump={flow.jump}
-          summaryRef={measuring.summaryRef}
-          messages={messages}
-        />
-      )}
-
-      {view.noteGroups.length === 0 ? null : (
-        <NoteSummary
-          groups={view.noteGroups}
-          onJump={flow.jump}
-          summaryRef={notes.summaryRef}
-          messages={messages}
-          outstanding={notes.outstanding}
-          source={studio.source}
-        />
-      )}
+      <MeasurementSummaries view={view} flow={flow} source={studio.source} />
 
       <MeasurementFieldsets studio={studio} flow={flow} view={view} />
 

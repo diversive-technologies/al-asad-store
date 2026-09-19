@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils/cn';
 import { ChevronLeft, ChevronRight } from '@/lib/vendor/icons';
 import { formatNumber, formatPlural } from '@/lib/utils/format';
 
-import { setPage, toQueryString } from '../lib/search-params';
+import { setPage } from '../lib/query-changes';
+import { toQueryString } from '../lib/search-params';
 import type { CatalogueQuery } from '../schemas/search.schema';
 
 export interface PaginationProps {

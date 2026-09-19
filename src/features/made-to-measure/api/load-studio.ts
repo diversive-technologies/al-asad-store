@@ -8,7 +8,8 @@ import { logApiError, logContentIssue } from '@/lib/utils/log';
 
 import { sanitizeMarks } from '../lib/marks';
 import { settleStudioStyle } from '../lib/studio-product';
-import { joinCopy, type StudioSet, type StyleChoice } from '../lib/studio-set';
+import { joinCopy } from '../lib/studio-set';
+import type { StudioData } from '../lib/studio-shown';
 import type { CaptureSource } from '../schemas/measurement-set.schema';
 import { fetchMeasurementCopy, fetchMeasurementSet, fetchStyleOffers } from './fetch-studio';
 import { tailoredProduct } from './tailored-product';
@@ -21,11 +22,6 @@ export interface StudioRequest {
   readonly source: CaptureSource | null;
   /** §34 — the product this was opened from, as a slug. */
   readonly product: string | null;
-}
-
-export interface StudioData {
-  readonly studio: StudioSet;
-  readonly choice: StyleChoice;
 }
 
 export type StudioUnavailable = 'UNAVAILABLE';

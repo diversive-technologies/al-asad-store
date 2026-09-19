@@ -4,9 +4,10 @@ import { addItem, createCart, removeLine, resetCarts, summaryFor, updateQuantity
 import { reservationLedger, resetReservations } from './bag-reservations';
 import { CATALOGUE } from './catalogue-db';
 import { placeOrder, quoteFor, resetOrders, type PlaceInput } from './checkout-db';
+import { onHandFor } from './inventory-db';
 import { styleOfferFor } from './measurement-sets-db';
 import { saveProfile, type ProfileOwnerRow, type SubmissionRow } from './profiles-db';
-import { onHandFor, toProductDetail } from './product-detail-db';
+import { toProductDetail } from './product-detail-db';
 
 /**
  * §34.8 — a garment being CUT, in the bag and through to the order.

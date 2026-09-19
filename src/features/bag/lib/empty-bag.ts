@@ -16,6 +16,7 @@ import type { BagSummary } from '../schemas/bag.schema';
  */
 export const EMPTY_BAG: BagSummary = {
   lines: [],
+  heldUntil: null,
   itemCount: 0,
   pricing: {
     subtotalMinor: 0,

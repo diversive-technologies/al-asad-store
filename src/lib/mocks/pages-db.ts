@@ -1,28 +1,19 @@
 import type { Locale } from '@/i18n/locales';
 
+import type { StaticPagePayload } from './page-authoring';
+import { POLICY_PAGES } from './policy-pages-db';
+import { STORE_PAGES } from './store-pages-db';
+
 /**
- * D1 — the four help pages of section 28.4.
+ * D1 — §21's pages: the four help pages of §28.4, here, and its static pages —
+ * the store's information and policy pages — in `store-pages-db.ts` and
+ * `policy-pages-db.ts`. One slug namespace, served by one `page(slug, locale)`.
  *
- * Section 21's invariant: every page exists in both locales, and a missing Urdu
- * version renders the English text rather than an empty page. That fallback is
- * implemented in `pageFor` below rather than left to the interface, because it
- * is a property of the content service, not of the component rendering it.
+ * Section 21's invariant: every page exists in both locales. Here every page is
+ * authored in both, so there is nothing to fall back from; §21's "a missing Urdu
+ * version renders the English text" is the content service's to implement once
+ * pages are edited in it, and `store-pages-db.test.ts` pins the Urdu that exists.
  */
-
-interface PageBlockPayload {
-  kind: 'HEADING' | 'PARAGRAPH' | 'DEFINITION';
-  id: string;
-  text?: string;
-  term?: string;
-  description?: string;
-}
-
-export interface StaticPagePayload {
-  slug: string;
-  title: string;
-  intro: string;
-  blocks: PageBlockPayload[];
-}
 
 const FABRIC_TERMS = [
   {
@@ -107,6 +98,8 @@ function simplePage(
 }
 
 const PAGES: Record<string, (locale: Locale) => StaticPagePayload> = {
+  ...STORE_PAGES,
+  ...POLICY_PAGES,
   'fabric-glossary': fabricGlossary,
   'payment-guide': simplePage(
     'payment-guide',
@@ -119,10 +112,12 @@ const PAGES: Record<string, (locale: Locale) => StaticPagePayload> = {
       en: [
         'Cash on delivery is available across Pakistan, up to a value limit shown at checkout.',
         'Card and wallet payments are authorised before the order is confirmed. If a payment does not complete, your bag is kept and nothing is charged.',
+        'Bank transfer is paid after you place the order. Your order confirmation shows the account to pay into and the amount, and your order number is the reference to write on the transfer.',
       ],
       ur: [
         'کیش آن ڈیلیوری پورے پاکستان میں دستیاب ہے، ایک مقررہ حد تک جو چیک آؤٹ پر دکھائی جاتی ہے۔',
         'کارڈ اور والٹ کی ادائیگی آرڈر کی تصدیق سے پہلے منظور کی جاتی ہے۔ اگر ادائیگی مکمل نہ ہو تو آپ کا تھیلا محفوظ رہتا ہے اور کوئی رقم نہیں کٹتی۔',
+        'بینک ٹرانسفر کی ادائیگی آرڈر دینے کے بعد کی جاتی ہے۔ آرڈر کی تصدیق پر وہ اکاؤنٹ اور رقم دکھائی جاتی ہے جس میں ادائیگی کرنی ہے، اور ٹرانسفر کے حوالے میں آپ کا آرڈر نمبر لکھا جاتا ہے۔',
       ],
     },
   ),

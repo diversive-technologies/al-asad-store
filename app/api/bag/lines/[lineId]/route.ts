@@ -1,9 +1,11 @@
 import { readCartId, updateQuantity } from '@/features/bag';
 import { updateQuantityRequestSchema } from '@/features/bag/contract';
 import { getLocale } from '@/i18n';
-import type { CartLineId } from '@/lib/domain/ids';
+import { cartLineIdSchema } from '@/lib/domain/ids';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
+import { isSameOrigin } from '@/lib/utils/request';
+import { NO_STORE, readJsonBody } from '@/lib/utils/route';
 
 /**
  * §16 `updateQuantity(cart, line, qty)`.
@@ -17,8 +19,6 @@ import { logApiError } from '@/lib/utils/log';
  */
 export const dynamic = 'force-dynamic';
 
-const NO_STORE = { 'Cache-Control': 'no-store' } as const;
-
 interface RouteContext {
   /** NEXT-03: dynamic params are a Promise in Next.js 16. */
   params: Promise<{ lineId: string }>;
@@ -27,28 +27,25 @@ interface RouteContext {
 export async function PATCH(request: Request, context: RouteContext): Promise<Response> {
   await ensureMockServer();
 
+  // SEC-08 — a write, so another origin is refused.
+  if (!isSameOrigin(request)) return new Response(null, { status: 403, headers: NO_STORE });
+
+  // SEC-02 — the path segment is untrusted and goes into a backend path, so it
+  // is parsed as the id it claims to be rather than cast to one (TS-03).
+  const lineId = cartLineIdSchema.safeParse((await context.params).lineId);
+  if (!lineId.success) return new Response(null, { status: 400, headers: NO_STORE });
+
   const cartId = await readCartId();
-  if (cartId === null) return new Response(null, { status: 404 });
+  if (cartId === null) return new Response(null, { status: 404, headers: NO_STORE });
 
-  const body: unknown = await request.json().then<unknown, null>(
-    (value: unknown) => value,
-    () => null,
-  );
+  const parsed = updateQuantityRequestSchema.safeParse(await readJsonBody(request));
+  if (!parsed.success) return new Response(null, { status: 400, headers: NO_STORE });
 
-  const parsed = updateQuantityRequestSchema.safeParse(body);
-  if (!parsed.success) return new Response(null, { status: 400 });
-
-  const { lineId } = await context.params;
-  const result = await updateQuantity(
-    cartId,
-    lineId as CartLineId,
-    parsed.data.quantity,
-    await getLocale(),
-  );
+  const result = await updateQuantity(cartId, lineId.data, parsed.data.quantity, await getLocale());
 
   if (!result.ok) {
     logApiError('api:bag:patch', result.error); // ERR-10
-    return new Response(null, { status: 502 });
+    return new Response(null, { status: 502, headers: NO_STORE });
   }
 
   // Raising a quantity runs the same §7.1 transaction as adding, so the union

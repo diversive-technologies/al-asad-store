@@ -1,3 +1,6 @@
+import type { Locale } from '@/i18n/locales';
+import { formatPlural } from '@/lib/utils/format';
+
 import type { ProductCard } from '../schemas/product-card.schema';
 import type { Suggestions } from '../schemas/search.schema';
 
@@ -11,6 +14,20 @@ import type { Suggestions } from '../schemas/search.schema';
  * arrays would mean the keyboard handler had to know the grouping, and would get
  * the boundary between them wrong.
  */
+
+/**
+ * Section 15's answer when the suggestion index cannot be reached: nothing to
+ * offer. Browsing must never depend on a secondary system being healthy, so the
+ * BFF answers this rather than a 5xx — and it is typed `Suggestions`, so it
+ * cannot drift from the schema the panel parses it with. It used to omit
+ * `refinements`, which turned a down index into a contract violation.
+ */
+export const EMPTY_SUGGESTIONS: Suggestions = {
+  terms: [],
+  products: [],
+  refinements: [],
+  collection: null,
+};
 
 /**
  * Where choosing a row takes the reader.
@@ -70,6 +87,23 @@ export function toSuggestionOptions(
   }));
 
   return [...terms, ...products];
+}
+
+/**
+ * What the search panel's live region says about its products (§30.3): nothing
+ * until an answer has arrived, then how many are SHOWN.
+ *
+ * Nothing while the answer is on its way or could not be had, because the list
+ * is empty then and a count would announce "0" beside a visible "Loading…".
+ * "Shown", because the panel draws at most four however many matched, and a
+ * count of the cards claimed as the number of results was wrong past four.
+ */
+export function productsShownStatus(
+  suggestions: Pick<Suggestions, 'products'> | undefined,
+  forms: Readonly<Record<string, string>>,
+  locale: Locale,
+): string {
+  return suggestions === undefined ? '' : formatPlural(forms, suggestions.products.length, locale);
 }
 
 /**

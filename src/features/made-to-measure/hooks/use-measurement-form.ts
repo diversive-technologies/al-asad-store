@@ -1,23 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
+import { useState, type FormEvent, type RefObject } from 'react';
 
-import { useForm, useWatch, type UseFormReturn } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, useWatch, type FieldErrors, type UseFormReturn } from 'react-hook-form';
 
 import type { MeasurementPointId } from '@/lib/domain/ids';
 
-import { takenIds, type MeasurementEntries } from '../lib/entries';
+import { emptyEntry, takenIds, type MeasurementEntries } from '../lib/entries';
 import type { FieldProblem } from '../lib/field-problems';
+import { measurementValidation } from '../lib/measurement-validation';
 import { DEFAULT_UNIT, type Unit } from '../lib/units';
-import {
-  buildMeasurementSchema,
-  emptyEntry,
-  type MeasurementEntry,
-} from '../schemas/measurement.schema';
+import type { MeasurementEntry } from '../schemas/measurement.schema';
 import type { MeasurementPoint } from '../schemas/measurement-set.schema';
 import type { Finding, TypedPointEntry } from '../schemas/profile.schema';
-import { useServerFindings } from './use-server-findings';
+import { useServerFindings, type UseServerFindingsResult } from './use-server-findings';
 import type { PlacedFigure } from './use-unit-conversion';
 import { useSummarySubmit } from './use-summary-submit';
 import { useUnitConversion } from './use-unit-conversion';
@@ -48,6 +44,27 @@ export interface UseMeasurementFormResult {
   readonly judgeAgain: () => void;
   /** Places the server's refusals on their fields, and lands focus on the summary. */
   readonly showFindings: (findings: readonly Finding[], sent: readonly TypedPointEntry[]) => void;
+  /** Starts the validation's download; the form calls it when first focused. */
+  readonly warmUp: () => void;
+}
+
+/* Why each field with an error has one. A server finding shows while it still
+   stands (`useServerFindings`); one whose figures have changed since is simply not
+   shown, whatever the form still holds. */
+function problemsOf(
+  points: readonly MeasurementPoint[],
+  errors: FieldErrors<MeasurementEntry>,
+  findings: UseServerFindingsResult,
+): ReadonlyMap<MeasurementPointId, FieldProblem> {
+  return new Map(
+    points.flatMap((point): (readonly [MeasurementPointId, FieldProblem])[] => {
+      const error = errors[point.id];
+      if (error === undefined) return [];
+      if (error.type !== 'server') return [[point.id, 'RANGE']];
+      const finding = findings.standingOn(point.id);
+      return finding === undefined ? [] : [[point.id, finding]];
+    }),
+  );
 }
 
 /**
@@ -68,9 +85,10 @@ export function useMeasurementForm(
   served: readonly MeasurementPoint[],
 ): UseMeasurementFormResult {
   const [unit, setUnit] = useState<Unit>(DEFAULT_UNIT);
+  const validation = measurementValidation(points, unit);
 
   const form = useForm<MeasurementEntry>({
-    resolver: zodResolver(buildMeasurementSchema(points, unit)),
+    resolver: validation.resolver,
     defaultValues: emptyEntry(points),
     // Nothing goes red until a check is asked for; after that, fixes are judged as typed.
     mode: 'onSubmit',
@@ -89,31 +107,9 @@ export function useMeasurementForm(
     setUnit,
   );
   const findings = useServerFindings(form, points, values, unit);
-
-  /* A server finding shows while it still stands (`useServerFindings`); one whose
-     figures have changed since is simply not shown, whatever the form still holds. */
-  const problems = new Map<MeasurementPointId, FieldProblem>(
-    points.flatMap((point): (readonly [MeasurementPointId, FieldProblem])[] => {
-      const error = form.formState.errors[point.id];
-      if (error === undefined) return [];
-      if (error.type !== 'server') return [[point.id, 'RANGE']];
-      const finding = findings.standingOn(point.id);
-      return finding === undefined ? [] : [[point.id, finding]];
-    }),
-  );
+  const problems = problemsOf(points, form.formState.errors, findings);
   const errorIds = [...problems.keys()];
   const { submit, summaryRef, requestSummaryFocus } = useSummarySubmit(form, errorIds.length);
-
-  /* STATE-04 — a unit switch changes what every figure means to the schema, so
-     once a check has been asked for, the errors on screen are judged again in the
-     new unit. An effect because the resolver that judges them is the NEXT
-     render's; the ref only remembers which unit was last judged. */
-  const judgedUnit = useRef(unit);
-  useEffect(() => {
-    if (judgedUnit.current === unit) return;
-    judgedUnit.current = unit;
-    if (form.formState.isSubmitted) void form.trigger();
-  }, [unit, form]);
 
   return {
     form,
@@ -136,5 +132,6 @@ export function useMeasurementForm(
     showFindings: (next, sent) => {
       if (findings.place(next, sent) > 0) requestSummaryFocus();
     },
+    warmUp: validation.warmUp,
   };
 }

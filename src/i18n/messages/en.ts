@@ -1,3 +1,5 @@
+import { enRootError } from './en-root-error';
+
 /**
  * SSOT-07 — THE copy registry. `en` is the shape-defining dictionary; every
  * other locale is typed against `Messages`, so a missing Urdu key is a compile
@@ -35,10 +37,20 @@ export const en = {
     languageGroupLabel: 'Language',
     loading: 'Loading…',
     close: 'Close',
-    retry: 'Try again',
+    retry: enRootError.retry,
+    /* A part of the page downloaded on demand (the bag panel, search, the
+       studio's review) whose code did not arrive. Said in its place, beside
+       Try again, so the page around it and anything typed into it stay. */
+    partUnavailable: 'This part of the page could not be loaded. Please try again.',
     viewAll: 'View all',
     submit: 'Submit',
     cancel: 'Cancel',
+    /* The name every breadcrumb trail carries, so a screen reader hears what the
+       navigation is rather than the title of the page it sits on. */
+    breadcrumbLabel: 'Breadcrumb',
+    /* Read after the name of a link that leaves the store in a new tab or app,
+       so nobody is taken somewhere they did not expect (SEC-09's links). */
+    opensInNewTab: '(opens in a new tab)',
   },
   product: {
     /* §34 — the made-to-measure fork under Add to bag. Drawn only when the
@@ -68,9 +80,21 @@ export const en = {
     imageAlt: 'Product photograph',
     galleryLabel: 'Product images',
     viewImage: 'View image {index}',
+    /*
+     * §28.2's full-screen view. `{index}` and `{count}` arrive formatted, `{name}`
+     * is the product as served. `openFullscreen` names the main photograph's
+     * button; `imagePosition` is read out politely as the frame changes.
+     */
+    openFullscreen: 'Open image {index} of {count} full screen',
+    fullscreenTitle: 'Photographs of {name}',
+    closeFullscreen: 'Close the full-screen view',
+    imagePosition: 'Image {index} of {count}',
     selectSizeHeading: 'Size',
     unifiedSizeHeading: 'Size for the whole set',
     perPieceHeading: 'Adjust individual pieces',
+    /* §28.2's size guide: the button beside a size selector, and the name of the
+       dialog it opens over the product page. */
+    sizeGuide: 'Size guide',
     sizeSoldOut: 'Sold out',
     sizeLowStock: 'Low stock',
     sizeUnknown: 'Availability unknown',
@@ -85,9 +109,29 @@ export const en = {
     codeLabel: 'Product code',
     estimatedDelivery: 'Estimated delivery',
     modelNote: 'Model is {height} cm and wears size {size}',
+    /*
+     * §28.2's sharing. `shareMessage` is the text WhatsApp opens with, already
+     * written: `{name}` the product as served, `{store}` the store's own name
+     * (`site.name`), `{url}` the product's canonical address. The customer can
+     * still change it before sending — nothing is sent by the store.
+     */
+    shareOnWhatsApp: 'Share on WhatsApp',
+    shareMessage: 'Have a look at {name} from {store}:\n{url}',
+    copyLink: 'Copy link',
+    linkCopied: 'Link copied.',
+    /* When the browser refuses to copy. Never silent: the link is shown instead. */
+    copyLinkManual: 'Your browser did not let us copy the link. Copy it from the box below.',
+    productLinkLabel: 'Link to this product',
     backToCatalogue: 'Back to the catalogue',
     notFoundHeading: 'We could not find that product',
-    notFoundBody: 'It may have sold out or the link may be out of date.',
+    /* Never "sold out": a sold-out product keeps its page, with Notify Me on it. */
+    notFoundBody: 'The link may be out of date, or this product is no longer offered.',
+    /* §28.2 — the related products at the foot of the page. A heading and nothing
+       else: which products, and why, is the backend's answer, so no sentence here
+       claims a reason ("similar", "matching") the rule may not have used. */
+    relatedHeading: 'You may also like',
+    /* A11Y-09 — the visually hidden heading over §28.2's information sections. */
+    infoHeading: 'Product details',
     fabricCalcHeading: 'Will this be enough fabric?',
     fabricCalcBody: 'Tell us your height and what you plan to have stitched.',
     fabricCalcHeight: 'Your height in centimetres',
@@ -98,6 +142,93 @@ export const en = {
     fabricCalcInsufficient: 'Not enough — about {shortfall} short.',
     fabricCalcUnavailable: 'We could not check that just now. Please try again.',
     fabricCalcNote: 'A guide, not a guarantee. Your tailor decides the final cut.',
+  },
+  /*
+   * §28.2's Notify Me, under a size selector that has sold-out sizes. §28.7's
+   * back-in-stock email is what answers it, and the BACKEND sends it when the
+   * size returns — so every sentence promises an email later and none says one
+   * has been sent. None says whether an address belongs to an account.
+   * `{product}` and `{piece}` arrive exactly as served (I18N-09); `{size}` is the
+   * size's own label. `lead` is a guest's line and `leadAccount` a signed-in
+   * customer's, who is written to at the address on the account.
+   */
+  backInStock: {
+    lead: 'Sold out in your size? Choose it and we will email you when it is back.',
+    leadAccount:
+      'Sold out in your size? Choose it and we will email the address on your account when it is back.',
+    sizeCta: 'Email me when size {size} is back',
+    formLead: 'Size {size} is sold out. Where should we email you when it is back?',
+    emailLabel: 'Email address',
+    emailHint: 'We use this address only to tell you this size is back.',
+    invalidEmail: 'Enter a valid email address.',
+    submit: 'Email me',
+    recordedProduct: 'We will email you when {product} is back in size {size}.',
+    recordedPiece: 'We will email you when the {piece} in {product} is back in size {size}.',
+    alreadyProduct: 'We already have a request to email you when {product} is back in size {size}.',
+    alreadyPiece:
+      'We already have a request to email you when the {piece} in {product} is back in size {size}.',
+    inStock: 'Size {size} can be bought again. The sizes have been refreshed so you can choose it.',
+    notOffered: 'Size {size} is no longer offered. Refresh the page to see the sizes there are.',
+    unreachable: 'We could not take your request just now. Please try again.',
+  },
+  /*
+   * §28.3's saved sizes. A size is saved only when a signed-in customer asks, per
+   * size chart, and it is used for ONE thing: choosing that size on a product page
+   * when the product comes in it and it is in stock. Nothing here says it filters
+   * listings (§28.6), chooses in the quick add (the tray only marks it) or adds
+   * anything to the bag. `{size}` and `{previous}` are sizes' own labels; `{sizeSet}`
+   * is the chart's name as served. `mark` sits under the saved size in a selector,
+   * and `sizeSavedName` is that size's whole name for a screen reader.
+   */
+  savedSizes: {
+    mark: 'Your size',
+    /* A size button's whole name when it is the saved one (I18N-06). */
+    sizeSavedName: '{size} — your saved size',
+    remember: 'Remember size {size}',
+    remembered:
+      'Size {size} is saved. On other products that come in it, we will choose it for you when it is in stock.',
+    rememberedInstead:
+      'Size {size} is saved in place of {previous}. On other products that come in it, we will choose it for you when it is in stock.',
+    isSaved: 'Size {size} is your saved size.',
+    prefilled: 'We have chosen your saved size. You can change it.',
+    rememberUnreachable: 'We could not save your size just now. Please try again.',
+    rememberGone:
+      'That size is no longer offered, so it cannot be saved. Refresh the page to see the sizes there are.',
+    signedOut: 'Your session has ended. Please sign in again to change your saved sizes.',
+    heading: 'Your saved sizes',
+    lead: 'On a product page we choose your saved size for you when the product comes in it and it is in stock. Nothing goes in your bag until you add it.',
+    empty:
+      'You have not saved a size yet. Choose a size on a product page and we will offer to remember it.',
+    guest:
+      'A saved size belongs to an account. Sign in, and a size you ask us to remember is chosen for you on product pages.',
+    unavailable:
+      'We could not reach your saved sizes just now. Anything you have saved is still on file — please try again in a moment.',
+    forget: 'Forget',
+    forgetLabel: 'Forget saved size {size} ({sizeSet})',
+    forgotten: 'Saved size forgotten.',
+    forgetGone:
+      'That saved size had already changed, perhaps in another tab. The list now shows what is saved.',
+    forgetUnreachable: 'We could not forget that size just now. Please try again.',
+  },
+  /* §28.4's help pages shown INSIDE another page — the size guide in a dialog on
+     the product page. On their own address a page needs no words of ours. */
+  help: {
+    openFullPage: 'Open this guide on its own page',
+    unavailable: 'This guide could not be loaded just now.',
+  },
+  /*
+   * The Contact us page's details, drawn from the client profile (`CLIENT.contact`)
+   * rather than from content. `hours` is one sentence with the day names and times
+   * already formatted for the reader's language (I18N-06, I18N-08).
+   */
+  storeContact: {
+    heading: 'How to reach us',
+    phoneLabel: 'Phone',
+    whatsAppLabel: 'WhatsApp',
+    emailLabel: 'Email',
+    addressLabel: 'Address',
+    hoursLabel: 'Hours',
+    hours: '{firstDay} to {lastDay}, {opens} to {closes}',
   },
   home: {
     metaTitle: 'Ethnic apparel, stitched and unstitched',
@@ -138,7 +269,14 @@ export const en = {
     forgotPassword: 'Forgot your password?',
     noAccount: 'Create an account',
     haveAccount: 'Already have an account?',
-    codeSent: 'If that number has an account, a code is on its way. It expires in five minutes.',
+    /*
+     * Unconditional, because it is true unconditionally: a code proves the number,
+     * so ANY number signs in with one and a new number becomes a new customer.
+     * "If that number has an account…" told a first-time customer to register
+     * first, for a rule no system applies — and it hid nothing, since every
+     * number was answered with the same sentence anyway.
+     */
+    codeSent: 'A code is on its way. It expires in five minutes.',
     /*
      * §11: "authentication responses never reveal whether an account exists", so
      * a wrong password, an unknown email and a locked account all say this.
@@ -161,6 +299,8 @@ export const en = {
     accountMenuLabel: 'Your account',
 
     signOut: 'Sign out',
+    signedOutStatus: 'You have signed out.',
+    signOutFailed: 'We could not sign you out just now. Please try again.',
     resetHeading: 'Reset your password',
     resetBody: 'Enter your email address and we will send you a link.',
     resetCta: 'Send reset link',
@@ -174,6 +314,14 @@ export const en = {
     paymentGuide: 'Payment guide',
     sizeGuide: 'Size guide',
     careGuide: 'Care guide',
+    /* §28.4's static pages: the store, and the terms it sells on. */
+    storeHeading: 'Our store',
+    aboutUs: 'About us',
+    contactUs: 'Contact us',
+    delivery: 'Delivery',
+    returns: 'Returns and exchanges',
+    termsOfSale: 'Terms of sale',
+    privacy: 'Privacy',
     rightsReserved: 'All rights reserved.',
   },
   bag: {
@@ -183,19 +331,34 @@ export const en = {
     title: 'Bag',
     emptyBody: 'Your bag is empty.',
     startShopping: 'Start shopping',
-    open: 'Open bag',
+    /* The header's bag button, count included, as ONE message (I18N-06): the
+       name and the count used to be two strings joined with a comma in the
+       component. I18N-07: both plural forms live here; nothing pluralises by hand. */
+    openWithCount: { one: 'Open bag, {count} item', other: 'Open bag, {count} items' },
     close: 'Close bag',
-    /* I18N-07: the registry carries both forms; nothing pluralises by hand. */
-    itemsOne: '1 item',
-    itemsOther: '{count} items',
     quantityLabel: 'Quantity',
     increase: 'Increase quantity',
     decrease: 'Decrease quantity',
     remove: 'Remove',
-    removeTitle: 'Remove this item?',
     removeBody: 'It will be released back into stock straight away.',
     removeConfirm: 'Remove it',
     removeCancel: 'Keep it',
+    /* Said aloud once a line is gone, because the line simply vanishes and focus
+       has moved on — a screen-reader user would otherwise be told nothing. */
+    removedStatus: '{item} removed from your bag.',
+    /* §30.3 — a quantity change is announced too: the count changes in place and
+       a screen-reader user would otherwise hear nothing. */
+    quantityStatus: 'Quantity of {item} is now {count}.',
+    /* §16 moveToWishlist — offered only to a signed-in customer, on a line picked
+       off the shelf. The line leaves the bag and the product is kept for later. */
+    moveToSaved: 'Move to saved items',
+    movedStatus: '{item} moved to your saved items.',
+    /* The line had already gone — another tab, or a lapsed hold — so nothing was saved. */
+    moveNotInBag: 'That item had already left your bag, so it was not saved.',
+    /* §34.8 — not offered on a cut line; this is the answer if a request asks anyway. */
+    moveNotMovable:
+      'An item being made to your measurements stays in your bag, because saving it would lose the measurements.',
+    moveSignedOut: 'Your session has ended. Sign in again to move items to your saved items.',
     subtotal: 'Subtotal',
     discount: 'Discount',
     delivery: 'Delivery',
@@ -203,10 +366,17 @@ export const en = {
     total: 'Total',
     freeDeliveryRemaining: 'Spend {amount} more for free delivery',
     freeDeliveryMet: 'You have free delivery',
+    /* The progress bar's name, true whether or not delivery is free yet; the
+       sentence above it says which. */
+    freeDeliveryProgressLabel: 'Progress towards free delivery',
     promoLabel: 'Promotional code',
     promoPlaceholder: 'Enter a code',
     promoApply: 'Apply',
     promoRemove: 'Remove code',
+    /* §30.3 — said once a code is applied or lifted, because the form and the
+       applied code swap places and nothing else says what happened. */
+    codeAppliedStatus: 'Code {code} applied.',
+    codeRemovedStatus: 'Code removed.',
     checkout: 'Go to checkout',
     /* §7.1: the refusal names the piece, so the copy has a slot for it. */
     unavailable: '{piece} in size {size} is no longer available.',
@@ -215,6 +385,10 @@ export const en = {
        the reason is not sent, and in every case the answer is the same. */
     measurementsRefused:
       'We could not use those measurements for this garment. Check them, save them again, then add it.',
+    /* §16 — an add refused on the product or the sizes it named: withdrawn since
+       the page loaded, or a size no longer offered. Same move whichever it was. */
+    selectionRefused:
+      'We could not add this as chosen. Refresh the page to see what is available now, then choose again.',
     updateFailed: 'We could not update your bag. Please try again.',
     unreachable: 'We could not reach your bag.',
     /* §28.2's durable hold, stated plainly rather than as a countdown. */
@@ -230,11 +404,14 @@ export const en = {
     heldInfoReserved:
       'These items are genuinely reserved. Nobody else can buy them while your bag holds them, even if they are the last ones in stock.',
     heldInfoExpiry:
-      'At that time the hold ends and the items go back on sale to everyone. They also leave your bag, so nothing sits there quietly out of stock.',
+      'When the hold on an item ends, it goes back on sale to everyone and leaves your bag, so nothing sits there quietly out of stock. The time shown is when the first hold ends.',
     heldInfoAction:
       'You can add them again afterwards if they are still available. Finishing checkout before then keeps them for good.',
+    /* True to §7.1: only the line that changed is re-reserved. This used to say
+       that changing the bag renewed "the hold", and the other lines lapsed on
+       their own clocks regardless. */
     heldInfoExtend:
-      'Changing your bag renews the hold, so you are not racing a clock while you shop.',
+      'Each item is held from when you last added it or changed its quantity, so changing one item renews the hold on that item only.',
     viewBag: 'View bag',
   },
   checkout: {
@@ -266,6 +443,11 @@ export const en = {
     emptyTitle: 'There is nothing to check out',
     emptyBody: 'Your bag is empty, so there is no order to place.',
     browse: 'Browse the catalogue',
+    /* ERR-02 — the quote could not be READ, which is not the same as an empty bag
+       and must never be told to someone as one. */
+    unreachableTitle: 'We could not load your checkout',
+    unreachableBody:
+      'The store could not be reached just now. Nothing has been ordered or charged — please try again in a moment.',
     /* §7.2 step 2 — the price moved, so the customer confirms the new one. */
     priceChangedTitle: 'The total has changed',
     priceChangedBody:
@@ -276,13 +458,20 @@ export const en = {
     backToBag: 'Back to the bag',
     failedTitle: 'We could not place your order',
     failed: 'We could not place your order. Nothing has been charged. Please try again.',
+    /* ERR-02 — no answer came back, which is not the same as a refusal: the order
+       may exist. Nothing here claims it failed or that nothing was charged. */
+    unconfirmedTitle: 'We could not confirm your order',
+    unconfirmedBody:
+      'The store did not answer in time, so your order may or may not have gone through. Please check your bag before placing it again: an order that went through empties it.',
     /* Errors, in the customer's words rather than the validator's (ERR-11). */
     nameInvalid: 'Please enter your full name.',
     mobileInvalid: 'Enter a mobile number like {example}.',
     emailInvalid: 'Enter a valid email address, or leave it blank.',
     addressInvalid: 'Please enter your address.',
     cityInvalid: 'Please enter your city.',
-    methodUnavailable: 'Not available for this order',
+    /* No method was CHOSEN. Its own words: a method the backend refused says why
+       beside the method itself. */
+    methodRequired: 'Choose how you would like to pay.',
     /* §34.7 — the cut cutoff, stated BEFORE payment and on the same screen as
        the price, which the spec asks for explicitly. */
     /* No COUNT in the heading: "one item" is false the moment somebody orders
@@ -299,17 +488,47 @@ export const en = {
       'You saved your measurements again after {items} went into your bag, and we will not cut it without you adding it again. In your bag it is marked — remove it, then add it again from its page.',
   },
   order: {
-    title: 'Order confirmed',
+    /* True in every state an order can be in. "Confirmed" was said of cash
+       orders awaiting confirmation and transfers awaiting payment (§6.6). */
+    title: 'Order placed',
     /* Prominent, because §28.3 tracks a guest order by exactly this. */
     numberLabel: 'Order number',
-    placedLabel: 'Placed',
+    placedOn: 'Placed: {date}',
     deliveringTo: 'Delivering to',
     paymentLabel: 'Payment',
     itemsHeading: 'What you ordered',
     total: 'Total',
+    /* I18N-06 — whole messages, so a translator owns the order and the marks. */
+    quantityTimes: '× {count}',
     giftNote: 'Wrapped as a gift',
+    giftMessageQuoted: '“{message}”',
     continueShopping: 'Continue shopping',
     notFound: 'We could not find that order.',
+    notFoundBody: 'Check the order number on your confirmation and try again.',
+    /* The tab's title, true whether the order or the lookup below is showing. */
+    pageTitle: 'Your order',
+    /*
+     * §28.3 — asked when nothing here shows who placed the order. The same words
+     * for a number that names no order, so the page never says which ones exist.
+     */
+    lookupHeading: 'Find your order',
+    lookupBody: 'Enter the mobile number this order was placed with to see it.',
+    lookupSubmit: 'Show my order',
+    lookupNotFound: 'We could not find an order with that number and mobile number.',
+    lookupFailed: 'We could not check that just now. Please try again.',
+    /*
+     * An order paid by transfer carries where to pay. Checkout promises "our
+     * account", so the confirmation has to name it — and the reference is the
+     * order number the customer already has.
+     */
+    transferHeading: 'Paying by bank transfer',
+    transferBody: 'Transfer the total to this account, with your order number as the reference.',
+    transferAmount: 'Amount',
+    transferReference: 'Reference',
+    transferBank: 'Bank',
+    transferAccountTitle: 'Account title',
+    transferAccountNumber: 'Account number',
+    transferIban: 'IBAN',
   },
   /**
    * §28.3's account area. A guest has one too: measurements save against this
@@ -338,6 +557,9 @@ export const en = {
     keptOnThisBrowser: 'These are kept on this browser only, and are not linked to an account.',
     savedOn: 'Saved on {date}, {path}.',
     openMeasurements: 'Open these measurements',
+    /* I18N-10 — a saved set's heading when the guide has no name for its style in
+       this language, or could not be read: never an empty heading. */
+    savedMeasurementsUntitled: 'Saved measurements',
     figuresUnavailable:
       'We could not load the measuring guide for these, so the figures are not shown here. They are still on file.',
     figuresNotAsked: {
@@ -356,6 +578,11 @@ export const en = {
     /* I18N-06 — the whole phrase, so a translation can put the count first. */
     ordersMoreItems: { one: '{item} and {count} more', other: '{item} and {count} more' },
     ordersView: 'View',
+    /* §28.3 — the history a page at a time, as links that work without JavaScript. */
+    ordersShowMore: 'Show more orders',
+    ordersShowOlder: 'Show older orders',
+    ordersBackToLatest: 'Back to your latest orders',
+    ordersNoneOlder: 'There are no older orders.',
     addressesHeading: 'Your addresses',
     addressesLead:
       'An address saved here is offered at checkout. Signing in is a placeholder while real accounts are built, so please do not save a real address yet.',
@@ -382,6 +609,13 @@ export const en = {
     addressEdit: 'Edit',
     addressMakeDefault: 'Make default',
     addressRemove: 'Remove',
+    /* A11Y-04 — every card repeats the three words above, so each button's NAME
+       says which address it acts on, and starts with the word on screen. */
+    addressEditLabel: 'Edit address: {recipient}, {line}',
+    addressMakeDefaultLabel: 'Make default address: {recipient}, {line}',
+    addressRemoveLabel: 'Remove address: {recipient}, {line}',
+    /* One line in the checkout picker; the separator is the language's own. */
+    addressInline: '{line}, {city}',
     recipientLabel: 'Who receives it',
     recipientHint: 'The name the courier will ask for.',
     addressUseSaved: 'Use a saved address',
@@ -425,6 +659,11 @@ export const en = {
       other: '{count} saved items are no longer available and are not shown.',
     },
     unreachable: 'We could not load your saved items. Please try again.',
+    /* Adding a saved product to the bag MOVES it: it leaves this list. Said aloud,
+       because the card simply disappears from the grid. */
+    movedToBag: '{item} moved to your bag.',
+    /* The add went in and the list could not be changed — both halves are true. */
+    movedToBagKept: '{item} is in your bag, but we could not take it off your saved items.',
     /* What this browser was holding, now kept with the account instead. */
     carried: {
       one: '{count} item you saved on this browser is now kept with your account.',
@@ -436,6 +675,8 @@ export const en = {
     title: 'Catalogue',
     breadcrumbHome: 'Home',
     productCount: { one: '{count} product', other: '{count} products' },
+    /* A11Y-09 — the visually hidden heading between the page's h1 and the cards. */
+    productsHeading: 'Products',
     noResultsHeading: 'Nothing matches those filters',
     noResultsBody: 'Try removing a filter, or browse the whole catalogue.',
     clearFilters: 'Clear all filters',
@@ -447,16 +688,23 @@ export const en = {
     layoutLabel: 'Grid layout',
     layoutOption: 'Show {count} per row',
     goToPage: { one: 'Go to page {count}', other: 'Go to page {count}' },
-    quickAdd: 'Quick add',
-    quickAddPending: 'Quick add arrives with the bag',
-    quickView: 'Quick view',
+    /*
+     * §30.3 — read by a polite live region after a filter, a sort or a page
+     * changes the listing. `{products}` is `productCount` already filled in, and
+     * `{filters}` the applied filters as the chips name them, joined as a list.
+     */
+    listingStatus: '{products}. Sorted by {sort}. Page {page} of {pages}.',
+    listingStatusFiltered: '{products} with {filters}. Sorted by {sort}. Page {page} of {pages}.',
     /* §28.1's card actions. */
     wishlistAdd: 'Save to wishlist',
     wishlistChangeFailed: 'We could not change your saved items. Please try again.',
-    wishlistRemove: 'Remove from wishlist',
     quickAddOpen: 'Choose a size',
     quickAddClose: 'Close sizes',
     quickAddFailed: 'Could not add. Please try again.',
+    /* §7.1 names the piece that ran out. Short for the tile, but a whole
+       sentence: "Kameez · M" alone never said the add had failed. */
+    quickAddUnavailable: '{piece} in {size} has just sold out.',
+    quickAddRefused: 'Not available as shown. Refresh the page.',
     previousImage: 'Previous image',
     nextImage: 'Next image',
     filtersHeading: 'Filters',
@@ -482,6 +730,8 @@ export const en = {
     priceUpTo: 'Up to {max}',
     sort: {
       label: 'Sort by',
+      /* The sort control's full name, as one message (I18N-06). */
+      trigger: '{label}: {value}',
       NEWEST: 'Newest',
       PRICE_ASC: 'Price: low to high',
       PRICE_DESC: 'Price: high to low',
@@ -500,7 +750,10 @@ export const en = {
     viewAllTerm: 'View all "{term}"',
     clear: 'Clear search',
     close: 'Close search',
-    resultCount: '{count} results',
+    /* §30.3 — read once the panel's answer arrives, and never while it is on its
+       way. It counts the products SHOWN: the panel draws at most four, however
+       many matched. */
+    resultCount: { one: '{count} product shown', other: '{count} products shown' },
     title: 'Search',
     inputLabel: 'Search products',
     placeholder: 'Boski, karandi, a product code…',
@@ -557,6 +810,15 @@ export const en = {
     phasePlacing: 'Placing the piece',
     resultHeading: 'You in this piece',
     resultAlt: 'A generated image of you wearing {product}',
+    /*
+     * With no provider connected the result is the garment's own catalogue
+     * photograph — the model it was shot on, NOT the customer. Heading, alt text
+     * and a visible line all say so, so nobody reads it as their own likeness.
+     */
+    sampleHeading: 'A sample, not your photo',
+    sampleAlt: 'The catalogue photograph of {product}, worn by the model it was shot on',
+    sampleLabel:
+      'Sample only. Try-on is not connected yet, so this is the catalogue photograph of the model this piece was shot on — not an image of you.',
     startAgain: 'Try another photo',
     unavailableDisabled:
       'Try-on is not switched on yet. Everything else on this page works as usual.',
@@ -590,6 +852,9 @@ export const en = {
     unavailable:
       'The measuring guide could not be loaded. You can try again, or shop in standard sizes meanwhile.',
     browseStandard: 'Shop standard sizes',
+    /* A switch of list whose read failed: the list in use stays, with the figures. */
+    listUnloaded:
+      'That measuring guide could not be loaded just now. The one below is the guide you were using, and your figures are still in it.',
     pageLeadCard: 'Copy the figures from your tailor’s card or note, exactly as they are written.',
     sourceLabel: 'How are you measuring?',
     sourceGarment: 'Copy a garment I own',
@@ -732,9 +997,20 @@ export const en = {
     stepDone: 'Done',
     stepPosition: '{current} of {total}',
   },
+  /*
+   * The store's own "not found" page, in the reader's language — the framework's
+   * default is English whatever the page's direction. Product and order pages
+   * say it in their own words (`product.notFound*`, `order.notFound*`).
+   */
+  notFound: {
+    heading: 'We could not find that page',
+    body: 'The link may be out of date, or the address may have been typed wrong.',
+    homeCta: 'Go to the homepage',
+    catalogueCta: 'Browse the catalogue',
+  },
   errors: {
     network: 'We could not reach the store. Please try again.',
-    unexpected: 'Something went wrong. Please try again.',
+    unexpected: enRootError.unexpected,
   },
 } as const;
 

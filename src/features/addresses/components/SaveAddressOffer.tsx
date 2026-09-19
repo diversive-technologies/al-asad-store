@@ -8,6 +8,7 @@ import type { Messages } from '@/i18n/messages/en';
 import type { AddressDetail } from '@/lib/domain/address';
 
 import { useAddresses } from '../hooks/use-addresses';
+import { holdsAddress } from '../lib/address-detail';
 import { addressRefusal } from '../lib/address-refusal';
 
 export interface SaveAddressOfferProps {
@@ -26,6 +27,11 @@ export interface SaveAddressOfferProps {
  * It draws nothing for a guest — there is no book to save into — and nothing
  * once the book already holds the same address, so nobody is invited to save a
  * second copy of what they picked from the picker a minute earlier.
+ *
+ * NOT until the book is known, either. `addresses` is empty until the read lands,
+ * so drawing the offer before then invites a save of an address the customer
+ * already has — and this page is bookmarkable by design, so a cold load is a
+ * first-class path rather than an edge.
  */
 export function SaveAddressOffer({ address, messages }: SaveAddressOfferProps) {
   const t = messages.account;
@@ -33,24 +39,8 @@ export function SaveAddressOffer({ address, messages }: SaveAddressOfferProps) {
   const book = useAddresses();
   const [saved, setSaved] = useState(false);
 
-  if (!isSignedIn) return null;
-  /*
-   * NOT until the book is known. `addresses` is empty until the read lands, so
-   * drawing the offer before then invites a save of an address the customer
-   * already has — and this page is bookmarkable by design, so a cold load is a
-   * first-class path rather than an edge.
-   */
-  if (!book.isReady) return null;
-
-  const held = book.addresses.some(
-    (one) =>
-      one.line === address.line &&
-      one.city === address.city &&
-      one.recipientName === address.recipientName &&
-      one.recipientMobile === address.recipientMobile,
-  );
-
-  if (held && !saved) return null;
+  if (!isSignedIn || !book.isReady) return null;
+  if (holdsAddress(book.addresses, address) && !saved) return null;
 
   if (saved) {
     /* A11Y-05: the outcome is announced, because the button it replaces was

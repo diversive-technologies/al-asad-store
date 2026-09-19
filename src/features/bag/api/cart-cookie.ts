@@ -2,9 +2,10 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 
+import { clientKey } from '@/config/client';
 import type { ApiError } from '@/lib/api/errors';
 import { ok, type Result } from '@/lib/result';
-import type { CartId } from '@/lib/domain/ids';
+import { cartIdSchema, type CartId } from '@/lib/domain/ids';
 import { capabilityCookieOptions } from '@/lib/utils/cookies';
 
 import { createCart } from './bag-server';
@@ -22,24 +23,28 @@ import { createCart } from './bag-server';
  * into the store from WhatsApp or an email must still have their bag, and a
  * bag id is not an authentication token. §28.2's guest checkout means this
  * cookie is the ONLY thing tying an anonymous customer to their reservations.
+ *
+ * D5: the name carries the client's key prefix rather than a brand written here.
  */
-const COOKIE_NAME = 'aa_cart';
+const COOKIE_NAME = clientKey('cart');
 
 /** Long enough to survive a browsing session and a night's sleep. The holds
  *  inside it expire on their own schedule (§7.1), which is the real limit. */
 const COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 /**
- * The stored id, or `null` when this browser has never had a bag.
+ * The stored id, or `null` when this browser has no bag this side can name.
  *
- * Deliberately NOT validated as a uuid here. A tampered or stale cookie is not
- * a client-side judgement call — the backend answers 404 for a cart it does not
- * have, and that is the only authority on whether an id is real (SEC-03).
+ * SEC-02: a cookie is untrusted input, so it is PARSED as the id the backend
+ * issued rather than cast to one — it goes into a backend path. A value that is
+ * not shaped like a cart id is treated as no cookie at all: the next add takes a
+ * fresh cart and overwrites it. Whether a well-shaped id names a REAL cart is
+ * still the backend's answer alone (SEC-03).
  */
 export async function readCartId(): Promise<CartId | null> {
   const store = await cookies();
-  const value = store.get(COOKIE_NAME)?.value;
-  return value === undefined || value.length === 0 ? null : (value as CartId);
+  const parsed = cartIdSchema.safeParse(store.get(COOKIE_NAME)?.value);
+  return parsed.success ? parsed.data : null;
 }
 
 async function writeCartId(cartId: CartId): Promise<void> {

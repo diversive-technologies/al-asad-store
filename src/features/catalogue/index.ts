@@ -4,17 +4,20 @@
  * here rather than reaching into this feature's internals.
  */
 export { fetchAvailability } from './api/fetch-availability';
+export { listingAvailabilities } from './api/listing-availability';
 export { evaluateFabric } from './api/evaluate-fabric';
 export { fetchFabricVerdict } from './api/fetch-fabric-verdict';
 export { fetchProduct } from './api/fetch-product';
 export { fetchProductsByIds } from './api/fetch-products-by-ids';
 export { fetchProductAvailability } from './api/fetch-product-availability';
+export { fetchProductSitemapPages } from './api/fetch-sitemap-pages';
 export { unifiedSizesFor, type QuickAddOffer, type QuickAddSize } from './lib/quick-add';
 export { findByCode } from './api/find-by-code';
 export { searchProducts } from './api/search-products';
 export { suggest } from './api/suggest';
 export { fetchSuggestions, type SuggestionsError } from './api/fetch-suggestions';
 export { CatalogueScreen, type CatalogueScreenProps } from './components/CatalogueScreen';
+export { SearchScreen, type SearchScreenProps } from './components/SearchScreen';
 export { FabricCalculator, type FabricCalculatorProps } from './components/FabricCalculator';
 export { ProductBuyBox, type ProductBuyBoxProps } from './components/ProductBuyBox';
 export { ProductGallery, type ProductGalleryProps } from './components/ProductGallery';
@@ -53,28 +56,30 @@ export {
   type SizeSelection,
 } from './lib/size-selection';
 export {
+  EMPTY_SUGGESTIONS,
   NO_ACTIVE_OPTION,
   nextActiveIndex,
   toSuggestionOptions,
   type SuggestionOption,
 } from './lib/suggestions';
 export {
-  clearFilters,
   EMPTY_QUERY,
-  hasActiveFilters,
-  listActiveFilters,
   PARAM_KEYS,
   parseCatalogueQuery,
-  removeActiveFilter,
+  toQueryString,
+  toSearchParams,
+} from './lib/search-params';
+export {
+  clearFilters,
+  hasActiveFilters,
+  setCollection,
   setInStockOnly,
   setPage,
   setPriceRange,
   setSort,
   toggleFacetValue,
-  toQueryString,
-  toSearchParams,
-  type ActiveFilter,
-} from './lib/search-params';
+} from './lib/query-changes';
+export { listActiveFilters, removeActiveFilter, type ActiveFilter } from './lib/active-filters';
 export {
   pieceAvailabilitySchema,
   productDetailAvailabilitySchema,

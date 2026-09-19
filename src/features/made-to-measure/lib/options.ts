@@ -67,6 +67,10 @@ export function choicesInPlay(
  * garments that still have one — a garment with nothing asked is hidden, not
  * drawn empty. Never without a garment: a list whose choices would hide every
  * one keeps its pieces rather than showing nothing.
+ *
+ * Both are the shape of a list the contract REFUSES (`choice-coverage`), so a
+ * parsed list never reaches either; they keep this function total rather than
+ * describing a state the studio is meant to show.
  */
 export function askedStudio(studio: StudioSet, inPlay: readonly ChoiceInPlay[]): StudioSet {
   const settled = settledOf(inPlay);

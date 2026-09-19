@@ -2,12 +2,21 @@ import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 
 import type { ProductCardWithAvailability } from '../lib/product-card';
+import type { ProductCard as ProductCardPayload } from '../schemas/product-card.schema';
 import { ProductCard } from './ProductCard';
 
 export interface ProductGridProps {
   entries: readonly ProductCardWithAvailability[];
   locale: Locale;
   messages: Messages;
+  /**
+   * PERF-07 — how many leading tiles preload their image. A listing's first rows
+   * are above the fold; a grid drawn at the foot of a product page has none, and
+   * preloading its photographs would compete with the product's own.
+   */
+  priorityImageCount?: number;
+  /** Handed to every card's quick add — see `ProductCard`. Absent, the bag panel opens. */
+  onAddedToBag?: (product: ProductCardPayload) => void;
 }
 
 /**
@@ -33,7 +42,13 @@ export interface ProductGridProps {
 /** PERF-07: roughly the first two rows at the widest breakpoint. */
 const ABOVE_THE_FOLD = 8;
 
-export function ProductGrid({ entries, locale, messages }: ProductGridProps) {
+export function ProductGrid({
+  entries,
+  locale,
+  messages,
+  priorityImageCount = ABOVE_THE_FOLD,
+  onAddedToBag,
+}: ProductGridProps) {
   return (
     <ul className="product-grid">
       {entries.map((entry, index) => (
@@ -43,7 +58,8 @@ export function ProductGrid({ entries, locale, messages }: ProductGridProps) {
             entry={entry}
             locale={locale}
             messages={messages}
-            hasPriorityImage={index < ABOVE_THE_FOLD}
+            hasPriorityImage={index < priorityImageCount}
+            onAddedToBag={onAddedToBag}
           />
         </li>
       ))}

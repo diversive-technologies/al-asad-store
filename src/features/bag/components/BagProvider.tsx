@@ -1,14 +1,13 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 
-import { usePathname } from 'next/navigation';
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/api/query-keys';
-import { unwrap } from '@/lib/result';
 
-import { fetchBag } from '../api/bag-browser';
+import { bagSummaryQuery } from '../api/bag-summary-query';
+import { useBagPanel } from '../hooks/use-bag-panel';
 import type { BagSummary } from '../schemas/bag.schema';
 
 interface BagContextValue {
@@ -38,23 +37,12 @@ const BagContext = createContext<BagContextValue | null>(null);
  * and hands the query down.
  */
 export function BagProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, open, close } = useBagPanel();
   const queryClient = useQueryClient();
 
-  const bag = useQuery({
-    queryKey: queryKeys.bag.summary(),
-    // DATA-03a: `unwrap` is the only sanctioned Result→throw adapter.
-    queryFn: ({ signal }) => unwrap(fetchBag(signal)),
-    /*
-     * DATA-09 — `staleTime: 0`. A bag holds reservations that expire, and its
-     * prices can change under a promotion; there is no interval over which a
-     * cached copy is safe to show. Refetching on focus matters more here than
-     * anywhere else in the store: a customer who left the tab open for an hour
-     * has a bag whose holds have lapsed.
-     */
-    staleTime: 0,
-    retry: false,
-  });
+  // DATA-09 — read again on focus, when the header's bag is opened, and on `/bag`
+  // (`bagSummaryQuery` has why: this provider never remounts).
+  const bag = useQuery(bagSummaryQuery());
 
   /*
    * DATA-06 — every mutation returns the whole refreshed summary, so the cache
@@ -68,36 +56,6 @@ export function BagProvider({ children }: { children: ReactNode }) {
     },
     [queryClient],
   );
-
-  const open = useCallback(() => {
-    setIsOpen(true);
-  }, []);
-
-  const close = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
-  /*
-   * Close on navigation.
-   *
-   * The panel lives in the root layout, so it survives a route change: a
-   * customer following a product link out of their bag would otherwise land on
-   * the product page with a modal still over it and the page behind it inert.
-   * Doing it here covers every link inside the panel at once, including the
-   * ones inside each bag line.
-   *
-   * Adjusted DURING RENDER rather than in an effect. This is React's own
-   * "you might not need an effect" case — state derived from a prop-like value
-   * changing — and an effect would render the stale open panel once before
-   * closing it, as well as tripping `react-hooks/set-state-in-effect`.
-   */
-  const pathname = usePathname();
-  const [lastPathname, setLastPathname] = useState(pathname);
-
-  if (pathname !== lastPathname) {
-    setLastPathname(pathname);
-    setIsOpen(false);
-  }
 
   const value = useMemo(
     () => ({ isOpen, open, close, bag, onSummary }),

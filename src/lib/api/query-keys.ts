@@ -64,6 +64,16 @@ export const queryKeys = {
   account: {
     all: ['account'] as const,
     addresses: (accountKey: string) => [...queryKeys.account.all, 'addresses', accountKey] as const,
+    /** Every language's copy of one account's saved sizes — what a change marks stale. */
+    savedSizesOf: (accountKey: string) =>
+      [...queryKeys.account.all, 'saved-sizes', accountKey] as const,
+    /**
+     * One account's saved sizes, in one language: the answer carries the size
+     * set's name and the size's label, and the language switch is a soft
+     * navigation the cache survives.
+     */
+    savedSizes: (accountKey: string, locale: string) =>
+      [...queryKeys.account.savedSizesOf(accountKey), locale] as const,
   },
   /**
    * §16 — the bag is ONE server-owned object, so it is one key.
@@ -83,16 +93,25 @@ export const queryKeys = {
    */
   checkout: {
     all: ['checkout'] as const,
-    quote: (deliveryOptionId: string, isGift: boolean) =>
+    /** `null` is "no option chosen yet", which the backend prices as its default. */
+    quote: (deliveryOptionId: string | null, isGift: boolean) =>
       [...queryKeys.checkout.all, 'quote', deliveryOptionId, isGift] as const,
     /**
-     * §28.3 — one placed order, keyed by the number that addresses it.
+     * §28.3 — one placed order, keyed by the number that addresses it AND by who
+     * is reading it (`''` for a guest).
+     *
+     * By the reader, for the saved items' reason: whether an order may be read
+     * at all depends on who asks, and signing out is a soft navigation the cache
+     * survives — keyed by the number alone, the next person at a shared browser
+     * was served the previous customer's name, address and measurements out of
+     * the cache, with no request made.
      *
      * Not keyed by locale, unlike the catalogue's reads: an order is a record
      * of what was bought at the price it was bought for, and its own fields do
      * not change language. What the page puts AROUND them is translated, and
      * that comes from `Messages` rather than from this cache.
      */
-    order: (orderNumber: string) => [...queryKeys.checkout.all, 'order', orderNumber] as const,
+    order: (orderNumber: string, accountKey: string) =>
+      [...queryKeys.checkout.all, 'order', orderNumber, accountKey] as const,
   },
 } as const;

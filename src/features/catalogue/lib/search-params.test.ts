@@ -1,19 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
+import type { SearchFacets } from '../schemas/search.schema';
+import { listActiveFilters, removeActiveFilter } from './active-filters';
 import {
   clearFilters,
-  EMPTY_QUERY,
   hasActiveFilters,
-  listActiveFilters,
-  parseCatalogueQuery,
-  removeActiveFilter,
   setPage,
   setPriceRange,
   setSort,
   toggleFacetValue,
-  toQueryString,
-} from './search-params';
-import type { SearchFacets } from '../schemas/search.schema';
+} from './query-changes';
+import { EMPTY_QUERY, parseCatalogueQuery, toQueryString } from './search-params';
 
 const FACETS: SearchFacets = {
   fabric: [{ value: 'lawn', label: 'Lawn', count: 12 }],
@@ -198,5 +195,49 @@ describe('active filter chips', () => {
     const cleared = listActiveFilters(query, FACETS).reduce(removeActiveFilter, query);
 
     expect(hasActiveFilters(cleared)).toBe(false);
+  });
+});
+
+/*
+ * BUG-03: the homepage's New arrivals "View all" opened `?collection=new-arrivals`,
+ * and the listing ignored the parameter — all 28 products, and no chip to say
+ * what was meant.
+ */
+describe('the collection a listing is scoped to', () => {
+  it('is parsed canonically: lower-cased, and dropped when it is not a slug', () => {
+    expect(parseCatalogueQuery({ collection: 'New-Arrivals' }).collection).toBe('new-arrivals');
+    expect(parseCatalogueQuery({ collection: '../../etc' }).collection).toBeNull();
+    expect(parseCatalogueQuery({ collection: '' }).collection).toBeNull();
+    expect(parseCatalogueQuery({}).collection).toBeNull();
+  });
+
+  it('round-trips through the address', () => {
+    const query = parseCatalogueQuery({ collection: 'new-arrivals', fabric: 'boski' });
+
+    expect(toQueryString(query)).toBe('?fabric=boski&collection=new-arrivals');
+    expect(parseCatalogueQuery({ fabric: 'boski', collection: 'new-arrivals' })).toEqual(query);
+  });
+
+  it('is a removable chip, named by the backend and by its slug when unnamed', () => {
+    const query = parseCatalogueQuery({ collection: 'new-arrivals', page: '2' });
+    const named = listActiveFilters(query, null, { slug: 'new-arrivals', name: 'New arrivals' });
+    const [chip] = named;
+
+    expect(chip?.kind === 'collection' ? chip.label : null).toBe('New arrivals');
+    expect(listActiveFilters(query, null).map((one) => ('label' in one ? one.label : ''))).toEqual([
+      'new-arrivals',
+    ]);
+
+    const removed = chip === undefined ? query : removeActiveFilter(query, chip);
+    expect(removed.collection).toBeNull();
+    expect(removed.page).toBe(1);
+  });
+
+  it('counts as applied, and goes with Clear all', () => {
+    const query = parseCatalogueQuery({ q: 'boski', collection: 'best-sellers' });
+
+    expect(hasActiveFilters(query)).toBe(true);
+    expect(clearFilters(query).collection).toBeNull();
+    expect(clearFilters(query).term).toBe('boski');
   });
 });

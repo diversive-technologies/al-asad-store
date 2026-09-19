@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 
-import Link from 'next/link';
-
+import { Breadcrumbs } from '@/components/shared/Breadcrumbs';
 import { ROUTES } from '@/config/routes';
 import { WishlistScreen } from '@/features/wishlist';
 import { getLocale, getMessages } from '@/i18n';
@@ -29,25 +28,18 @@ export default async function WishlistPage() {
 
   return (
     <div className="page-shell py-10">
-      {/* Section 30.5 asks for breadcrumbs; A11Y-01 makes them a real nav. */}
-      <nav aria-label={t.title} className="text-fg-muted mb-4 text-sm">
-        <ol className="flex items-center gap-2">
-          <li>
-            <Link href={ROUTES.home} className="hover:text-fg">
-              {messages.catalogue.breadcrumbHome}
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li className="text-fg">{t.title}</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        label={messages.common.breadcrumbLabel}
+        steps={[
+          { label: messages.catalogue.breadcrumbHome, href: ROUTES.home },
+          { label: t.title },
+        ]}
+      />
 
       <h1 className="text-fg mb-6 text-2xl font-semibold">{t.title}</h1>
 
-      {/* A11Y-01: the saved items are this page's main content, and say so. */}
-      <main>
-        <WishlistScreen locale={locale} messages={messages} />
-      </main>
+      {/* A11Y-01: no second `<main>` — the root layout's already holds this page. */}
+      <WishlistScreen locale={locale} messages={messages} />
     </div>
   );
 }

@@ -1,17 +1,13 @@
 'use client';
 
-import { notFound } from 'next/navigation';
-
-import { useQuery } from '@tanstack/react-query';
-
 import { ErrorState } from '@/components/shared/ErrorState';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { queryKeys } from '@/lib/api/query-keys';
-import { unwrap } from '@/lib/result';
 
-import { fetchOrderByNumber } from '../api/checkout-browser';
+import { useOrderRead } from '../hooks/use-order-read';
 import { OrderConfirmation } from './OrderConfirmation';
+import { OrderLookup } from './OrderLookup';
+import { OrderSkeleton } from './OrderSkeleton';
 
 export interface OrderScreenProps {
   orderNumber: string;
@@ -34,25 +30,16 @@ export interface OrderScreenProps {
  * read as a missing order.
  */
 export function OrderScreen({ orderNumber, locale, messages }: OrderScreenProps) {
-  const order = useQuery({
-    queryKey: queryKeys.checkout.order(orderNumber),
-    // DATA-03a: `unwrap` is the ONLY sanctioned Result → rejection adapter, and
-    // it belongs here and nowhere else. Absence is not in the error channel, so
-    // it arrives below as `null` rather than as a rejection.
-    queryFn: ({ signal }) => unwrap(fetchOrderByNumber(orderNumber, signal)),
-  });
+  // MOD-05 — the read, keyed by who is reading, and a lookup's arrival (`useOrderRead`).
+  const { order, onFound, headingRef } = useOrderRead(orderNumber);
 
   if (order.isPending) {
     /*
      * A11Y-06 — the wait is announced rather than left as a blank page. The
      * segment's `loading.tsx` covers the server render, which is now instant;
-     * this covers the read that follows it.
+     * this covers the read that follows it, in the same shape (NEXT-14).
      */
-    return (
-      <p role="status" className="page-shell text-fg-muted py-16">
-        {messages.common.loading}
-      </p>
-    );
+    return <OrderSkeleton label={messages.common.loading} />;
   }
 
   /*
@@ -67,11 +54,21 @@ export function OrderScreen({ orderNumber, locale, messages }: OrderScreenProps)
   }
 
   /*
-   * ERR-06 — a number that names no order is a 404, which is what it genuinely
-   * is. That sentence was always right; it was simply being applied to failures
-   * as well, which is the defect. Now only real absence reaches it.
+   * §28.3 — no order THIS BROWSER may see under that number: none exists, or
+   * nothing here shows who placed it. Both get the same lookup by mobile, so the
+   * page never says which numbers are real. A match fills the cache from the
+   * backend's own answer (DATA-06), and the confirmation renders in place.
    */
-  if (order.data === null) notFound();
+  if (order.data === null) {
+    return <OrderLookup orderNumber={orderNumber} messages={messages} onFound={onFound} />;
+  }
 
-  return <OrderConfirmation order={order.data} locale={locale} messages={messages} />;
+  return (
+    <OrderConfirmation
+      order={order.data}
+      locale={locale}
+      messages={messages}
+      headingRef={headingRef}
+    />
+  );
 }

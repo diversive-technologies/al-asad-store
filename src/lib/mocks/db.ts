@@ -1,6 +1,8 @@
 import type { Locale } from '@/i18n/locales';
 
-import { CATALOGUE, photoUrl, toProductCard } from './catalogue-db';
+import { collectionRecords, NEW_ARRIVALS_COLLECTION } from './catalogue-collections';
+import { toProductCard } from './catalogue-db';
+import { photoUrl } from './catalogue-photography';
 
 /**
  * D1 — THE fixture source for the mock layer.
@@ -10,9 +12,10 @@ import { CATALOGUE, photoUrl, toProductCard } from './catalogue-db';
  * fixture that drifts from the contract fails at the boundary (DATA-02) exactly
  * as a non-conforming backend response would.
  *
- * DATA-13: fixtures *report* constraints, they never compute them. Availability
- * is stated as a status, the way the backend states it — no quantity crosses
- * the wire and no threshold is applied on this side of it.
+ * DATA-13: fixtures *report* constraints, they never compute them on the other
+ * side of the wire. Availability is not here at all: it is a live read of the
+ * stock ledger (`availability-db.ts`), stated as a status — no quantity crosses
+ * the wire.
  *
  * Content is held per locale because the real endpoints are locale-scoped
  * (sections 21 and 22). Serving one language for both would hide exactly the
@@ -22,39 +25,6 @@ import { CATALOGUE, photoUrl, toProductCard } from './catalogue-db';
  * rail and the listing page are two views of ONE catalogue, and a separate
  * homepage fixture would let them disagree about what the store sells (PD-01).
  */
-
-/**
- * The availability overlay of architecture 8.2, derived from the catalogue so a
- * product cannot exist in one and be missing from the other.
- *
- * Two products are deliberately withheld: availability that never arrives is a
- * real state the interface has to handle without claiming an item is buyable
- * (DATA-13a), and it should be reachable in the running store rather than only
- * in a unit test.
- */
-export const AVAILABILITY = CATALOGUE.filter((_, index) => index % 11 !== 6).map(
-  (record, index) => {
-    if (!record.isInStock) {
-      return {
-        productId: record.id,
-        status: 'SOLD_OUT' as const,
-        /*
-         * A SET is unbuyable when one piece is gone, and the backend says which.
-         * Shalwar rather than Dupatta: it is the one piece BOTH set garments
-         * have — a three-piece waistcoat suit and a two-piece kameez shalwar —
-         * so the overlay never names a piece the product does not contain.
-         */
-        unavailablePieceNames: record.type === 'SET' ? ['Shalwar'] : [],
-      };
-    }
-
-    return {
-      productId: record.id,
-      status: index % 5 === 2 ? ('LOW_STOCK' as const) : ('IN_STOCK' as const),
-      unavailablePieceNames: [],
-    };
-  },
-);
 
 interface HomepageCopy {
   heroHeadline: string;
@@ -147,6 +117,82 @@ const TILE_IMAGES = ['kurta-rust', 'kameez-slate', 'kameez-taupe', 'waistcoat-ma
 
 const RAIL_LENGTH = 8;
 
+/** §28.4's hero film, the first of the homepage's sections. */
+function heroSection(copy: HomepageCopy) {
+  return {
+    kind: 'HERO_VIDEO',
+    id: 'hero',
+    // One still and one film per colour scheme. The interface swaps between
+    // them without reloading the page, carrying the playback position
+    // across, so toggling the theme reads as a grade change rather than a
+    // restart.
+    poster: { light: '/hero/poster-light.avif', dark: '/hero/poster-dark.avif' },
+    video: { light: '/hero/light.mp4', dark: '/hero/dark.mp4' },
+    headline: copy.heroHeadline,
+    subheadline: copy.heroSubheadline,
+    cta: { label: copy.heroCta, href: '/catalogue' },
+  };
+}
+
+/**
+ * §34's homepage stage, placed directly under the hero. Made-to-Measure is the
+ * store's second USP, so it is the first thing a visitor scrolls to, not the last.
+ */
+function stitchingSection(copy: HomepageCopy) {
+  return {
+    kind: 'STITCHING_ENTRY',
+    id: 'stitching-entry',
+    heading: copy.stitchingHeading,
+    body: copy.stitchingBody,
+    steps: [...copy.stitchingSteps],
+    cta: { label: copy.stitchingCta, href: '/stitched' },
+  };
+}
+
+function categorySection(copy: HomepageCopy) {
+  return {
+    kind: 'CATEGORY_GRID',
+    id: 'shop-by-type',
+    title: copy.gridTitle,
+    tiles: copy.tiles.map((label, index) => ({
+      id: TILE_IDS[index],
+      label,
+      imageUrl: photoUrl(TILE_IMAGES[index] ?? 'kameez-slate'),
+      href: TILE_HREFS[index],
+    })),
+  };
+}
+
+function catalogueSection(copy: HomepageCopy) {
+  return {
+    kind: 'CATALOGUE_ENTRY',
+    id: 'catalogue-entry',
+    heading: copy.catalogueHeading,
+    body: copy.catalogueBody,
+    cta: { label: copy.catalogueCta, href: '/catalogue' },
+    previewImageUrls: [
+      photoUrl('waistcoat-ivory'),
+      photoUrl('kameez-charcoal'),
+      photoUrl('waistcoat-bottle'),
+      photoUrl('kurta-rust'),
+    ],
+  };
+}
+
+function bannerSection(copy: HomepageCopy) {
+  return {
+    kind: 'EDITORIAL_BANNER',
+    id: 'fabric-story',
+    heading: copy.bannerHeading,
+    body: copy.bannerBody,
+    // The collar-and-placket detail shot: cloth close enough to read.
+    imageUrl: photoUrl('kameez-charcoal'),
+    // Logical, not physical: the reading-end side in both directions.
+    imageSide: 'end',
+    cta: { label: copy.bannerCta, href: '/help/fabric-glossary' },
+  };
+}
+
 /**
  * Section 28.4: a video and four sections. *Which* four is editorial
  * configuration, so this represents what the operator would have set up in the
@@ -157,75 +203,22 @@ export function homepageFor(locale: Locale) {
 
   return {
     sections: [
-      {
-        kind: 'HERO_VIDEO',
-        id: 'hero',
-        // One still and one film per colour scheme. The interface swaps between
-        // them without reloading the page, carrying the playback position
-        // across, so toggling the theme reads as a grade change rather than a
-        // restart.
-        poster: { light: '/hero/poster-light.avif', dark: '/hero/poster-dark.avif' },
-        video: { light: '/hero/light.mp4', dark: '/hero/dark.mp4' },
-        headline: copy.heroHeadline,
-        subheadline: copy.heroSubheadline,
-        cta: { label: copy.heroCta, href: '/catalogue' },
-      },
-      /*
-       * §34's homepage stage, placed directly under the hero. Made-to-Measure is
-       * the store's second USP, so it is the first thing a visitor scrolls to,
-       * not the last.
-       */
-      {
-        kind: 'STITCHING_ENTRY',
-        id: 'stitching-entry',
-        heading: copy.stitchingHeading,
-        body: copy.stitchingBody,
-        steps: [...copy.stitchingSteps],
-        cta: { label: copy.stitchingCta, href: '/stitched' },
-      },
+      heroSection(copy),
+      stitchingSection(copy),
       {
         kind: 'PRODUCT_RAIL',
         id: 'new-arrivals',
         title: copy.railTitle,
-        collectionSlug: 'new-arrivals',
-        products: CATALOGUE.slice(0, RAIL_LENGTH).map((record) => toProductCard(record, locale)),
-        viewAllHref: '/catalogue?collection=new-arrivals',
+        collectionSlug: NEW_ARRIVALS_COLLECTION,
+        // The rail and its "View all" are one collection, so they cannot disagree.
+        products: collectionRecords(NEW_ARRIVALS_COLLECTION)
+          .slice(0, RAIL_LENGTH)
+          .map((record) => toProductCard(record, locale)),
+        viewAllHref: `/catalogue?collection=${NEW_ARRIVALS_COLLECTION}`,
       },
-      {
-        kind: 'CATEGORY_GRID',
-        id: 'shop-by-type',
-        title: copy.gridTitle,
-        tiles: copy.tiles.map((label, index) => ({
-          id: TILE_IDS[index],
-          label,
-          imageUrl: photoUrl(TILE_IMAGES[index] ?? 'kameez-slate'),
-          href: TILE_HREFS[index],
-        })),
-      },
-      {
-        kind: 'CATALOGUE_ENTRY',
-        id: 'catalogue-entry',
-        heading: copy.catalogueHeading,
-        body: copy.catalogueBody,
-        cta: { label: copy.catalogueCta, href: '/catalogue' },
-        previewImageUrls: [
-          photoUrl('waistcoat-ivory'),
-          photoUrl('kameez-charcoal'),
-          photoUrl('waistcoat-bottle'),
-          photoUrl('kurta-rust'),
-        ],
-      },
-      {
-        kind: 'EDITORIAL_BANNER',
-        id: 'fabric-story',
-        heading: copy.bannerHeading,
-        body: copy.bannerBody,
-        // The collar-and-placket detail shot: cloth close enough to read.
-        imageUrl: photoUrl('kameez-charcoal'),
-        // Logical, not physical: the reading-end side in both directions.
-        imageSide: 'end',
-        cta: { label: copy.bannerCta, href: '/help/fabric-glossary' },
-      },
+      categorySection(copy),
+      catalogueSection(copy),
+      bannerSection(copy),
     ],
   };
 }

@@ -2,9 +2,8 @@ import { http, HttpResponse } from 'msw';
 
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { API_HEADERS } from '@/lib/api/headers';
-import { addressDetailSchema } from '@/lib/domain/address';
 
-import { ordersFor } from './checkout-db';
+import { orderHistoryPage } from './orders-db';
 import {
   addressesFor,
   makeDefault,
@@ -12,10 +11,21 @@ import {
   reviseAddress,
   saveAddress,
 } from './addresses-db';
+import {
+  addressChoiceBody,
+  addressWriteBody,
+  bodyOf,
+  headerOf,
+  localeOf,
+  savedItemsBody,
+  savedSizeBody,
+} from './request-bodies';
+import { forgetSize, saveSize, savedSizesFor } from './saved-sizes-db';
 import { removeItem, saveItems, savedItemsFor } from './wishlist-db';
 
 /**
- * D1 — §28.3's account, standing in for Java: the saved items and the addresses.
+ * D1 — §28.3's account, standing in for Java: the saved items, the addresses and
+ * the saved sizes.
  *
  * The account the list belongs to arrives in a header the BFF attaches from the
  * session, never in the body: a list that named its own owner would let any
@@ -23,42 +33,16 @@ import { removeItem, saveItems, savedItemsFor } from './wishlist-db';
  * A request without one is refused rather than served an empty list, because
  * "nobody asked" and "this customer has nothing" are different answers.
  */
-const accountKeyOf = (request: Request): string | null => {
-  const key = request.headers.get(API_HEADERS.accountKey);
-  return key === null || key.length === 0 ? null : key;
-};
+const accountKeyOf = (request: Request): string | null => headerOf(request, API_HEADERS.accountKey);
 
-/* SEC-02 — the body is untrusted. Ids are read as unknown and filtered to plain
-   strings rather than cast, and the count is bounded: the BFF bounds it too, and
-   a stand-in for Java has no business trusting its caller either. */
-const MAX_ITEMS = 100;
-
-function idsIn(body: unknown): string[] | null {
-  if (typeof body !== 'object' || body === null) return null;
-  const raw = (body as { productIds?: unknown }).productIds;
-  if (!Array.isArray(raw)) return null;
-  const ids = raw.filter((id): id is string => typeof id === 'string' && id.length > 0);
-  return ids.length === raw.length && ids.length <= MAX_ITEMS ? ids : null;
-}
-
-/* SEC-02 again, for the address bodies. The mock is a stand-in for Java and has
-   no business trusting its caller either, so the body is PARSED rather than
-   cast — and parsed by the same schema the contract states, because a mock that
-   accepts what Java would refuse teaches the interface a habit the real backend
-   will break, and a second hand-written copy of the bounds is a second place for
-   them to drift (PD-01). Module 18's own handlers read their bodies this way. */
-function detailIn(body: unknown) {
-  if (typeof body !== 'object' || body === null) return null;
-  const parsed = addressDetailSchema.safeParse((body as { address?: unknown }).address);
-  return parsed.success ? parsed.data : null;
-}
-
-/** An address id the caller sent, which names one it already holds. */
-function addressIdIn(body: unknown): string | null {
-  if (typeof body !== 'object' || body === null) return null;
-  const value = (body as { addressId?: unknown }).addressId;
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
+/*
+ * SEC-02 — every body is untrusted, and is PARSED against its shape rather than
+ * cast (`request-bodies.ts`). The address is parsed by the same rules the
+ * contract states, because a mock that accepts what Java would refuse teaches the
+ * interface a habit the real backend will break, and a second hand-written copy
+ * of the bounds is a second place for them to drift (PD-01). The saved-item count
+ * is bounded here too: a stand-in for Java has no business trusting its caller.
+ */
 
 export const accountHandlers = [
   /* §28.3 — what this customer has saved. */
@@ -74,10 +58,9 @@ export const accountHandlers = [
     const accountKey = accountKeyOf(request);
     if (accountKey === null) return new HttpResponse(null, { status: 401 });
 
-    // `.clone()` — a resolver that consumes the body breaks the next lookup.
-    const ids = idsIn(await request.clone().json());
-    if (ids === null) return new HttpResponse(null, { status: 400 });
-    return HttpResponse.json({ ids: saveItems(accountKey, ids) });
+    const body = await bodyOf(request, savedItemsBody);
+    if (body === null) return new HttpResponse(null, { status: 400 });
+    return HttpResponse.json({ ids: saveItems(accountKey, body.productIds) });
   }),
 
   /* D6 — a removal is RECORDED at its own path; there is no DELETE anywhere. */
@@ -85,11 +68,11 @@ export const accountHandlers = [
     const accountKey = accountKeyOf(request);
     if (accountKey === null) return new HttpResponse(null, { status: 401 });
 
-    const ids = idsIn(await request.clone().json());
-    if (ids === null) return new HttpResponse(null, { status: 400 });
+    const body = await bodyOf(request, savedItemsBody);
+    if (body === null) return new HttpResponse(null, { status: 400 });
 
     let list = savedItemsFor(accountKey);
-    for (const id of ids) list = removeItem(accountKey, id);
+    for (const id of body.productIds) list = removeItem(accountKey, id);
     return HttpResponse.json({ ids: list });
   }),
 
@@ -107,20 +90,18 @@ export const accountHandlers = [
     const accountKey = accountKeyOf(request);
     if (accountKey === null) return new HttpResponse(null, { status: 401 });
 
-    const body: unknown = await request.clone().json();
-    const detail = detailIn(body);
-    if (detail === null) return new HttpResponse(null, { status: 400 });
+    const body = await bodyOf(request, addressWriteBody);
+    if (body === null) return new HttpResponse(null, { status: 400 });
 
-    const addressId = addressIdIn(body);
-    if (addressId !== null) {
-      const revised = reviseAddress(accountKey, addressId, detail);
+    if (body.addressId !== undefined) {
+      const revised = reviseAddress(accountKey, body.addressId, body.address);
       /* An id this account does not hold is NOT FOUND rather than refused: the
          customer may be looking at a page opened before they removed it. */
       if (revised === null) return new HttpResponse(null, { status: 404 });
       return HttpResponse.json({ addresses: revised });
     }
 
-    const saved = saveAddress(accountKey, detail, crypto.randomUUID());
+    const saved = saveAddress(accountKey, body.address, crypto.randomUUID());
     if (saved === 'FULL') return new HttpResponse(null, { status: 409 });
     return HttpResponse.json({ addresses: saved });
   }),
@@ -130,21 +111,59 @@ export const accountHandlers = [
     const accountKey = accountKeyOf(request);
     if (accountKey === null) return new HttpResponse(null, { status: 401 });
 
-    const addressId = addressIdIn(await request.clone().json());
-    if (addressId === null) return new HttpResponse(null, { status: 400 });
+    const body = await bodyOf(request, addressChoiceBody);
+    if (body === null) return new HttpResponse(null, { status: 400 });
 
-    const list = removeAddress(accountKey, addressId);
+    const list = removeAddress(accountKey, body.addressId);
     if (list === null) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json({ addresses: list });
   }),
 
-  /* §28.3 — what this customer has bought. A guest's orders are not here: they
-     carry no account and are found by their number, which is what addresses
-     them. */
+  /* §28.3 — what this customer has bought, a page at a time. A guest's orders are
+     not here: they carry no account and are found by their number, which is what
+     addresses them. A page asked for badly is a 400, not a guess. */
   http.get(`*${ENDPOINTS.account.orders}`, ({ request }) => {
     const accountKey = accountKeyOf(request);
     if (accountKey === null) return new HttpResponse(null, { status: 401 });
-    return HttpResponse.json({ orders: ordersFor(accountKey) });
+
+    const page = orderHistoryPage(accountKey, new URL(request.url).searchParams);
+    if (page === null) return new HttpResponse(null, { status: 400 });
+    return HttpResponse.json(page);
+  }),
+
+  /* §28.3 — the sizes this customer asked us to remember, one per size set. */
+  http.get(`*${ENDPOINTS.account.savedSizes}`, ({ request }) => {
+    const accountKey = accountKeyOf(request);
+    if (accountKey === null) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json({ sizes: savedSizesFor(accountKey, localeOf(request)) });
+  }),
+
+  /* Saving one. The body names a SIZE; which set it supersedes is the store's
+     rule (DATA-13). A size of no set — the one size of a sizeless piece
+     included — is a 404, exactly as an unknown address id is. */
+  http.post(`*${ENDPOINTS.account.savedSizes}`, async ({ request }) => {
+    const accountKey = accountKeyOf(request);
+    if (accountKey === null) return new HttpResponse(null, { status: 401 });
+
+    const body = await bodyOf(request, savedSizeBody);
+    if (body === null) return new HttpResponse(null, { status: 400 });
+
+    const sizes = saveSize(accountKey, body.sizeId, localeOf(request));
+    if (sizes === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ sizes });
+  }),
+
+  /* D6 — forgetting is RECORDED at its own path; there is no DELETE anywhere. */
+  http.post(`*${ENDPOINTS.account.savedSizeRemoval}`, async ({ request }) => {
+    const accountKey = accountKeyOf(request);
+    if (accountKey === null) return new HttpResponse(null, { status: 401 });
+
+    const body = await bodyOf(request, savedSizeBody);
+    if (body === null) return new HttpResponse(null, { status: 400 });
+
+    const sizes = forgetSize(accountKey, body.sizeId, localeOf(request));
+    if (sizes === null) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ sizes });
   }),
 
   /* Choosing the default — an event about the book, not an edit to one row. */
@@ -152,10 +171,10 @@ export const accountHandlers = [
     const accountKey = accountKeyOf(request);
     if (accountKey === null) return new HttpResponse(null, { status: 401 });
 
-    const addressId = addressIdIn(await request.clone().json());
-    if (addressId === null) return new HttpResponse(null, { status: 400 });
+    const body = await bodyOf(request, addressChoiceBody);
+    if (body === null) return new HttpResponse(null, { status: 400 });
 
-    const list = makeDefault(accountKey, addressId);
+    const list = makeDefault(accountKey, body.addressId);
     if (list === null) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json({ addresses: list });
   }),

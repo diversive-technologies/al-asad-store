@@ -2,22 +2,24 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'al-asad.wishlist';
+import { clientKey } from '@/config/client';
+import { readStorage, removeStorage, writeStorage } from '@/lib/utils/browser-storage';
+
+import { parseLocalList, toggledLocalList } from '../lib/local-list';
+
+/** D5 — named through the client's key prefix, never with a brand written here. */
+const STORAGE_KEY = clientKey('wishlist');
 /** Fired on this tab too, because `storage` only reaches OTHER tabs. */
-const CHANGE_EVENT = 'al-asad:wishlist';
+const CHANGE_EVENT = `${STORAGE_KEY}:change`;
 
+/*
+ * Every access goes through `browser-storage`, because a browser that blocks site
+ * data throws on the mere READ of `localStorage` — and this runs on every page,
+ * for every visitor, from `SavedItemsProvider` in the root layout. Unguarded, that
+ * took the page to its error boundary; guarded, such a browser keeps no list.
+ */
 function read(): string[] {
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (raw === null) return [];
-
-  // ERR-05(2): a corrupt or hand-edited value is recoverable — treat it as empty
-  // rather than letting a parse error take down every card on the page.
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
-  } catch {
-    return [];
-  }
+  return parseLocalList(readStorage(STORAGE_KEY));
 }
 
 export interface LocalWishlist {
@@ -68,17 +70,13 @@ export function useLocalWishlist(): LocalWishlist {
   }, []);
 
   const toggle = useCallback((productId: string) => {
-    const next = read().includes(productId)
-      ? read().filter((id) => id !== productId)
-      : [...read(), productId];
-
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    writeStorage(STORAGE_KEY, JSON.stringify(toggledLocalList(read(), productId)));
     // Every mounted card listens, so all of them re-render in step.
     window.dispatchEvent(new Event(CHANGE_EVENT));
   }, []);
 
   const clear = useCallback(() => {
-    window.localStorage.removeItem(STORAGE_KEY);
+    removeStorage(STORAGE_KEY);
     window.dispatchEvent(new Event(CHANGE_EVENT));
   }, []);
 

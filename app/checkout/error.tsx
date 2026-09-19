@@ -3,8 +3,13 @@
 import { Button } from '@/components/ui/button';
 import { useMessages } from '@/i18n/use-messages';
 
+export interface CheckoutErrorProps {
+  error: Error & { digest?: string };
+  reset: () => void;
+}
+
 /** ERR-09 / ERR-11: our copy, never the thrown error's text (SEC-07). */
-export default function CheckoutError({ reset }: { error: Error; reset: () => void }) {
+export default function CheckoutError({ reset }: CheckoutErrorProps) {
   const messages = useMessages();
 
   return (

@@ -117,6 +117,15 @@ export const bagLineSchema = z
     reservationExpiresAt: z.iso.datetime().nullable(),
     /** §34.8 — present exactly when the line is being CUT rather than picked. */
     stitching: bagLineStitchingSchema.nullable(),
+    /**
+     * §16 `moveToWishlist` — whether the backend will move this line into saved
+     * items. STATED rather than inferred from `stitching` (DATA-13): which lines
+     * may move is the Cart module's rule. Today a line cut to measure may not,
+     * because a saved item is a product and cannot carry the measurements the
+     * line is cut to. Whether the customer HAS saved items — a session — is the
+     * interface's to know, and is not part of this.
+     */
+    movableToWishlist: z.boolean(),
   })
   /*
    * ONE place where the two kinds of line are told apart, so neither can arrive
@@ -177,6 +186,16 @@ export type BagPricing = z.infer<typeof bagPricingSchema>;
  */
 export const bagSummarySchema = z.object({
   lines: z.array(bagLineSchema),
+  /**
+   * §7.3 — when the FIRST hold in the bag lapses; `null` when nothing in it is
+   * held (an empty bag, or only garments being cut).
+   *
+   * Stated rather than picked from the lines here. Each line is held from when
+   * it was last added to or changed, so the lines' times differ, and the bag
+   * used to show whichever line came first in the list — a later time than the
+   * one at which something actually left the bag.
+   */
+  heldUntil: z.iso.datetime().nullable(),
   /**
    * The header badge count, stated rather than summed.
    *

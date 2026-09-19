@@ -7,12 +7,18 @@ import { cn } from '@/lib/utils/cn';
 
 import { CodeSignInForm } from './CodeSignInForm';
 import { PasswordSignInForm } from './PasswordSignInForm';
+import { TestAccountNotice } from './TestAccountNotice';
 
 export interface SignInScreenProps {
   messages: Messages;
   mobileExample: string;
-  /** Shown only while the mock layer is armed — see the notice below. */
+  /** Shown only while the mock layer is armed — see `TestAccountNotice`. */
   testHint: { email: string; password: string } | null;
+  /**
+   * The page that sent the customer here, to land on once signed in — or `null`
+   * for the homepage. Already allow-listed by the route (SEC-06).
+   */
+  returnTo: string | null;
 }
 
 type Method = 'password' | 'code';
@@ -33,7 +39,7 @@ type Method = 'password' | 'code';
  * A11Y-01/A11Y-02: the switch is a real `radiogroup` of buttons, not two divs
  * with click handlers, so it is reachable and announced.
  */
-export function SignInScreen({ messages, mobileExample, testHint }: SignInScreenProps) {
+export function SignInScreen({ messages, mobileExample, testHint, returnTo }: SignInScreenProps) {
   const t = messages.auth;
   const [method, setMethod] = useState<Method>('password');
 
@@ -47,22 +53,7 @@ export function SignInScreen({ messages, mobileExample, testHint }: SignInScreen
       <h1 className="text-fg text-2xl font-semibold">{t.signInHeading}</h1>
       <p className="text-fg-muted mt-2 text-sm">{t.signInBody}</p>
 
-      {/*
-       * D3, said plainly on the screen rather than only in a comment. This is
-       * the placeholder for §11, and anyone testing should know the account is
-       * seeded rather than wondering why their real details fail.
-       */}
-      {testHint === null ? null : (
-        <div className="rounded-card border-border bg-surface-muted mt-6 border p-3 text-xs">
-          <p className="text-fg font-medium">{t.testAccountHeading}</p>
-          <p className="text-fg-muted mt-1">
-            {t.testAccountEmail}: <code>{testHint.email}</code>
-          </p>
-          <p className="text-fg-muted">
-            {t.testAccountPassword}: <code>{testHint.password}</code>
-          </p>
-        </div>
-      )}
+      {testHint === null ? null : <TestAccountNotice messages={messages} hint={testHint} />}
 
       <div role="radiogroup" aria-label={t.methodLabel} className="mt-6 flex gap-2">
         {methods.map((entry) => (
@@ -88,9 +79,9 @@ export function SignInScreen({ messages, mobileExample, testHint }: SignInScreen
 
       <div className="mt-6">
         {method === 'password' ? (
-          <PasswordSignInForm messages={messages} />
+          <PasswordSignInForm messages={messages} returnTo={returnTo} />
         ) : (
-          <CodeSignInForm messages={messages} mobileExample={mobileExample} />
+          <CodeSignInForm messages={messages} mobileExample={mobileExample} returnTo={returnTo} />
         )}
       </div>
     </section>
