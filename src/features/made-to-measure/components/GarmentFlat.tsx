@@ -103,8 +103,8 @@ export function GarmentFlat({
   return (
     <div
       className="gf-stage"
-      /* STY-01a — the ratio comes from the drawing's own viewBox, which is data,
-         so it travels as a custom property rather than as a style declaration. */
+      /* STY-01a — the ratio is the drawing's own viewBox, data, so it travels as a
+         custom property; the `as` is TS-03(4), a custom property on `style`. */
       style={
         { '--gf-ratio': `${String(drawing.width)} / ${String(drawing.height)}` } as CSSProperties
       }

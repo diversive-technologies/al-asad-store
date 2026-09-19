@@ -29,9 +29,14 @@ function badgeLabel(kind: ProductBadgeKind, t: Messages['product']): string {
   }
 }
 
+/*
+ * A11Y-07 in both themes. The gold does not move with the theme, so its ink is
+ * `on-accent`, which does not either: `text-fg` turns near-white in dark mode and
+ * read 2.09:1 on the gold, against 7.7:1 now.
+ */
 const BADGE_TONE: Record<ProductBadgeKind, string> = {
   NEW: 'bg-brand-600 text-on-brand',
-  DISCOUNT: 'bg-accent-500 text-fg',
+  DISCOUNT: 'bg-accent-500 text-on-accent',
   LOW_STOCK: 'bg-surface-strong text-fg',
   SOLD_OUT: 'bg-fg text-surface',
 };

@@ -1,9 +1,9 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import type { Messages } from '@/i18n/messages/en';
 
 import type { SavedAddress } from '../schemas/address.schema';
+import { AddressCardActions } from './AddressCardActions';
 
 export interface AddressCardProps {
   address: SavedAddress;
@@ -62,27 +62,14 @@ export function AddressCard({
         </p>
       </div>
 
-      {/*
-       * , NOT . Disabling the control somebody just pressed
-       * takes focus off it and drops it on the body — the same defect the
-       * studio's Check and Save buttons were fixed for. A second press while
-       * one change is in flight is refused by the hook's own latch instead.
-       */}
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="secondary" onClick={onEdit} aria-busy={isBusy}>
-          {t.addressEdit}
-        </Button>
-        {address.isDefault ? null : (
-          <Button type="button" variant="secondary" onClick={onMakeDefault} aria-busy={isBusy}>
-            {t.addressMakeDefault}
-          </Button>
-        )}
-        {/* D6 — this records a removal. The address stays on file against the
-            orders that went to it; it simply stops being offered. */}
-        <Button type="button" variant="ghost" onClick={onRemove} aria-busy={isBusy}>
-          {t.addressRemove}
-        </Button>
-      </div>
+      <AddressCardActions
+        address={address}
+        messages={messages}
+        isBusy={isBusy}
+        onEdit={onEdit}
+        onRemove={onRemove}
+        onMakeDefault={onMakeDefault}
+      />
     </li>
   );
 }

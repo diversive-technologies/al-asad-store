@@ -1,14 +1,19 @@
 import type { Metadata } from 'next';
 
-import Link from 'next/link';
-
+import { Breadcrumbs } from '@/components/shared/Breadcrumbs';
 import { ROUTES } from '@/config/routes';
 import { AccountIdentity, readSession } from '@/features/auth';
 import { AccountAddresses } from '@/features/addresses';
 import { AccountOrders } from '@/features/checkout';
 import { AccountMeasurements } from '@/features/made-to-measure';
+import { AccountSavedSizes } from '@/features/saved-sizes';
 import { AccountSavedItems } from '@/features/wishlist';
 import { getMessages } from '@/i18n';
+
+export interface AccountPageProps {
+  /** NEXT-03 — a Promise in Next.js 16. Only the order history reads it. */
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const messages = await getMessages();
@@ -22,42 +27,43 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * STRUCT-02: the route composes and does not implement. Each section comes from
  * the feature that owns its data — identity from `auth`, orders from
- * `checkout`, addresses from `addresses`, saved items from `wishlist`,
- * measurements from `made-to-measure` — so none of them knows about the others
- * and the page knows about none of their internals (MOD-01).
+ * `checkout`, addresses from `addresses`, sizes from `saved-sizes`, saved items
+ * from `wishlist`, measurements from `made-to-measure` — so none of them knows
+ * about the others and the page knows about none of their internals (MOD-01).
  *
  * A GUEST gets the page too, reduced: measurements save against a device token
  * before anyone signs in, so a page that refused them would hide a customer's own
  * figures behind a sign-in they were never asked for.
  */
-export default async function AccountPage() {
-  const [messages, session] = await Promise.all([getMessages(), readSession()]);
+export default async function AccountPage({ searchParams }: AccountPageProps) {
+  const [messages, session, { orders, ordersAfter }] = await Promise.all([
+    getMessages(),
+    readSession(),
+    searchParams,
+  ]);
   const t = messages.account;
 
   return (
     <div className="page-shell py-10">
-      {/* §30.5 asks for breadcrumbs; A11Y-01 makes them a real nav. */}
-      <nav aria-label={t.title} className="text-fg-muted mb-4 text-sm">
-        <ol className="flex items-center gap-2">
-          <li>
-            <Link href={ROUTES.home} className="hover:text-fg py-2">
-              {messages.catalogue.breadcrumbHome}
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li className="text-fg">{t.title}</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        label={messages.common.breadcrumbLabel}
+        steps={[
+          { label: messages.catalogue.breadcrumbHome, href: ROUTES.home },
+          { label: t.title },
+        ]}
+      />
 
       <h1 className="text-fg mb-6 text-2xl font-semibold">{t.title}</h1>
 
-      <main className="max-w-3xl">
+      {/* A11Y-01: a `div`, because the root layout's `<main>` already holds this page. */}
+      <div className="max-w-3xl">
         <AccountIdentity session={session} messages={messages} />
-        <AccountOrders />
+        <AccountOrders searchParams={{ orders, ordersAfter }} />
         <AccountAddresses />
+        <AccountSavedSizes />
         <AccountSavedItems />
         <AccountMeasurements isSignedIn={session !== null} />
-      </main>
+      </div>
     </div>
   );
 }

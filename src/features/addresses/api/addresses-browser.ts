@@ -1,8 +1,17 @@
 import { ROUTES } from '@/config/routes';
+import { fetchWithContract } from '@/lib/api/browser-fetch';
 import type { AddressDetail } from '@/lib/domain/address';
 import { err, ok, type Result } from '@/lib/result';
 
-import { addressBookSchema, type AddressBook } from '../schemas/address.schema';
+import type { AddressBook } from '../schemas/address.schema';
+
+/*
+ * Deliberate code split (IMP-01a, PERF-10): the book is read by the address
+ * page, by checkout's picker and by the offer after an order, and a static import
+ * of its schema made Zod first-load JavaScript on all three. It arrives beside
+ * the response instead (`fetchWithContract` has the reasoning).
+ */
+const loadSchema = () => import('../schemas/address.schema');
 
 export interface AddressBookError {
   /**
@@ -27,26 +36,24 @@ async function call(
   path: string,
   init: RequestInit,
 ): Promise<Result<AddressBook, AddressBookError>> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { Accept: 'application/json', ...init.headers },
-  }).then<Response | null, null>(
-    (result) => result,
-    () => null,
+  const [response, contract] = await fetchWithContract(
+    path,
+    { ...init, headers: { Accept: 'application/json', ...init.headers } },
+    loadSchema,
   );
 
   if (response === null) return err({ kind: 'UNREACHABLE' });
   if (response.status === 401) return err({ kind: 'SIGNED_OUT' });
   if (response.status === 409) return err({ kind: 'FULL' });
   if (response.status === 404) return err({ kind: 'GONE' });
-  if (!response.ok) return err({ kind: 'UNREACHABLE' });
+  if (!response.ok || contract === null) return err({ kind: 'UNREACHABLE' });
 
   const payload: unknown = await response.json().then<unknown, null>(
     (value: unknown) => value,
     () => null,
   );
 
-  const parsed = addressBookSchema.safeParse(payload);
+  const parsed = contract.addressBookSchema.safeParse(payload);
   return parsed.success ? ok(parsed.data) : err({ kind: 'UNREACHABLE' });
 }
 

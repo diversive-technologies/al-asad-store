@@ -13,3 +13,13 @@ export const SITE = {
   /** Resolves relative URLs in metadata, including the hreflang alternates. */
   metadataBase: new URL(clientEnv.NEXT_PUBLIC_APP_URL),
 } as const;
+
+/**
+ * A path from `ROUTES` as the full address a person can paste somewhere else —
+ * a WhatsApp message, a copied link — resolved against the same base the
+ * metadata's canonical addresses are, so a shared link and the canonical one are
+ * the same string.
+ */
+export function absoluteUrl(path: string): string {
+  return new URL(path, SITE.metadataBase).href;
+}

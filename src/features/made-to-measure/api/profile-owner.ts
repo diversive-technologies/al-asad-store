@@ -3,6 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
+import { clientKey } from '@/config/client';
 import { accountKeyOf, readSession } from '@/features/auth';
 import type { ApiError } from '@/lib/api/errors';
 import { ok, type Result } from '@/lib/result';
@@ -25,9 +26,10 @@ export interface ResolvedOwner {
  * A guest's profiles are theirs by this cookie, which is a CAPABILITY exactly as
  * the cart id is (SEC-01). Its value is a token the backend minted; anything that
  * is not even token-shaped is treated as no cookie at all (SEC-02), and the
- * backend refuses a well-shaped token it never issued.
+ * backend refuses a well-shaped token it never issued. D5: named through the
+ * client's key prefix.
  */
-const DEVICE_COOKIE = 'aa_measurements';
+const DEVICE_COOKIE = clientKey('measurements');
 const DEVICE_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 const deviceTokenShape = z.uuid();
 

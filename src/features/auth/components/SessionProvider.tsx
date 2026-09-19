@@ -20,6 +20,11 @@ const EMPTY: SessionContextValue = {
 
 const SessionContext = createContext<SessionContextValue>(EMPTY);
 
+export interface SessionProviderProps {
+  session: { displayName: string; email: string; mobile: string } | null;
+  children: ReactNode;
+}
+
 /**
  * STATE-01 rung 5 — Context, for the "low-frequency, app-wide concern" the rule
  * names outright: session.
@@ -29,13 +34,7 @@ const SessionContext = createContext<SessionContextValue>(EMPTY);
  * security boundary — it decides what to OFFER, and the backend still decides
  * what to allow.
  */
-export function SessionProvider({
-  session,
-  children,
-}: {
-  session: { displayName: string; email: string; mobile: string } | null;
-  children: ReactNode;
-}) {
+export function SessionProvider({ session, children }: SessionProviderProps) {
   const value = useMemo(
     () => (session === null ? EMPTY : { isSignedIn: true, ...session }),
     [session],

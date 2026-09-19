@@ -1,7 +1,9 @@
 'use client';
 
-import { Check } from '@/lib/vendor/icons';
+import type { Locale } from '@/i18n/locales';
 import { cn } from '@/lib/utils/cn';
+import { formatNumber } from '@/lib/utils/format';
+import { Check } from '@/lib/vendor/icons';
 
 import type { FacetKey } from '../schemas/search.schema';
 import type { SearchRefinement } from '../schemas/search.schema';
@@ -12,6 +14,8 @@ export interface SearchRefinementsProps {
   applied: readonly SearchRefinement[];
   heading: string;
   onToggle: (facet: FacetKey, value: string) => void;
+  /** Counts are numbers in the reader's language (I18N-08). */
+  locale: Locale;
 }
 
 /**
@@ -36,6 +40,7 @@ export function SearchRefinements({
   applied,
   heading,
   onToggle,
+  locale,
 }: SearchRefinementsProps) {
   // Nothing to narrow and nothing narrowed: before a term is typed, or when a
   // degraded index has no counts. The section does not render at all.
@@ -77,7 +82,9 @@ export function SearchRefinements({
                 {/* The count is what makes a refinement worth tapping: it answers
                     "how many would I get?" before the tap is spent. An applied
                     one has no count to give — it is already the result. */}
-                {isApplied ? null : <span className="text-fg-muted text-xs">{entry.count}</span>}
+                {isApplied ? null : (
+                  <span className="text-fg-muted text-xs">{formatNumber(entry.count, locale)}</span>
+                )}
               </button>
             </li>
           );

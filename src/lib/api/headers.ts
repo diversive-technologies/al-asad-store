@@ -24,4 +24,10 @@ export const API_HEADERS = {
    * store has no answer for.
    */
   accountKey: 'x-account-key',
+  /**
+   * §28.3 — a capability to read ONE order, issued by the backend at placement
+   * or after the order's mobile number was proved. The BFF keeps it in an
+   * httpOnly cookie and attaches it here; the browser never sees it.
+   */
+  orderAccess: 'x-order-access',
 } as const;

@@ -25,7 +25,7 @@ const PREVIEW_SIZES = '(min-width: 768px) 12rem, 40vw';
 export function CatalogueEntrySection({ section }: CatalogueEntrySectionProps) {
   return (
     <section aria-labelledby={section.id} className="bg-surface-muted">
-      <div className="page-shell grid items-center gap-8 py-14 md:grid-cols-2">
+      <div className="page-shell grid grid-cols-1 items-center gap-8 py-14 md:grid-cols-2">
         <div className="flex flex-col items-start gap-4">
           {/* A11Y-09: sequential under the page's single h1. */}
           <h2 id={section.id} className="text-fg text-2xl font-semibold text-balance">

@@ -8,6 +8,7 @@
  * must not mirror.
  */
 export {
+  Bell,
   Camera,
   Check,
   ChevronDown,
@@ -17,9 +18,12 @@ export {
   Columns3,
   Heart,
   Info,
+  Link2,
   Loader2,
   LogOut,
+  Maximize2,
   Menu,
+  MessageCircle,
   Minus,
   Moon,
   Plus,

@@ -1,11 +1,20 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import type { SizeId } from '@/lib/domain/ids';
-import type { Messages } from '@/i18n/messages/en';
 import { cn } from '@/lib/utils/cn';
 
 import type { AvailabilityStatus } from '../schemas/availability.schema';
 import type { SizeOption } from '../schemas/product-detail.schema';
+import { SizeRadio } from './SizeRadio';
+
+/** Which of a selector's sizes is chosen, and which is the customer's own. */
+export interface SizeChoice {
+  selected: SizeId | null;
+  /** §28.3 — the customer's saved size, when it is one of this selector's sizes. */
+  saved: SizeId | null;
+}
 
 export interface SizeSelectorProps {
   legend: string;
@@ -18,27 +27,16 @@ export interface SizeSelectorProps {
    */
   groupId: string;
   sizes: readonly SizeOption[];
-  selected: SizeId | null;
+  /** Grouped because they are one fact about the sizes (CMP-06). */
+  choice: SizeChoice;
   onSelect: (sizeId: SizeId) => void;
   /** `null` from the caller means the overlay could not be read (§30.2). */
   statusOf: (sizeId: SizeId) => AvailabilityStatus | null;
-  messages: Messages;
-}
-
-function statusLabel(status: AvailabilityStatus | null, messages: Messages): string | null {
-  const t = messages.product;
-
-  switch (status) {
-    case 'SOLD_OUT':
-      return t.sizeSoldOut;
-    case 'LOW_STOCK':
-      return t.sizeLowStock;
-    case null:
-      return t.sizeUnknown;
-    default:
-      // IN_STOCK needs no annotation: it is the unremarkable case.
-      return null;
-  }
+  /**
+   * A control that belongs on the legend's line — §28.2's size guide. Absent or
+   * `null` draws the legend alone on its line.
+   */
+  legendAction?: ReactNode;
 }
 
 /**
@@ -47,69 +45,57 @@ function statusLabel(status: AvailabilityStatus | null, messages: Messages): str
  * A11Y-01: radios rather than buttons, because this is a single choice among
  * several and native radios give arrow-key movement, roving focus and the right
  * announcement for free. A row of `<button>`s would need all three hand-rolled
- * and would still announce wrongly.
+ * and would still announce wrongly. Each size is a `SizeRadio`, which also marks
+ * the customer's saved size (§28.3).
  *
  * §28.2: sold-out sizes are SHOWN as sold out rather than removed. Hiding them
- * would leave a customer wondering whether their size exists at all. They stay
- * in the list, disabled, and say why in words — A11Y-06, since a struck-through
- * label is a visual convention a screen reader cannot see.
+ * would leave a customer wondering whether their size exists at all.
  *
- * Notify Me on those sizes is the next slice; the state it hangs from is here.
+ * Notify Me on those sizes is drawn beside this selector rather than inside it
+ * (`SizeGroup`): a sold-out size still cannot be CHOSEN, so asking about one is
+ * its own control and leaves this group's radios meaning what they meant.
+ *
+ * The legend and its action share a line by FLOATING, not by a flex row. Only a
+ * `<legend>` that is the fieldset's own child names the group, and a legend inside
+ * a wrapper div would not be; a floated legend is still that child — it still names
+ * the group — but lays out as ordinary content, so the action can sit at the end of
+ * its line and wrap under it when a long piece name or Urdu needs the room. Both
+ * floats are logical (`float-start` / `float-end`, I18N-04), and the sizes clear
+ * them.
  */
 export function SizeSelector({
   legend,
   groupId,
   sizes,
-  selected,
+  choice,
   onSelect,
   statusOf,
-  messages,
+  legendAction,
 }: SizeSelectorProps) {
   if (sizes.length === 0) return null;
+
+  const hasAction = legendAction !== null && legendAction !== undefined;
 
   return (
     <fieldset>
       {/* FORM-05: the group is labelled, not just the individual inputs. */}
-      <legend className="text-fg mb-2 text-sm font-medium">{legend}</legend>
+      <legend className={cn('text-fg float-start text-sm font-medium', hasAction && 'leading-8')}>
+        {legend}
+      </legend>
+      {hasAction ? <div className="float-end flex">{legendAction}</div> : null}
 
-      <div className="flex flex-wrap gap-2">
-        {sizes.map((size) => {
-          const status = statusOf(size.id);
-          const isSoldOut = status === 'SOLD_OUT';
-          const annotation = statusLabel(status, messages);
-          const inputId = `size-${groupId}-${String(size.id)}`;
-
-          return (
-            <div key={size.id}>
-              <input
-                type="radio"
-                id={inputId}
-                name={`size-${groupId}`}
-                value={size.id}
-                checked={selected === size.id}
-                disabled={isSoldOut}
-                onChange={() => {
-                  onSelect(size.id);
-                }}
-                className="peer sr-only"
-              />
-              <label
-                htmlFor={inputId}
-                className={cn(
-                  'rounded-card flex min-w-12 cursor-pointer items-center justify-center px-3 py-2 text-sm',
-                  'peer-focus-visible:ring-brand-500 peer-focus-visible:ring-2',
-                  isSoldOut
-                    ? 'text-fg-muted cursor-not-allowed line-through opacity-60'
-                    : 'peer-checked:bg-brand-600 peer-checked:text-on-brand bg-surface-muted text-fg hover:bg-surface-strong',
-                )}
-              >
-                <bdi>{size.label}</bdi>
-                {/* A11Y-06: the state is in words, not only in the strike-through. */}
-                {annotation === null ? null : <span className="sr-only"> — {annotation}</span>}
-              </label>
-            </div>
-          );
-        })}
+      <div className="clear-both flex flex-wrap gap-2 pt-2">
+        {sizes.map((size) => (
+          <SizeRadio
+            key={size.id}
+            groupId={groupId}
+            size={size}
+            isChecked={choice.selected === size.id}
+            isSaved={choice.saved === size.id}
+            status={statusOf(size.id)}
+            onSelect={onSelect}
+          />
+        ))}
       </div>
     </fieldset>
   );

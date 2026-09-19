@@ -1,5 +1,6 @@
-import Link from 'next/link';
+import type { ReactNode } from 'react';
 
+import { BreadcrumbTrail } from '@/components/shared/BreadcrumbTrail';
 import { ROUTES } from '@/config/routes';
 import type { Locale } from '@/i18n/locales';
 import { useMessages } from '@/i18n/use-messages';
@@ -13,6 +14,8 @@ import { StyleChooser } from './StyleChooser';
 export interface StudioIntroProps {
   readonly studio: StudioSet;
   readonly choice: StyleChoice;
+  /** A list asked for that could not be loaded, said under the choice of list. */
+  readonly notice: ReactNode;
   readonly locale: Locale;
 }
 
@@ -22,7 +25,7 @@ export interface StudioIntroProps {
  * garment is measured, a card is copied. One polite status says what the list on
  * screen asks for, whichever strip changed it — silent on the first load.
  */
-export function StudioIntro({ studio, choice, locale }: StudioIntroProps) {
+export function StudioIntro({ studio, choice, notice, locale }: StudioIntroProps) {
   const messages = useMessages();
   const t = messages.madeToMeasure;
   const styleLabel = choice.options.find(
@@ -32,11 +35,14 @@ export function StudioIntro({ studio, choice, locale }: StudioIntroProps) {
 
   return (
     <>
-      <nav aria-label={t.pageTitle} className="mm-crumbs">
-        <Link href={ROUTES.home}>{messages.catalogue.breadcrumbHome}</Link>
-        <span aria-hidden>/</span>
-        <span>{t.pageTitle}</span>
-      </nav>
+      <BreadcrumbTrail
+        label={messages.common.breadcrumbLabel}
+        steps={[
+          { label: messages.catalogue.breadcrumbHome, href: ROUTES.home },
+          { label: t.pageTitle },
+        ]}
+        className="mm-crumbs"
+      />
 
       <h1 className="mm-title">{t.pageTitle}</h1>
 
@@ -57,6 +63,7 @@ export function StudioIntro({ studio, choice, locale }: StudioIntroProps) {
         requested={choice.requestedSource}
         product={choice.product?.slug ?? null}
       />
+      {notice}
 
       {styleLabel === undefined ? null : (
         <p role="status" className="sr-only">

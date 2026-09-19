@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LOCALES } from '@/i18n/locales';
 
-import { CLIENT } from './client';
+import { CLIENT, clientKey } from './client';
 
 /**
  * D5 — the client profile is the file a new deployment edits, which makes it the
@@ -52,5 +52,42 @@ describe('client profile', () => {
 
   it('rejects a number from a different market', () => {
     expect(CLIENT.market.mobile.pattern.test('+971 50 123 4567')).toBe(false);
+  });
+
+  // A language added without an address would render an empty block on its
+  // Contact us page rather than failing anywhere a developer would see it.
+  it.each(LOCALES)('has a postal address in %s', (locale) => {
+    expect(CLIENT.contact.address[locale]?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['phone', CLIENT.contact.phone],
+    ['whatsApp', CLIENT.contact.whatsApp],
+  ])(
+    'gives the %s number in international form, so it can be dialled from a link',
+    (_field, number) => {
+      // `tel:` and wa.me both need the country code; a local 03xx number dials nowhere abroad.
+      expect(number).toMatch(/^\+\d[\d\s-]{6,}$/);
+    },
+  );
+
+  it('gives an email address with a domain', () => {
+    expect(CLIENT.contact.email).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+  });
+
+  it('opens before it closes, on 24-hour times', () => {
+    const { opens, closes, firstDay, lastDay } = CLIENT.contact.hours;
+
+    expect(opens).toMatch(/^([01]\d|2[0-3]):[0-5]\d$/);
+    expect(closes).toMatch(/^([01]\d|2[0-3]):[0-5]\d$/);
+    expect(opens < closes).toBe(true);
+    expect(firstDay).toBeLessThanOrEqual(lastDay);
+  });
+
+  it('prefixes its cookie and storage names with a valid cookie-name token', () => {
+    // A space, `=` or `;` in the prefix would make every cookie this store sets
+    // unreadable, and nothing would throw — the cart would simply never persist.
+    expect(CLIENT.keyPrefix).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(clientKey('cart')).toBe(`${CLIENT.keyPrefix}_cart`);
   });
 });

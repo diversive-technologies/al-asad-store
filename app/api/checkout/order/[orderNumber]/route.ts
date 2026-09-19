@@ -1,6 +1,9 @@
-import { fetchOrder } from '@/features/checkout';
+import { currentAccountKey } from '@/features/auth/server';
+import { readOrderFor } from '@/features/checkout';
+import { orderNumberSchema } from '@/lib/domain/ids';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
+import { NO_STORE } from '@/lib/utils/route';
 
 /**
  * DATA-08 — reading one order, and the EIGHTH BFF in the project.
@@ -21,58 +24,51 @@ import { logApiError } from '@/lib/utils/log';
  * worked precisely because it obeys that — `/bag` renders a Client Component
  * that fetches `/api/bag`. This is the order doing the same thing.
  *
- * It is a legitimate BFF rather than scaffolding: `apiRequest` is `server-only`
- * and the read has to start in the browser. When Java replaces the mock layer
- * the route stays exactly as it is, because the reason for it stays true.
+ * ## Who may read it (§28.3)
  *
- * STRUCT-02: it proxies and decides nothing. Which numbers name an order is the
- * backend's to answer (DATA-13).
+ * The NUMBER is an address and never a secret — numbers run in sequence. So the
+ * route attaches who is asking: the session's account, and any access token this
+ * browser holds for the order. The backend decides; anyone it does not recognise
+ * gets the same 404 an unknown number does, and the page then asks for the
+ * order's mobile number (`./lookup`).
+ *
+ * A read, and it changes nothing, so SEC-08's origin check does not apply.
  */
 export const dynamic = 'force-dynamic';
-
-const NO_STORE = { 'Cache-Control': 'no-store' } as const;
-
-/**
- * SEC-02 — the path segment is untrusted input, so its LENGTH is too. The
- * shape of an order number is deliberately not asserted: that is the backend's
- * rule (DATA-13), and a client that encoded it would hold a second copy of it.
- * This declines only what cannot be a number at all.
- */
-const MAX_ORDER_NUMBER_LENGTH = 64;
-
-function isPossibleOrderNumber(value: string): boolean {
-  return value.length > 0 && value.length <= MAX_ORDER_NUMBER_LENGTH && !/\s/.test(value);
-}
 
 interface RouteContext {
   /** NEXT-03: dynamic params are a Promise in Next.js 16. */
   params: Promise<{ orderNumber: string }>;
 }
 
-/** §28.3 — a guest returns to their order by its number. */
 export async function GET(_request: Request, context: RouteContext): Promise<Response> {
   // D1 — a Route Handler never renders the root layout, so it arms its own
   // module context or the first request after a hot reload hits a real socket.
   await ensureMockServer();
 
-  const { orderNumber } = await context.params;
-  if (!isPossibleOrderNumber(orderNumber)) return new Response(null, { status: 404 });
+  /*
+   * SEC-02 — the path segment is untrusted and goes into a backend path. It is
+   * parsed as an order number, which declines anything that is not one path
+   * segment; the FORMAT of a number stays the backend's rule (DATA-13).
+   */
+  const orderNumber = orderNumberSchema.safeParse((await context.params).orderNumber);
+  if (!orderNumber.success) return new Response(null, { status: 404, headers: NO_STORE });
 
-  const result = await fetchOrder(orderNumber);
+  const result = await readOrderFor(orderNumber.data, await currentAccountKey());
 
   if (!result.ok) {
     /*
-     * ERR-02 — the discriminant is the whole point of this branch, and
-     * collapsing it is the defect this change exists to remove. A number that
-     * names no order is an ordinary business state and answers 404. Anything
-     * else is the store being unreachable, and MUST NOT be dressed up as one:
-     * saying "no such order" to someone holding a receipt sends them looking
-     * for a mistake they did not make.
+     * ERR-02 — a number this browser may not see is an ordinary business state
+     * and answers 404. Anything else is the store being unreachable, and MUST NOT
+     * be dressed up as one: saying "no such order" to someone holding a receipt
+     * sends them looking for a mistake they did not make.
      */
-    if (result.error.kind === 'NOT_FOUND') return new Response(null, { status: 404 });
+    if (result.error.kind === 'NOT_FOUND') {
+      return new Response(null, { status: 404, headers: NO_STORE });
+    }
 
     logApiError('api:checkout:order', result.error); // ERR-10
-    return new Response(null, { status: 502 });
+    return new Response(null, { status: 502, headers: NO_STORE });
   }
 
   return Response.json(result.value, { headers: NO_STORE });

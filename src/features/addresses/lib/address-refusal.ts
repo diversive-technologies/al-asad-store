@@ -28,3 +28,18 @@ export function addressRefusal(kind: AddressBookError['kind'], t: Messages['acco
       return t.addressesUnavailable;
   }
 }
+
+/**
+ * The refusal a failed change carries, recovered from the mutation's error.
+ *
+ * `unwrap` rejects with the error VALUE, so the union is recovered by narrowing,
+ * not a cast (DATA-03a, TS-03); anything else that could have been thrown is not
+ * guessed at.
+ */
+export function addressFailureOf(error: unknown): AddressBookError['kind'] | null {
+  if (error === null || typeof error !== 'object' || !('kind' in error)) return null;
+  const { kind } = error;
+  return kind === 'SIGNED_OUT' || kind === 'FULL' || kind === 'GONE' || kind === 'UNREACHABLE'
+    ? kind
+    : null;
+}

@@ -30,6 +30,32 @@ export interface UseFieldNotesResult {
   readonly summaryRef: RefObject<HTMLDivElement | null>;
 }
 
+/* The quiet summary's focus, and the only effect: a notes-only answer has nowhere
+   else to land, while a refusal keeps the red summary's landing. The request is
+   spent on the render it was armed for whether or not it is used — left armed
+   behind a refusal it would fire later, on the keystroke that clears the last red
+   field, and take focus out from under the customer. */
+function useNotesFocus(canLand: boolean): {
+  readonly summaryRef: RefObject<HTMLDivElement | null>;
+  readonly request: () => void;
+} {
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const wantsFocus = useRef(false);
+
+  useEffect(() => {
+    if (!wantsFocus.current) return;
+    wantsFocus.current = false;
+    if (canLand) summaryRef.current?.focus();
+  });
+
+  return {
+    summaryRef,
+    request: () => {
+      wantsFocus.current = true;
+    },
+  };
+}
+
 /**
  * The QUIET channel: figures the rules ask about, and the customer's answer.
  *
@@ -56,25 +82,13 @@ export function useFieldNotes(
     notes: [],
   });
   const [kept, setKept] = useState<ReadonlyMap<string, Held>>(new Map());
-  const summaryRef = useRef<HTMLDivElement>(null);
-  const wantsFocus = useRef(false);
 
   const stands = (held: Held): boolean => figuresStand(held.basis, points, values, unit);
   const standing = placed.key === key ? placed.notes.filter(stands) : [];
   const keptNow = [...kept.values()].filter(stands);
-  const isKept = (note: Note): boolean => keptNow.some((held) => noteKey(held.note) === noteKey(note));
-
-  /* The only effect, and its external system is focus: a notes-only answer has
-     nowhere else to land, while a refusal keeps the red summary's landing.
-     The request is spent on the render it was armed for whether or not it is
-     used — left armed behind a refusal it would fire later, on the keystroke
-     that clears the last red field, and take focus out from under the customer. */
-  useEffect(() => {
-    if (!wantsFocus.current) return;
-    wantsFocus.current = false;
-    if (standing.length === 0 || hasErrors) return;
-    summaryRef.current?.focus();
-  });
+  const isKept = (note: Note): boolean =>
+    keptNow.some((held) => noteKey(held.note) === noteKey(note));
+  const focus = useNotesFocus(standing.length > 0 && !hasErrors);
 
   return {
     on: (id) => standing.filter((held) => held.note.pointId === id).map((held) => held.note),
@@ -107,8 +121,8 @@ export function useFieldNotes(
          changed is let go here rather than lingering to apply again if the
          customer happens to type its figure back. */
       setKept((before) => new Map([...before].filter(([, held]) => stands(held))));
-      if (notes.length > 0) wantsFocus.current = true;
+      if (notes.length > 0) focus.request();
     },
-    summaryRef,
+    summaryRef: focus.summaryRef,
   };
 }

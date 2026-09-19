@@ -23,10 +23,12 @@ export async function GET(request: Request): Promise<Response> {
   // No cart means nothing to quote. Not an error — there is simply no checkout.
   if (cartId === null) return new Response(null, { status: 404 });
 
+  // No option named is the backend's default, which the quote then states.
   const url = new URL(request.url);
+  const requested = url.searchParams.get('deliveryOptionId');
   const result = await fetchQuote(
     cartId,
-    url.searchParams.get('deliveryOptionId') ?? '',
+    requested === null || requested.length === 0 ? null : requested,
     url.searchParams.get('isGift') === 'true',
     await getLocale(),
   );

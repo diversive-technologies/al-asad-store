@@ -12,6 +12,15 @@ findings are recorded here.
 if something a customer needs sits outside the screen, if text overlaps or is cut
 off, or if a control is too small to hit on a phone (under about 32px).
 
+**What this log holds.** UC-01 to UC-13 are the by-hand pass recorded before
+2026-09-19, kept as it was found. UC-14 to UC-16 are the numbers
+`../BACKEND-USE-CASES.md` gives to tailoring a garment from its product, the account
+page and the address book; they have not had a by-hand pass in this log yet. UC-17
+to UC-26 are the features added in the round of 17–19 September 2026. Since that
+round the main journeys also run automatically (see "The automated journeys"
+below), and the by-hand pass of the new use cases is the last section
+("By-hand pass, 2026-09-19").
+
 ---
 
 ## What was wrong, and what was done
@@ -157,6 +166,9 @@ The customer must scroll sideways, or zoom out and still find things misaligned.
   none; switching it off would have taken quick add away from every phone.
   **Checked end to end on a phone:** tap the button, the tray opens, tap M, one item
   in the bag. Desktop is unchanged — still revealed by hover, still 32px.
+- `NOTE` (changed 2026-09-19) The catalogue now shows **12 products per page**, so
+  the 24 products are two pages, not one. 12 divides every column count the grid
+  uses (1, 2, 3, 4 and 6), so every page still ends on a full row.
 
 ---
 
@@ -273,6 +285,10 @@ the order.
   `opacity: 0`, 32×32, over the photograph, so a customer aiming for the product
   could silently save it instead. Drawn at 36×36 on touch now, by the same fix as the
   "Choose a size" button in UC-03.
+- `NOTE` (changed 2026-09-19) The heart's label no longer flips to "Remove from
+  wishlist". It is always "Save to wishlist", and a screen reader hears whether it is
+  pressed. The heart is offered only to a signed-in customer; saved items belong to
+  the account.
 
 ---
 
@@ -306,6 +322,11 @@ the order.
 
 - `PASS` The whole path — catalogue → product → bag → checkout → confirmation —
   works on a phone, despite the product page's width fault.
+- `NOTE` (changed 2026-09-19) The confirmation is now headed **"Order placed"**, which
+  is true whatever state the order is in. An order paid by bank transfer shows where
+  to pay (UC-24). The order's page opens straight away only in the browser that
+  placed it or for the signed-in account that placed it; anyone else is asked for
+  the order's mobile number first (UC-24).
 
 ---
 
@@ -316,6 +337,10 @@ the order.
 | | Phone 375 |
 | --- | --- |
 | Loads, readable, no overflow | PASS |
+
+- `NOTE` (changed 2026-09-19) The same route now also serves six store pages —
+  About us, Contact us, Delivery, Returns and exchanges, Terms of sale and Privacy —
+  linked from a regrouped footer (UC-25).
 
 ---
 
@@ -338,15 +363,391 @@ the order.
 
 ---
 
+## UC-17 — Read the size guide without losing my size
+
+**As a customer:** on a product page I am not sure of my size, so I open the size
+guide, read it, and go back to choosing.
+
+- A **"Size guide"** button sits at the end of the "Size" line on a single-piece
+  product. On a set it sits on the "Size for the whole set" line and on the "Adjust
+  individual pieces" heading — not beside every piece.
+- Choose a size first, then press it. A centred dialog titled "Size guide" shows the
+  served size guide and a link, **"Open this guide on its own page"**, to
+  `/help/size-guide`.
+- Close it with the X, a click outside it, or Escape. Focus returns to the "Size
+  guide" button and **the size chosen before is still chosen**.
+- Phone 375: the button stays on the size line (or wraps under a long one), the
+  dialog fits the screen, nothing scrolls sideways.
+
+**Automated:** `product-page.spec.ts` — "the size guide opens over the page and
+hands focus back when it closes" (Escape and the close button).
+
+---
+
+## UC-18 — Share a product
+
+**As a customer:** I send a product to someone on WhatsApp, or copy its link.
+
+- Under "Estimated delivery": **"Share on WhatsApp"** and **"Copy link"**.
+- WhatsApp opens `wa.me` in a new tab with the message already written: "Have a
+  look at {product} from Al-Asad:" and the product's address on the next line. The
+  address is the product's own, with no language setting in it.
+- "Copy link" shows a tick and **"Link copied."**, which a screen reader also hears.
+  Pasting gives the product's address.
+- If the browser will not copy by either of the two ways the page tries, it says
+  "Your browser did not let us copy the link. Copy it from the box below." and shows
+  the link, selected, in a box labelled "Link to this product".
+
+**Automated:** `product-page.spec.ts` — "copy link puts the product's own address on
+the clipboard and says so".
+
+---
+
+## UC-19 — See what else I might like
+
+**As a customer:** at the foot of a product page I look at related products.
+
+- A **"You may also like"** section with up to 12 product cards, in the same grid as
+  the catalogue. The product itself is never among them.
+- The same garment comes first, other garments of the same kind after, and
+  anything sold out goes last. An unstitched kurta shows only the other unstitched
+  kurta.
+- The cards work like the catalogue's: frames on hover, quick add, the heart for a
+  signed-in customer. Pressing one opens that product.
+- The section arrives after the rest of the page: the buy box works before it is
+  there, and a grey placeholder holds its place meanwhile.
+
+**Automated:** `product-page.spec.ts` — "you may also like offers other products,
+and each opens its own page".
+
+---
+
+## UC-20 — Look closely at the photographs
+
+**As a customer:** I zoom into the cloth, and look at every photograph full screen.
+
+- **Desktop, with a mouse:** hovering the main photograph zooms it in place, twice
+  the size, following the pointer. Nothing else on the page moves.
+- **Pressing the photograph** (or Tab to it and Enter) opens a full-screen view
+  titled "Photographs of {product}", with focus on its close button. Next and
+  previous buttons, the arrow keys and the thumbnails change the photograph; the
+  keys follow the reading direction and wrap from the last to the first. A line
+  reads "Image n of N". Home and End jump to the ends.
+- Closing it (Escape or the close button) returns focus to the photograph, and the
+  page shows the photograph last looked at, with its thumbnail scrolled into view.
+- **Phone:** an expand icon on the photograph shows it opens larger. Swiping left
+  and right changes the photograph; dragging up or down does not; pinching zooms
+  without changing the photograph. With the phone on its side, the full-screen
+  view hides its thumbnails so the photograph keeps its height.
+- Pick a product with several photographs: four of the 24 have only one.
+
+**Automated:** `product-page.spec.ts` — "the gallery opens full screen, steps
+through the photographs and closes".
+
+---
+
+## UC-21 — Ask to be told when a sold-out size is back (Notify Me)
+
+**As a customer:** my size is sold out, so I ask to be emailed when it returns.
+
+- On a product with a size drawn struck through, under the sizes: "Sold out in your
+  size? Choose it and we will email you when it is back." and one button per
+  sold-out size, named "Email me when size {size} is back".
+- **As a guest:** pressing it opens an email field ("Size {size} is sold out. Where
+  should we email you when it is back?"). A bad address says "Enter a valid email
+  address." A good one closes the form and says "We will email you when {product}
+  is back in size {size}." Asking again with the same address, in any letter case,
+  says "We already have a request to email you…".
+- Typing the test account's own email as a guest gives exactly the same sentence as
+  any other address — the page never reveals whether an account exists.
+- **Signed in:** the line says "…we will email the address on your account…", and
+  one press records the request with no form.
+- **On a set:** the buttons under "Size for the whole set" ask about the whole
+  product; those under a piece in "Adjust individual pieces" ask about that piece
+  ("…when the Shalwar in {product} is back…"). A whole-set size is drawn sold out
+  when any piece lacks it.
+- No email is actually sent: nothing sends email yet. The store only records the
+  request.
+
+**Automated:** `product-page.spec.ts` — "notify me takes an address for a sold-out
+size and says what will happen" (guest).
+
+---
+
+## UC-22 — Move things between the bag and my saved items
+
+**As a signed-in customer:** I keep something for later instead of buying it now,
+and later buy something I had saved.
+
+- Each line in the bag (panel and `/bag`) has **"Move to saved items"** before
+  Remove. Pressing it takes the line out of the bag, says "{item} moved to your
+  saved items.", and moves focus to the next line's Remove (or to the empty-bag
+  sentence). The product is then on `/wishlist` and its heart is filled.
+- A line being cut to measure has no "Move to saved items" — only Remove. A guest
+  sees no move button at all.
+- On `/wishlist`, adding a card to the bag with its quick add **moves** it: the card
+  leaves the list without the list blanking, the bag panel does not open, and
+  "{item} moved to your bag." appears above the list beside a "View bag" link, which
+  takes focus. Elsewhere, quick add still opens the bag panel.
+
+**Automated:** `saved-for-later.spec.ts` — "a bag line moved to saved items leaves
+the bag and appears on the saved list".
+
+---
+
+## UC-23 — Have my size remembered
+
+**As a signed-in customer:** I save my size once and it is chosen for me on other
+products.
+
+- Choose one size for the whole product (a single-piece product, or a set with every
+  piece in the same size). A **"Remember size {size}"** button appears under the
+  sizes. Pressing it says "Size {size} is saved…" and a **"Your size"** mark appears
+  under that size in every selector.
+- On another product that comes in that size and has it in stock, the size is
+  already chosen, with "We have chosen your saved size. You can change it." Nothing
+  goes in the bag until Add to bag is pressed.
+- Saving another size says "Size L is saved in place of M." Sizes chosen differently
+  per piece offer nothing to remember. A saved size that is sold out is not chosen,
+  but is still marked. On a set, the saved size is chosen for every piece or for
+  none: if any piece lacks it in stock, nothing is chosen.
+- In a card's quick-add tray the saved size is marked with an icon; a screen reader
+  hears "{size} — your saved size". It is never pressed for you.
+- `/account` has **"Your saved sizes"**: the chart ("Clothing sizes") and the size,
+  with Forget. Forgetting says "Saved size forgotten." and product pages stop
+  choosing it.
+- A guest sees none of this.
+
+**Automated:** `saved-for-later.spec.ts` — "a size saved on one product is chosen for
+the customer on the next".
+
+---
+
+## UC-24 — Open my order again, from anywhere
+
+**As a customer:** I come back to my order later, maybe on another phone.
+
+- The browser that placed the order opens `/order/{number}` straight away, and so
+  does the signed-in account that placed it, from any browser.
+- Anyone else — another browser, a shared link — sees **"Find your order"** and a
+  mobile number field. The mobile the order was placed with opens it; a wrong one,
+  or a number that names no order, says "We could not find an order with that
+  number and mobile number." — the same sentence for both.
+- An address with the order number in small letters (`/order/aa100001`) opens
+  straight away for the signed-in account that placed it. For a guest it asks for
+  the mobile number even in the browser that placed the order — that browser's
+  access is kept under the number as issued — and after the lookup it opens at
+  either spelling.
+- An order paid by **bank transfer** shows "Paying by bank transfer": the amount,
+  the order number as the reference, and the bank's details. The bank details are a
+  placeholder, not the client's account.
+- A signed-in customer's `/account` lists their orders 20 at a time, newest first,
+  with **"Show more orders"**; it works without JavaScript.
+
+**Automated:** none. `guest-checkout.spec.ts` covers placing an order and seeing its
+page in the same browser.
+
+---
+
+## UC-25 — Read the store's own pages
+
+**As a customer:** I look up delivery, returns, or how to reach the shop.
+
+- The footer has four parts: **Shop**, **Help** (Delivery, Returns and exchanges,
+  Size guide, Payment guide, Fabric glossary, Care guide), **Our store** (About us,
+  Contact us, Terms of sale, Privacy) and the newsletter. One column on a phone,
+  three columns on a tablet with the newsletter on its own row, one row on a desktop.
+- Each opens at `/help/{page}`. **Contact us** ends with "How to reach us": phone
+  (opens the dialler), WhatsApp (opens in a new tab), email, hours and address.
+  **Every contact detail is a placeholder**; the hours look real and are not.
+- No page states a figure — delivery charges, the free-delivery threshold and the
+  cash-on-delivery limit are described without numbers. Returns are asked for by
+  contacting the store; there is no return form.
+- Terms of sale and Privacy are placeholders with no legal standing, to be replaced
+  by the client's lawyer.
+- In Urdu (`?locale=ur`) every page and the footer read right to left, and the
+  footer offers the way back to English, because the header switch is off.
+- A page that does not exist, a product that does not exist and an order number
+  that cannot be one each show a proper "could not find" page with a way back.
+
+**Automated:** `urdu.spec.ts` checks the footer's help heading in Urdu; nothing opens
+the store pages yet.
+
+---
+
+## UC-26 — What a search engine is given
+
+**As the store:** search engines can find every public page and nothing private.
+
+- `/robots.txt` allows `/` and disallows `/api/`, `/account`, `/bag`, `/checkout`,
+  `/order/`, `/sign-in`, `/sign-up`, `/forgot-password` and `/wishlist`, and names the
+  sitemap.
+- `/sitemap.xml` lists the homepage, `/catalogue`, `/stitched`, the ten help and store
+  pages and all 24 products, as full addresses, each with its English and Urdu
+  alternative.
+- A product page's source holds a `Product` description (name, code, price in PKR,
+  availability matching the buy box, no rating) and a `BreadcrumbList`; `/catalogue`
+  has a `BreadcrumbList`; the homepage has the store's name and web address.
+- Each page names its own canonical address; the Urdu version names its own.
+
+**Automated:** none end to end; unit tests hold robots.txt to the pages' own
+`noindex` settings and check the sitemap and the structured data.
+
+---
+
+## The automated journeys
+
+Since 2026-09-19 the main journeys run in a real browser against a real `next dev`,
+with the mock backend inside it: `npm run test:e2e` (Playwright, Chromium). It
+starts its own server on port **3107** and **cannot run while your own
+`npm run dev` is running** — Next allows one dev server per project folder — so
+stop that first. In a Claude Code session, also clear `AI_AGENT` and `CLAUDECODE`
+before running it, or `next dev` writes `AGENTS.md` and `CLAUDE.md` into the
+repository root. One run takes about three minutes; the last three full runs passed
+17 of 17.
+
+| Spec | Journeys |
+| --- | --- |
+| `guest-checkout.spec.ts` | A guest goes from the homepage to the catalogue, picks a size by keyboard, bags it, checks out with the first payment method on offer, lands on the order page, and finds the bag empty afterwards. |
+| `catalogue-listing.spec.ts` | A filter and a sort narrow and order the listing, the screen-reader status line and the address follow both, and removing the filter keeps the sort. An address past the last page shows the last page. |
+| `search.spec.ts` | Typing part of a trending term offers suggestions and choosing one lists results. A product code typed into search opens that product. |
+| `product-page.spec.ts` | The size guide opens and hands focus back (UC-17). Copy link copies the product's own address (UC-18). "You may also like" offers other products that open (UC-19). The gallery opens full screen, steps and closes (UC-20). Notify Me takes an address for a sold-out size (UC-21). |
+| `account.spec.ts` | A signed-in customer saves a product with the heart and finds it on the saved-items page and on the account. The account page shows who is signed in and every section's empty state. |
+| `saved-for-later.spec.ts` | A bag line moved to saved items leaves the bag and appears on the list (UC-22). A size remembered on one product is chosen on the next (UC-23). |
+| `made-to-measure.spec.ts` | A guest opens the studio from a product's fork, is refused with nothing filled, fills the required figures, checks, reviews, saves on this browser, and bags the garment, which the bag shows as cut to measure and not returnable. |
+| `phone.spec.ts` | On a Pixel 7: a size is tapped, bagged, raised, and removed with confirmation, and nothing ever scrolls sideways. |
+| `urdu.spec.ts` | In Urdu the homepage, the catalogue and a product page read right to left with their Urdu words, and nothing scrolls sideways. |
+
+Before the first journey, `tests/e2e/global-setup.ts` checks that the catalogue has
+product cards — so a mock that has stopped answering stops the run there, by name —
+and requests every page and route once, so no journey pays for a first compile. The
+server is pointed at `http://127.0.0.1:9` for the backend, so a request the mock does
+not answer fails at once instead of reaching a real service. A signed-in journey
+signs in by setting the mock session cookie, not through the sign-in form. After
+"Go to checkout" the guest journey waits for the bag panel to finish closing before
+it types: the panel stays modal through its exit animation, and the page under a
+modal dialog cannot be typed into.
+
+The journeys find products through the page — never by address or product code —
+and read their words from the message files. Two things are still written into
+them: the eleven measurement figures in `tests/e2e/support/measurements.ts`, which
+must satisfy the placeholder tailor's rules, and the guest's name, mobile and
+address.
+
+---
+
 ## Not tested, and why
 
 - **A real card payment.** There is no payment provider connected; card and wallet
   orders are confirmed by the stand-in. Cash on delivery was tested end to end.
 - **A real Try-on image.** No image provider is connected, so the panel's guidance,
   privacy wording and photo picker were tested, but not a generated picture.
-- **Urdu on the storefront.** The language switcher is deliberately off until the
-  Urdu review is finished; the made-to-measure screens were checked in Urdu
-  separately and read correctly right-to-left.
-- **Reading saved measurements back.** Nothing reads a saved profile into the form
-  yet; that belongs with the account area.
+- **Urdu on the storefront, by hand.** The header language switch is deliberately
+  off until the Urdu review is finished. Urdu is reachable with `?locale=ur`, and
+  `urdu.spec.ts` checks the main path reads right to left; the words themselves
+  still await a native reader.
+- **Emails and text messages.** Nothing sends either yet, so a Notify Me request, a
+  password reset and a sign-in code are recorded but never delivered; the sign-in
+  code is shown on screen instead.
 
+---
+
+## By-hand pass, 2026-09-19
+
+Driven in the running store (`npm run dev`, MSW on) at 1280×800 and at the 375×812
+phone preset, light and dark, English and Urdu, as a guest and signed in (the D3
+session cookie set directly — no password or sign-in code was typed). Results per
+cell: `PASS`, `FIXED` (a fault found here and repaired in the same pass), `NOTE`,
+or `—` where that width was not exercised for that case.
+
+| Use case | Desktop 1280 | Phone 375 |
+| --- | --- | --- |
+| UC-17 Size guide | PASS | — (the page around it fits) |
+| UC-18 Share a product | PASS | — |
+| UC-19 You may also like | PASS | PASS (layout) |
+| UC-20 Photographs, zoom and full screen | FIXED | NOTE (swipe and pinch need a real phone) |
+| UC-21 Notify Me | PASS | — |
+| UC-22 Bag and saved items | PASS | PASS |
+| UC-23 Saved sizes | FIXED | PASS |
+| UC-24 Open my order again | PASS, NOTE | — |
+| UC-25 Store pages and footer | PASS | PASS |
+| UC-26 Robots, sitemap, structured data | PASS | — (not width-dependent) |
+
+**What was checked, briefly**
+
+- UC-17 — "Size guide" beside the whole-set legend and the per-piece heading opens the
+  dialog with focus on Close, the help page's own text, and "Open this guide on its own
+  page".
+- UC-18 — the WhatsApp link carries the product name and its canonical address and
+  opens safely (`target=_blank`, `rel=noopener noreferrer`, "opens in a new tab" in its
+  name). The pane refuses the clipboard, so Copy link showed its fallback: the address
+  in a selected read-only box and a sentence saying so.
+- UC-19 — twelve products, the same garment first and newest first, the product itself
+  and the sold-out suits left out.
+- UC-20 — full screen opens on Close, reads "Image 1 of 4", steps with Next and the
+  right arrow, and hands focus back to the photograph it opened from.
+- UC-21 — as a guest: a bad address refused in words, then "We will email you when …
+  is back in size XS." with focus on it, and a repeat request recognised ("We already
+  have a request…").
+- UC-22 — signed in, "Move to saved items" empties the line, says so and lands focus on
+  "Your bag is empty."; on `/wishlist` a quick add moves the product into the bag and
+  out of the list, announced, without duplicating a product already saved.
+- UC-23 — "Remember size L" confirms with focus and marks all four selectors; another
+  suit with L on every piece opens with L chosen and "We have chosen your saved size";
+  the account lists "Clothing sizes / L" with a named Forget. At 3 per row on a phone
+  the quick-add tray still fits the 104px tile, the saved size named "L — your saved
+  size".
+- UC-24 — `/order/AA100001` reloads to the order; an unknown number and a number the
+  browser holds no access to both get the same "Find your order" lookup.
+- UC-25 — all ten help and store pages answer with their own titles and canonical
+  addresses; the contact card renders the FIXTURE details from the client profile; in
+  Urdu the pages read right to left with nothing past the screen edge.
+- UC-26 — `robots.txt` disallows the private routes and names the sitemap;
+  `sitemap.xml` lists 37 addresses (home, catalogue, studio, ten pages, 24 products)
+  with language alternates; the product page publishes Product (PKR price, live
+  availability, no rating) and BreadcrumbList, the listing BreadcrumbList, the
+  homepage Organization and WebSite.
+
+The earlier use cases were walked again as well: header, search panel and results
+page, listing (filters, chips, price, in stock, sort, paging, page 99, back button),
+cards, product page (set sizing and per-piece override, Fabric Calculator, adding an
+unstitched length), try-on (the sample labelled as a sample), bag panel (quantity,
+codes, removal, the hold explanation), guest and signed-in checkout (validation,
+delivery, gift, cash on delivery, one order from a double press, the saved-address
+picker), made to measure from a product through save and Add to bag to a placed order
+carrying the figures, sign-in, sign-up and reset validation, sign out, the account
+area and the address book. A contrast sweep of every text element on eighteen pages
+found nothing under 4.5:1 in dark or light, apart from text set over photographs,
+which that sweep cannot see behind.
+
+**Findings**
+
+- **FIXED — a saved size half-filled a set.** The waistcoat had no L while the kameez
+  and shalwar did; the page chose L on two pieces, left the waistcoat blank, disabled
+  Add to bag and said "We have chosen your saved size". A set now takes its saved size
+  whole or not at all (`saved-size-prefill.ts`, with a test).
+- **FIXED — the largest image carried the `priority` prop Next 16 deprecates**, and the
+  dev server warned about it on the product page. The gallery's frame and the hero's
+  still load eagerly at high priority; a card's first frame in the leading rows loads
+  eagerly.
+- **FIXED — the way back to English was pronounced as Urdu.** The footer's "English"
+  on an Urdu page now carries `lang="en"` in a `bdi`.
+- **FIXED (found in review, not by hand) — an unknown payment method or delivery option
+  at placement answered NOT_FOUND**, which the checkout route reads as an empty bag. It
+  is its own INVALID answer now, a 400 like the quote's.
+- **NOTE — `/order/aa100001` in the browser that placed it asks for the mobile.** The
+  order read and the lookup ignore case; the browser's access cookie does not. The
+  lookup then shows the order.
+- **NOTE — an unknown `/help/…` page renders the store's not-found page with `noindex`
+  and status 200.** The status is sent before the page streams; `/no-such-route`
+  itself answers 404.
+- **NOTE — the pane's Enter sends only a keydown**, so implicit form submission never
+  fires from it; the search panel's submit was verified through the form itself.
+- **NOTE — pane artefacts, not store faults:** while the pane is not painting, React's
+  hidden streaming copies stay in the document, which duplicates ids and makes React
+  warn about radios sharing a name. With the pane painting the copies are gone.
+
+**Not exercised by hand:** typing a password or a sign-in code (covered by the
+Playwright suite and by the session cookie), a real try-on image, a hold lapsing after
+30 minutes, the backend switched off, a full keyboard-only walk, reduced motion, and
+touch on a real phone.

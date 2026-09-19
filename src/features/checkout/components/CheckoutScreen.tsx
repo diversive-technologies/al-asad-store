@@ -1,195 +1,71 @@
 'use client';
 
-import { useRef, useState, type FormEvent } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-
-import { Button, ButtonLink } from '@/components/ui/button';
 import { CLIENT } from '@/config/client';
-import { ROUTES } from '@/config/routes';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { queryKeys } from '@/lib/api/query-keys';
-import { unwrap } from '@/lib/result';
 
-import { fetchQuote, placeOrder } from '../api/checkout-browser';
-import {
-  checkoutFormSchema,
-  type CheckoutFormInput,
-  type OrderTotals,
-  type PlaceOrderResult,
-} from '../schemas/checkout.schema';
+import { useCheckoutQuote } from '../hooks/use-checkout-quote';
+import { usePlaceOrder } from '../hooks/use-place-order';
 import { CheckoutFields } from './CheckoutFields';
+import { CheckoutNotice } from './CheckoutNotice';
+import { CheckoutOrderAside } from './CheckoutOrderAside';
 import { CheckoutOutcomeAlert } from './CheckoutOutcomeAlert';
-import { CutCutoffNotice } from './CutCutoffNotice';
-import { OrderSummary } from './OrderSummary';
+import { CheckoutSkeleton } from './CheckoutSkeleton';
 
 export interface CheckoutScreenProps {
   locale: Locale;
   messages: Messages;
 }
 
-/** §28.2: "Checkout: single page." Not a wizard, not a stepper. */
+/**
+ * §28.2: "Checkout: single page." Not a wizard, not a stepper.
+ *
+ * NEXT-14 — the page's own shape is drawn for the FIRST quote only. A re-quote
+ * keeps the form on screen with the previous totals (`checkoutQuoteQuery`), so
+ * changing delivery or the gift box no longer throws focus to the top of the page.
+ *
+ * ERR-02 — two different facts, kept apart: a store that could not be reached,
+ * and a bag with nothing in it to check out. A refusal that EMPTIED the bag —
+ * every hold lapsed — keeps its words above the notice, naming what lapsed.
+ */
 export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
   const t = messages.checkout;
-  const router = useRouter();
-  const queryClient = useQueryClient();
+  const { quote, choices } = useCheckoutQuote();
+  const { form, outcome, isPlacing, onSubmit, warmUp } = usePlaceOrder(quote, t.failed);
 
-  /*
-   * Two fields drive a re-quote, because both change the total — and the total
-   * is what decides whether Cash on Delivery is offered at all (§17). They are
-   * held here rather than read from the form, so the query key is a plain value
-   * and the quote does not refetch on every keystroke elsewhere in the form.
-   */
-  const [deliveryOptionId, setDeliveryOptionId] = useState('standard');
-  const [isGift, setIsGift] = useState(false);
-  const [outcome, setOutcome] = useState<PlaceOrderResult | null>(null);
-  /* FORM-06, synchronously — see `AddToBagButton` for why `isPending` is not
-     sufficient. Here the cost of the gap would be two orders, not two items. */
-  const inFlight = useRef(false);
+  if (quote.isPending) return <CheckoutSkeleton label={messages.common.loading} />;
 
-  const quote = useQuery({
-    queryKey: queryKeys.checkout.quote(deliveryOptionId, isGift),
-    queryFn: ({ signal }) => unwrap(fetchQuote(deliveryOptionId, isGift, signal)),
-    // DATA-09: a quote reflects live stock, a live promotion and a cap the
-    // operator can change. There is no interval over which it is safe to reuse.
-    staleTime: 0,
-    retry: false,
-  });
-
-  // FORM-01 / FORM-02: one Zod schema, React Hook Form, `zodResolver`.
-  const form = useForm<CheckoutFormInput>({
-    resolver: zodResolver(checkoutFormSchema),
-    defaultValues: {
-      contactName: '',
-      contactMobile: '',
-      contactEmail: '',
-      addressLine: '',
-      addressCity: '',
-      deliveryOptionId: 'standard',
-      paymentMethodId: '',
-      isGift: false,
-      giftMessage: '',
-    },
-  });
-
-  const place = useMutation({
-    mutationFn: (input: CheckoutFormInput & { expectedTotalMinor: number }) =>
-      unwrap(placeOrder(input)),
-    onSuccess: (result: PlaceOrderResult) => {
-      if (result.kind === 'PLACED') {
-        /*
-         * DATA-06 — the bag is GONE, so its cache entry must go with it.
-         *
-         * §7.2 discards the cart on commit, but nothing had told the browser
-         * that: the header badge and the panel kept rendering the summary from
-         * before the order, so a customer who had just checked out still saw
-         * two items waiting for them. `removeQueries` clears it immediately
-         * rather than leaving the stale count on screen until a refetch
-         * resolves, and the provider re-reads an empty bag from the server.
-         */
-        queryClient.removeQueries({ queryKey: queryKeys.bag.all });
-
-        /*
-         * The order number is the address (§28.3), so this is a navigation
-         * rather than a state change — the customer can bookmark it, share it,
-         * and come back to it.
-         */
-        router.push(ROUTES.orderConfirmation(result.order.orderNumber));
-        return;
-      }
-
-      /*
-       * §7.2's two rollback paths, plus a failed authorisation. None is an
-       * error to be swallowed: each is rendered with what it carries — the
-       * items that lapsed, or the total that moved.
-       */
-      setOutcome(result);
-      if (result.kind === 'PRICE_CHANGED') void quote.refetch();
-      /* Both send the customer to the bag, and the bag they find there has to be
-         the backend's answer NOW — the lapsed lines gone, the changed line marked —
-         not the summary cached when they last touched it. */
-      if (result.kind === 'RESERVATION_EXPIRED' || result.kind === 'MEASUREMENTS_CHANGED') {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.bag.all });
-      }
-    },
-    onError: () => {
-      setOutcome({ kind: 'PAYMENT_FAILED', reason: t.failed });
-    },
-  });
-
-  function onSubmit(input: CheckoutFormInput): void {
-    const totals = quote.data?.totals;
-    if (totals === undefined) return;
-
-    inFlight.current = true;
-    setOutcome(null);
-
-    /*
-     * `expectedTotalMinor` is what arms §7.2 step 2. The customer is submitting
-     * against a total they were SHOWN, and the backend refuses if it has moved.
-     */
-    place.mutate(
-      { ...input, expectedTotalMinor: totals.totalMinor },
-      {
-        onSettled: () => {
-          inFlight.current = false;
-        },
-      },
+  const alert =
+    outcome === null ? null : (
+      <CheckoutOutcomeAlert outcome={outcome} locale={locale} messages={messages} />
     );
-  }
 
-  /*
-   * `handleSubmit` is composed HERE rather than during render, so the latch is
-   * only ever read inside an event handler — which is both what the rule
-   * requires and what is actually true.
-   */
-  function handleFormSubmit(event: FormEvent<HTMLFormElement>): void {
-    if (inFlight.current) {
-      event.preventDefault();
-      return;
-    }
-    void form.handleSubmit(onSubmit)(event);
-  }
-
-  if (quote.isPending) {
-    return <p className="page-shell text-fg-muted py-16">{messages.common.loading}</p>;
-  }
-
-  // A 404 from the quote means an empty bag: there is nothing to check out, and
-  // that is a state to explain rather than an error to report.
-  if (quote.isError || quote.data === undefined) {
+  if (quote.isError || quote.data === null) {
     return (
-      <section className="page-shell max-w-xl py-16">
-        <h1 className="text-fg text-2xl font-semibold">{t.emptyTitle}</h1>
-        <p className="text-fg-muted mt-3">{t.emptyBody}</p>
-        <div className="mt-6">
-          <ButtonLink href={ROUTES.catalogue.list} variant="primary">
-            {t.browse}
-          </ButtonLink>
-        </div>
-      </section>
+      <CheckoutNotice
+        kind={quote.isError ? 'UNREACHABLE' : 'EMPTY'}
+        messages={messages}
+        onRetry={() => {
+          void quote.refetch();
+        }}
+      >
+        {alert}
+      </CheckoutNotice>
     );
   }
-
-  const totals: OrderTotals = quote.data.totals;
 
   return (
     <section className="page-shell py-10">
       <h1 className="text-fg text-2xl font-semibold">{t.title}</h1>
 
-      {outcome === null ? null : (
-        <CheckoutOutcomeAlert outcome={outcome} locale={locale} messages={messages} />
-      )}
+      {alert}
 
       <form
-        onSubmit={handleFormSubmit}
+        onSubmit={onSubmit}
+        onFocus={warmUp}
         // FORM-02: the browser's own validation is off; Zod is the source (FORM-01).
         noValidate
-        className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]"
+        className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]"
       >
         <CheckoutFields
           form={form}
@@ -197,34 +73,16 @@ export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
           messages={messages}
           locale={locale}
           mobileExample={CLIENT.market.mobile.example}
-          onDeliveryChange={setDeliveryOptionId}
-          onGiftChange={setIsGift}
+          choices={choices}
         />
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <OrderSummary totals={totals} locale={locale} messages={messages} />
-
-          {/*
-           * §34.7 — BEFORE payment and on the same screen as the price, which is
-           * where the spec puts it in as many words. It sits between the total
-           * and the button that spends it, because that is the moment somebody
-           * decides, and nothing in the store said it until now.
-           */}
-          {quote.data?.madeToMeasure.isPresent === true ? (
-            <CutCutoffNotice
-              leadTimeDays={quote.data.madeToMeasure.leadTimeDays}
-              hasOtherItems={quote.data.madeToMeasure.hasOtherItems}
-              locale={locale}
-              messages={messages}
-            />
-          ) : null}
-
-          {/* FORM-06: disabled and `aria-busy` in flight, so a double submit
-              cannot place two orders. */}
-          <Button type="submit" size="lg" className="mt-4 w-full" isLoading={place.isPending}>
-            {place.isPending ? t.placing : t.place}
-          </Button>
-        </aside>
+        <CheckoutOrderAside
+          quote={quote.data}
+          isPlacing={isPlacing}
+          isRequoting={quote.isPlaceholderData}
+          locale={locale}
+          messages={messages}
+        />
       </form>
     </section>
   );

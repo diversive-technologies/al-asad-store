@@ -1,4 +1,6 @@
-import Image from 'next/image';
+import type { ComponentType } from 'react';
+
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
 import { ROUTES } from '@/config/routes';
@@ -6,6 +8,38 @@ import { useMessages } from '@/i18n/use-messages';
 import { ChevronRight } from '@/lib/vendor/icons';
 
 import type { StudioProduct } from '../lib/studio-product';
+import type { StudioProductPhotoProps } from './StudioProductPhoto';
+
+type PhotoComponent = ComponentType<StudioProductPhotoProps>;
+
+/* The photo's own box, empty: while its code downloads, and if it cannot be. */
+function PhotoBox() {
+  return <span aria-hidden className="mm-product-photo" />;
+}
+
+/*
+ * Deliberate code split (IMP-01a, PERF-06, PERF-10): this photograph is the
+ * only thing on the studio's first paint drawn with `next/image`, and it is
+ * drawn only when a product sent the customer here — so a plain visit carried
+ * the image component for nothing. It is still rendered on the server (`ssr`
+ * stays on), so the photo is in the page's HTML and its code is preloaded with
+ * it; arriving from a product by a client navigation, the photo's own box holds
+ * its place until it lands, as it did while the image itself was loading.
+ *
+ * `next/dynamic` rather than `onDemandPart`, because only it renders on the
+ * server. Its lazy component throws when the download fails, which would take
+ * the studio down with it, so the loader never rejects (DATA-03): a photo that
+ * cannot be downloaded leaves its box empty, and the name and the way back to
+ * the garment still stand.
+ */
+const StudioProductPhoto = dynamic(
+  () =>
+    import('./StudioProductPhoto').then<PhotoComponent, PhotoComponent>(
+      (module) => module.StudioProductPhoto,
+      () => PhotoBox,
+    ),
+  { loading: PhotoBox },
+);
 
 export interface StudioProductBannerProps {
   readonly product: StudioProduct;
@@ -34,17 +68,7 @@ export function StudioProductBanner({ product }: StudioProductBannerProps) {
 
   return (
     <Link href={ROUTES.catalogue.detail(product.slug)} className="mm-product group">
-      {/* A11Y-04: the alt text is the operator's, and it is `aria-hidden` here
-          because the link's own words already name the garment — a screen reader
-          would otherwise hear the product twice in one control. */}
-      <Image
-        aria-hidden
-        src={product.imageUrl}
-        alt={product.imageAlt}
-        width={64}
-        height={80}
-        className="mm-product-photo"
-      />
+      <StudioProductPhoto src={product.imageUrl} alt={product.imageAlt} />
       <span className="flex flex-col items-start gap-0.5">
         <span className="text-fg-muted text-xs">{t.productFor}</span>
         <span className="text-fg text-sm font-medium">{product.name}</span>

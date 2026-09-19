@@ -50,6 +50,28 @@ function spendPress(): boolean {
   return fromPress;
 }
 
+/*
+ * A POINTER activates on its click, not on focus. On a phone, activating turns
+ * the studio into focus mode, and focus lands between the press and the release
+ * — so the layout changed under the finger and the release came down on whatever
+ * was there now: a tap on Chest arrived as a tap on the drawing's Shoulder mark,
+ * and could as easily have hit Done. Keyboard focus has no click to wait for,
+ * so it still activates at once; `spendPress` tells the two apart.
+ */
+function activationOf(onActivate: () => void): {
+  readonly onFocus: () => void;
+  readonly onClick: () => void;
+} {
+  return {
+    onFocus: () => {
+      if (!spendPress()) onActivate();
+    },
+    onClick: () => {
+      onActivate();
+    },
+  };
+}
+
 /** What the server said about this field: a refusal, a quiet note, or neither. */
 export interface FieldStatus {
   readonly error: string | undefined;
@@ -90,14 +112,6 @@ export function MeasurementField({
   registration,
   onActivate,
 }: MeasurementFieldProps) {
-  /*
-   * A POINTER activates on its click, not on focus. On a phone, activating turns
-   * the studio into focus mode, and focus lands between the press and the release
-   * — so the layout changed under the finger and the release came down on whatever
-   * was there now: a tap on Chest arrived as a tap on the drawing's Shoulder mark,
-   * and could as easily have hit Done. Keyboard focus has no click to wait for,
-   * so it still activates at once; `spendPress` tells the two apart.
-   */
   return (
     <div
       id={fieldRowId(id)}
@@ -125,12 +139,7 @@ export function MeasurementField({
               {...aria}
               {...registration}
               aria-describedby={describedBy(aria, id, status.note !== undefined)}
-              onFocus={() => {
-                if (!spendPress()) onActivate();
-              }}
-              onClick={() => {
-                onActivate();
-              }}
+              {...activationOf(onActivate)}
               type="text"
               inputMode="decimal"
               autoComplete="off"

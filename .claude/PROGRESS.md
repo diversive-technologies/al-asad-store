@@ -7,28 +7,43 @@ question at the start of a session: **what is done, and what is next.**
 Keep it current at the end of an iteration. A stale progress file is worse than
 none, because it is believed.
 
-Last updated: 2026-09-17, on `main`, with ALL SEVEN account plan phases done — a
-saved profile read back into the studio, `/account`, the saved items moved off the
-browser and onto the account, an address book offered at checkout, an order
-history, a made-to-measure line the bag can hold and the order can carry, and "get
-it tailored" from a product and on the card — and with all six Made-to-Measure
-plan phases done
-— the client's order, the list served as content, a real save with a review, the
-tailor's-card path, finishing choices that decide what is asked, and the tailor's
-rules as rows. Every rule row, bound and card convention is FIXTURE until the
-client's written list arrives; the machinery around them is built.
-The 3D experiment is kept, unmerged, on branch `3d-model` at `62363d3`. Nothing
-is pushed: `main` is ahead of `origin/main`.
+**Layout (2026-09-17):** this repository is the storefront alone. The Java service
+is its own repository beside it (`../backend`), and the two deploy separately.
 
-Phases 1 and 2 of the account plan are done: a saved measurement profile can be
-READ back and the studio offers it — including across garment styles, since every
-style is composed from the same point rows — and `/account` now shows what is on
-file, for a guest as well as a signed-in customer.
+Last updated: 2026-09-19, on `main`. The round below is ONE commit on top of
+`621e384` (17 September: all seven account plan phases and all six Made-to-Measure
+plan phases) — about 590 changed or new paths from four passes:
 
-A by-hand pass over every use case on a desktop and a phone (`TESTING-USE-CASES.md`)
-then found five layout faults, led by a product page that was 81px wider than every
-phone screen. All five are fixed — see "Phone layout" below. The test log carries the
-customer-facing account; this file carries what is worth not learning twice.
+1. **A repair pass over the whole storefront** — SEC-08 on every write route, order
+   read protection with a mobile lookup, `SELECTION_REFUSED`, paged order history,
+   availability from the ledger, the MOD-03 splits, loading and not-found states.
+2. **The rest of §28.2/§28.3 on the mocks** — size guide, sharing, "You may also
+   like", gallery magnifier and full screen, Notify Me, bag ↔ saved items, saved
+   sizes — plus the PERF-10 size budget and a Playwright suite.
+3. **The operator's catalogue change** — one product per photograph, 24 products.
+4. **Store and policy pages, SEO, an adversarial review and its fixes.**
+
+At the end of the round (19 September), after the by-hand pass and its fixes:
+typecheck, lint, **1,586 unit tests (174 files)**, `npm run build` and **17/17
+Playwright journeys, two full runs in a row** all passed. The by-hand fixes: the
+order route's own skeleton, a saved size pre-filled on a set only when every piece
+can take it, the product page's and the hero's largest image loaded eagerly at high
+priority, the bag line's quantity formatted per locale, the saved-size radio's name
+as one message, the footer's language switch pronounced in its own language, and an
+unknown payment method or delivery option refused at placement. Every rule row, bound and card
+convention, the stitching charges, the contact details, the bank account and the
+legal pages are FIXTURE — see "Deliberate gaps".
+
+Branches: the 3D experiment is kept, unmerged, on `3d-model` at `62363d3`.
+`backend-integration` at `85aaf94` (18 September) is one commit on `621e384` that
+lets the homepage, the card availability overlay and the newsletter pass through MSW
+to a real Java service; it adds `catalogue-handlers.ts` and `content-handlers.ts`,
+which `main`'s uncommitted split also adds with different contents, so a merge will
+conflict on both. Nothing is pushed: `main` is ahead of `origin/main`.
+
+The by-hand test log is `TESTING-USE-CASES.md`; its pass over the features of this
+round is its last section ("By-hand pass, 2026-09-19"). This file carries state and
+what is worth not learning twice.
 
 ---
 
@@ -36,12 +51,12 @@ customer-facing account; this file carries what is worth not learning twice.
 
 | # | Super-module | Status |
 | --- | --- | --- |
-| M1 | Landing page + foundation | **Done.** Committed. |
-| M2 | Catalogue | **Feature-complete** except the small-screen filter drawer, which waits on M4. |
-| M3 | Product page | **In progress** — contract, mock, route and shell done; extras remain. |
-| M4 | Bag & reservation | **Core done.** Reservations, panel, quantity, remove, promo code. |
-| M5 | Checkout | **Core done.** Quote, single-page checkout, §7.2 placement, confirmation. |
-| M6 | Real auth & account | **Auth screens built** against §11's shape; account area still deferred. |
+| M1 | Landing page + foundation | **Done.** Committed. Store and policy pages, SEO files and a regrouped footer added (uncommitted). |
+| M2 | Catalogue | **Done.** Listing, filters, sorts, search, collections by address; page size 12. Three card and filter details DEFERRED — see "Deliberate gaps". |
+| M3 | Product page | **Done** on the mocks: gallery with magnifier and full screen, size guide, sharing, Notify Me, Fabric Calculator, "You may also like" (uncommitted). |
+| M4 | Bag & reservation | **Done** on the mocks, including move to saved items; the shared-key oversell fixed (uncommitted). |
+| M5 | Checkout | **Done** on the mocks except the payment gateway. Order read protection, mobile lookup, bank-transfer instructions (uncommitted). Self-service cancellation and a find-my-order page are DEFERRED. |
+| M6 | Real auth & account | **Account area built** on the D3 placeholder session: measurements, saved items, addresses, order history (paged), saved sizes. **Real auth waits for the backend.** |
 | USP1 | Try-On (§24) | **Interface complete, provider unconnected** — which is exactly §28.5. See below. |
 | USP2 | Made-to-Measure (§34) | **Measurement atelier rebuilt as GARMENT FLATS**, now on `main` — the 3D figure and `three` are gone (kept on branch `3d-model`). Kameez, shalwar and waistcoat as SVG line art, each measurement marked on the drawing it is taken from. Four ways in are built — a header call to action on every page, a homepage stage, a buy-box fork and a bag nudge. The list is served as content (plan Phase 2) and measurements are SAVED — after a server check and a review, append-only, to the mock (plan Phase 3) — and collar, ban and cuff choices decide which points are asked (plan Phase 5). A customer can copy a tailor's card instead, with the card's photo shown beside the form and never sent (plan Phase 4, FIXTURE conventions). The tailor's rules are rows on the server (plan Phase 6): a rule that REFUSES, and a rule that only ASKS — a quiet note under the field offering "Measure again" or "Keep my number", with what the customer keeps recorded against the rule by name. |
 
@@ -55,19 +70,44 @@ customer-facing account; this file carries what is worth not learning twice.
   serialisation is canonical (defaults omitted, values sorted). Domain rules:
   relevance is demoted without a term, an inverted price range is swapped, any
   filter change resets to page 1 and paging does not.
-- **Mock** — `src/lib/mocks/catalogue-db.ts` (28 deterministic products) and
-  `catalogue-search.ts`, 19 tests. Facet counts are contextual: each facet is
-  counted with all *other* filters applied but not its own.
+- **Mock** — `src/lib/mocks/catalogue-db.ts` (24 deterministic products, one per
+  photograph — see "Photography") with its vocabulary and photography tables split
+  out, and `catalogue-search.ts` / `catalogue-query.ts` / `catalogue-refinements.ts`.
+  Facet counts are contextual: each facet is counted with all *other* filters
+  applied but not its own. The mock serves **12 per page** (`PAGE_SIZE`), mirrored by
+  `DEFAULT_PAGE_SIZE` for the grid arithmetic.
+- **Collections by address** — `?collection=<slug>` (lower-cased, slug pattern, 100
+  characters) scopes the listing; the backend names it (`resultPage.collection`) and
+  a removable chip shows it. The homepage's New arrivals rail and its View all read
+  the same `new-arrivals` collection; the search panel's best sellers come from
+  `best-sellers` and its View all opens that collection. Membership is FIXTURE
+  (`catalogue-collections.ts`). An unknown collection answers 0 results.
+- **Stock-dependent reads are live.** "In stock only", its count and the best
+  sellers read the stock ledger (`availability-db.ts`), the same answer the product
+  page gets — they used to read a seed flag, so a card could contradict its page.
+  `searchProducts` is therefore read uncached (`revalidate: 0`), because every answer
+  carries `inStockCount`. Every product the store holds gets a card overlay answer
+  (an every-eleventh-product gap is gone); `LOW_STOCK` means two or fewer sizes left
+  across every piece.
 - **Routes** — `/catalogue`, `/search`, `/help/[slug]`, `/bag`, each with its own
   `loading.tsx` and `error.tsx`.
 - **Product card** — persistent strip (name + price, fabric · colour + was-price)
-  plus a `motion` hover reveal carrying piece count and metreage. It now also
-  carries three real controls:
-  - a **wishlist heart** (`hooks/use-wishlist.ts`, localStorage — see the gap
-    note below);
+  plus a hover/focus reveal carrying piece count and metreage — a CSS `card-reveal`
+  utility since `motion` was removed (PERF-10). On touch the metreage is in the
+  strip itself (`card-touch-only`), because the reveal never opens on a phone. It
+  also carries three real controls:
+  - a **wishlist heart** (`hooks/use-wishlist.ts`), saved to the ACCOUNT and drawn
+    only for a signed-in customer; one constant label, "Save to wishlist", with
+    `aria-pressed`;
   - a **quick add**: the bag button opens a size tray that asks
     `/api/quick-add` at that moment, and choosing a size adds the product with
-    ONE size applied to every piece;
+    ONE size applied to every piece. The offer is `SIZED | ONE_SIZE`: a product with
+    no sized piece (the unstitched kurta) gets a single "Add to bag". The tray
+    closes on Escape or an outside press; during an add the sizes stay enabled with
+    `aria-busy` behind a synchronous latch, and focus goes to the tray toggle before
+    the bag opens. `UNAVAILABLE` says "{piece} in {size} has just sold out.",
+    `SELECTION_REFUSED` "Not available as shown. Refresh the page.", and either
+    re-reads the offer;
   - a **frame carousel**: hover advances through the product's photographs
     every 2.5s, arrows step and wrap, dots show position. Using an arrow PINS
     the frame — the automatic advance stops for the rest of that hover, because
@@ -110,11 +150,14 @@ customer-facing account; this file carries what is worth not learning twice.
   **5 columns went with it, and that is the load-bearing part.** Every column
   count must divide `DEFAULT_PAGE_SIZE` exactly, or a page ends on a part-filled
   row while its next products sit on page 2 — a hole in the grid with stock
-  behind it. 24 / 5 = 4.8, so from 1920px every page showed four tiles in its
-  last row. 24 divides by 1, 2, 3, 4 and 6. `GRID_COLUMN_COUNTS` in
-  `features/catalogue/lib/grid-columns.ts` is the authoritative list and
-  `grid-columns.test.ts` asserts the division, so a count that does not divide
-  fails the suite instead of appearing as a gap on one monitor width.
+  behind it. At the page size of 24 it then had, 24 / 5 = 4.8, so from 1920px
+  every page showed four tiles in its last row. The page size is **12** now — the
+  operator's choice, so a 24-product catalogue pages at all; 18 was rejected
+  because 4 columns do not divide it — and 12 divides by 1, 2, 3, 4 and 6.
+  `GRID_COLUMN_COUNTS` in `features/catalogue/lib/grid-columns.ts` is the
+  authoritative list and `grid-columns.test.ts` asserts the division — for the
+  page size and for `RELATED_PRODUCTS_LIMIT` (also 12) — so a count that does not
+  divide fails the suite instead of appearing as a gap on one monitor width.
 
   Measured after: 1280 → 4 columns at 206px, 1920 → 4 at 366px, 2560 → 6 at
   343px, every row full at all three.
@@ -270,13 +313,61 @@ customer-facing account; this file carries what is worth not learning twice.
   violation rather than a buy box with nothing to override.
 - **Readers** — `fetchProduct` (404 → `ok(null)` so the route can render
   `notFound()`), `fetchProductAvailability` (`revalidate: 0`).
-- **Mock** — `product-detail-db.ts`, derived from the same `CATALOGUE` records
-  the listing uses, plus two MSW handlers.
-- **Route** — `/catalogue/[slug]` with per-product metadata, `loading` and
-  `error`. This was the last dead link.
-- **Shell** — gallery with thumbnails, and the buy box branching on the DECLARED
-  type: SIMPLE gets one selector, SET gets the unified selector plus the
-  per-piece override panel. Selection logic is pure and covered by 21 tests.
+- **Mock** — `product-detail-db.ts` (content in `product-content-db.ts`, the
+  `on_hand` ledger in `inventory-db.ts`, the overlays in `availability-db.ts`),
+  derived from the same `CATALOGUE` records the listing uses. The estimated
+  delivery date is computed from today (3–6 days on), so it is never in the past.
+- **Route** — `/catalogue/[slug]` with per-product metadata, its own canonical,
+  `loading`, `error` and `not-found` ("The link may be out of date, or this product
+  is no longer offered" — never "sold out", since a sold-out product keeps its
+  page). `page.tsx` is at 79 of MOD-03's 80 lines: anything new goes into the
+  feature, not the route.
+- **Shell** — the buy box branching on the DECLARED type: SIMPLE gets one
+  selector, SET gets the unified selector plus the per-piece override panel.
+  Selection logic is pure and tested. **The unified selector offers only the sizes
+  every piece shares** (the card's intersection rule), so its sold-out marks, its
+  Notify Me chips, the saved-size pre-fill and the §7.1 add all agree — it used to
+  judge a size by the first piece alone.
+- **Gallery** — the main frame plus a scrolling thumbnail strip. On a fine,
+  hover-capable pointer it **magnifies 2× in place**: CSS `scale` about the pointer,
+  written as two custom properties straight onto the frame in the handler rather
+  than through React state. `sizes` asks for twice the drawn width only there, and
+  the factor must match `--magnifier-scale` (each comments the other). Pressing the
+  frame (an overlay button beside the image, so the image keeps its alt text)
+  opens a **full-screen view** (`components/ui/dialog/FullscreenDialog.tsx`, sharing
+  `useNativeDialog` with `Dialog` and `SlideOver`): cross-faded frames, 44px arrows,
+  arrow keys in reading direction, Home/End, wrap at the ends (a disabled end button
+  would drop focus), an "Image n of N" status line, and swipe. The swipe rule is
+  shared with the card (`lib/frame-navigation.ts`, `hooks/use-swipe-step.ts`): a
+  gesture that ever had two fingers, or on a zoomed page, is never a swipe, so
+  pinch-zoom is never blocked. One `activeIndex` serves the page and the view, and
+  the page strip scrolls its active thumbnail into view without moving the window.
+  The view loads on demand. **Content note:** the photographs are 1200px wide, so
+  the 2× zoom upscales on large screens; 1600–2400px sources would be sharp.
+- **Size guide** — a dialog beside the SIMPLE legend, the SET's whole-set legend
+  and the per-piece heading (not beside every piece), showing the served
+  `size-guide` help page through `InlineHelpPage` in the content feature, with a
+  link to `/help/size-guide`. The route reads the page in its `Promise.all` and
+  passes it down as a slot (ProductScreen → ProductSummary → ProductBuyBox →
+  ProductSizing), so catalogue never imports content (MOD-01; content's barrel
+  already imports catalogue's). Mounted on first open, kept after. One guide for
+  every product — the content model has no per-piece sections.
+- **Sharing** — a server-rendered WhatsApp link (`wa.me/?text=`, one parameterised
+  message, `%20` not `+`) and a Copy link button. The address is
+  `absoluteUrl(ROUTES.catalogue.detail(slug))` from `NEXT_PUBLIC_APP_URL` — the same
+  canonical `generateMetadata` declares — so the backend must keep a published
+  slug stable or redirect it. `lib/utils/clipboard.ts` `copyText` is the one place
+  browser copy errors are caught: Clipboard API, then the copy command inside the
+  same press, then a selected read-only field with a sentence saying why.
+- **You may also like** — `ENDPOINTS.catalogue.related`, up to
+  `RELATED_PRODUCTS_LIMIT` (12, which divides every column count), rendered with
+  `ProductGrid` in its own `<Suspense>` with a 12-tile skeleton, so the buy box
+  works before it arrives. Cached 300s like other card reads; the availability
+  overlay decorates it live. Which products and in what order is the backend's
+  rule (the mock's is FIXTURE — `catalogue-related.ts`). A failed read logs once
+  (`product:related`) and hides the section; a failed overlay only leaves the
+  cards' availability unknown.
+- **Notify Me** — see its own section below.
 - **Fabric Calculator (§25)** — the second BFF route, `/api/fabric-calculator`.
   The interface holds NO requirement table and does no subtraction: §25 makes
   that a backend module, and the comfort margin separating "comfortable" from
@@ -286,9 +377,10 @@ customer-facing account; this file carries what is worth not learning twice.
 
 ## M3 — what is left
 
-Notify Me on sold-out sizes, size guides, WhatsApp and copy-link sharing,
-you-may-also-like, and the gallery's desktop magnifier and mobile
-tap-to-fullscreen. None is started; none is faked.
+Nothing from §28.2's list. Built but not yet driven by hand in a browser (the
+features pass was forbidden a dev server): the magnifier's feel, real swipe and
+pinch on a phone, Safari's focus return, the WhatsApp handoff, the copy fallback
+over `http` on iOS. `TESTING-USE-CASES.md` UC-17 to UC-21 are the checklist.
 
 ## Card-level single entity — the operator's rule
 
@@ -306,12 +398,11 @@ fails. §30.2 still holds: an unknown availability is not sold out.
 
 ## M2 — what is left
 
-Nothing. The **filter drawer** landed: below 64rem the rail is hidden and the
-same `FilterPanel` renders inside a `SlideOver` opening from `inline-start`,
-behind a Filters button carrying a count of what is applied. The panel is
-rendered twice — once for the rail, once for the drawer — which is the price of
-keeping it a Server Component on both surfaces; `PriceFilter` now generates its
-ids with `useId` so the two copies cannot collide.
+Nothing but the DEFERRED card details (see "Deliberate gaps"). The filter drawer
+is the only filter surface at every width, rendered once (see "There is no rail at
+any width" above). A filter, sort or page change is announced by a polite
+`role=status` line ("24 products. Sorted by Newest. Page 1 of 2."), and an address
+past the last page shows the last page.
 
 ## M4 — what is built
 
@@ -319,43 +410,68 @@ ids with `useId` so the two copies cannot collide.
   Sorted lock order, an all-or-nothing check across every piece before any row
   is written, `Unavailable(piece)` naming the piece AND size that failed,
   existing holds refreshed rather than stacked, immediate release on removal,
-  and §7.3 read-time expiry. **15 tests**, including the one that matters most:
-  a SET that fails on its last piece leaves NO reservation behind.
-- **A real stock ledger.** `product-detail-db` now holds `on_hand` per
-  `(piece, size)` — §13's key — and the availability overlay reads from it,
-  subtracting active reservations. Taking the last unit makes a size read sold
-  out for everyone, with no job having run. Previously stock was a status
-  pattern with no number, so `Unavailable` could never actually fire.
-- **Contract** — `bag.schema.ts` (the bag as it IS: summary, lines, pricing) and,
-  since account plan Phase 7, `bag-write.schema.ts` (the requests, and the
-  `Ok | Unavailable | MeasurementsRefused` answers). Every money figure arrives computed, the line
-  total included; `Ok | Unavailable(piece)` is a discriminated union; and the
-  summary carries NO cart id, because the id is a capability that stays in the
-  httpOnly cookie.
-- **BFF** — `/api/bag`, `/api/bag/lines/[lineId]`, `/api/bag/code`. The third,
-  fourth and fifth BFF routes, and the first that attach a credential: the cart
-  id is read from an httpOnly cookie the browser cannot see or forge.
+  and §7.3 read-time expiry. Tested, including the one that matters most: a SET
+  that fails on its last piece leaves NO reservation behind.
+- **The shared-key oversell is fixed (HIGH, found by the review).** A re-reserve
+  used to set aside every hold of the WHOLE cart, so two lines of one garment
+  sharing a (piece, size) — a quick add at M plus a per-piece add with the
+  waistcoat at M — each passed alone and together held 10 of 8; placement then
+  allocated past `on_hand`. `reserve` now sets aside only the SAME line's holds
+  (`exceptLineId`), and `allocate` sums every row of a key before the
+  `allocated <= on_hand` guard. `bag-shared-key.test.ts` pins both halves.
+- **A real stock ledger.** `inventory-db.ts` holds `on_hand` per `(piece, size)` —
+  §13's key — and `reservation-ledger.ts` writes the availability sum once
+  (`availableQuantity`: on hand − allocated − ACTIVE unexpired holds), which the
+  §7.1 check, the product page, the cards, the in-stock filter and the best sellers
+  all read. A sizeless piece (the unstitched kurta) is keyed on its one size,
+  `ONE_SIZE`; the add names only sized pieces and the backend resolves the rest.
+- **Contract** — `bag.schema.ts` (the bag as it IS: summary, lines, pricing) and
+  `bag-write.schema.ts` (the requests and answers). An add answers `ADDED`,
+  `UNAVAILABLE {piece, size}`, `SELECTION_REFUSED` (unknown product, or a size
+  cover that does not name every sized piece once in a size it is offered in) or
+  `MEASUREMENTS_REFUSED`. **`NOT_FOUND` means "no such cart" and nothing else** —
+  the BFF discards the cart cookie on it, so any refusal that came back as a 404
+  used to throw a customer's real bag away. The summary carries `heldUntil`, the
+  EARLIEST hold in the bag (the backend's figure — the panel used to show the first
+  line's), and every line carries `movableToWishlist`. No cart id is ever sent.
+- **BFF** — `/api/bag` (GET answers **204** when the browser has no cart or the
+  backend no longer has it, so the header's read on every page loads no schema),
+  `/api/bag/lines/[lineId]` (PATCH), `…/removal`, `…/move-to-wishlist`,
+  `/api/bag/code` and `…/code/removal`. The cart id is read from an httpOnly cookie
+  (`aa_cart`, via `clientKey`). A NOT_FOUND on add is confirmed with a HEAD on the
+  cart before the cookie is discarded, and the one retry keeps the owner header
+  (`add-for-customer.ts`).
 - **Dialog primitive** — `components/ui/dialog/SlideOver.tsx`, on the native
   `<dialog>` element with `showModal()`. No dependency added: the platform gives
   the focus trap, Escape, focus restore, top layer and inert background that
   A11Y-08 requires.
 - **Panel** — slide-in, per-piece size display, quantity, remove with inline
   confirmation, promotional code, free-delivery progress, and the hold's expiry
-  time.
+  time. Its contents and footer download on first open (warmed on hover, focus,
+  touch or Add to bag); the dialog shell opens at once. The bag query re-reads on
+  window focus, when the panel opens and when `/bag` mounts, and a failed line
+  change invalidates it, so a lapsed line stops being shown.
+- **Focus and announcements** — quantity and Confirm carry `aria-busy` instead of
+  `disabled` behind one synchronous latch, Remove moves focus to Confirm and back,
+  a removal lands focus on the next line's control or the empty-state sentence
+  (`focusAfterRemoval`), and quantity changes, removals, moves and code apply/lift
+  are announced in a polite status line.
 - **Add to bag** works from the product page, and the header shows a live count.
 - **"Held for you until…" explains itself.** The bare time was ambiguous — a
   customer could not tell whether the items were reserved, whether they would
   quietly go out of stock, or whether they would leave the bag. An info button
-  beside it opens a popover answering all three, plus the fact that editing the
-  bag renews the hold. Built on the native popover API in
+  beside it opens a popover answering all three, plus the fact that changing an
+  item renews that item's hold (only that item's — the copy used to promise the
+  whole bag). Built on the native popover API in
   `components/ui/popover/`, for the same reason `SlideOver` uses `<dialog>`: the
   platform ships the primitive, so no dependency was added.
 
 ## M4 — what is left
 
-`moveToWishlist` is M6. The `/bag` page now renders the real bag: both it and
-the panel share `BagContents`, so there is one implementation of a line, its
-quantity control and the hold explanation.
+Nothing on the mocks. `moveToWishlist` is built (see "Bag and saved items"). The
+`/bag` page and the panel share `BagContents`, so there is one implementation of a
+line, its quantity control and the hold explanation. Holding cloth for a cut line
+(metreage reservation) has no contract yet — see Made-to-Measure.
 
 ## M5 — what is built
 
@@ -365,12 +481,15 @@ quantity control and the hold explanation.
   paths real: a lapsed hold returns `RESERVATION_EXPIRED` **naming the items**,
   and a total that moved returns `PRICE_CHANGED` carrying the new one, because
   "prices are never silently changed under a customer at payment". Reservations
-  become allocations under the `allocated <= on_hand` guard, the cart is
-  discarded on commit so a refresh cannot place it twice, and steps 7–8 stay
-  outside the transaction. **10 tests.**
-- **`allocated` is now a real column.** `bag-reservations.ts` tracks it beside
-  the holds, and every availability read subtracts both — a unit sold this
-  morning is as unavailable as one in somebody's bag.
+  become allocations under the `allocated <= on_hand` guard (summed per key — see
+  M4), the cart is CONVERTED on commit so a refresh cannot place it twice, and
+  steps 7–8 stay outside the transaction. Step 1 is `expireLapsedLines`: it records
+  each lapsed stock line as EXPIRED and names it, so "Some items are no longer held"
+  is reachable — a bag READ used to mark lapsed lines itself, so placement never saw
+  one. `summaryFor` is now a pure read.
+- **`allocated` is a real column** in `reservation-ledger.ts`, and every
+  availability read subtracts it beside the holds — a unit sold this morning is as
+  unavailable as one in somebody's bag.
 - **No conditional per payment method, anywhere.** §3.1 forbids it, so the four
   methods are a LIST from `quote()`, each carrying its own label, description and
   availability, and the interface renders the list. A fifth method is a
@@ -381,15 +500,57 @@ quantity control and the hold explanation.
   with a reason above the cap, and `place()` refuses it again — a client that
   never called `quote` is still refused, which is what §17 means by "never only
   in the interface".
-- **Single page** (§28.2), guest checkout, React Hook Form + `zodResolver`,
-  delivery options, gift wrapping with a message, and a sticky order summary.
-- **The order number is the address** — `/order/[orderNumber]`, bookmarkable and
-  shareable, which is how §28.3 will track a guest order.
+- **Single page** (§28.2), guest checkout, React Hook Form (validation loads on
+  first focus — see "Size budget"), delivery options, gift wrapping with a message,
+  and a sticky order summary. A missing payment method says "Choose how you would
+  like to pay."
+- **The quote states the delivery option it priced** (`quote.deliveryOptionId`).
+  The first quote names none and gets the backend's default; placement sends the
+  option the shown total was priced with. Nothing says `'standard'` in the
+  interface any more, and the mock refuses an unknown option instead of pricing it
+  as the first. A re-quote (delivery or gift changed) keeps the previous quote on
+  screen with the aside `aria-busy`, so the form no longer unmounts and drops focus.
+  An outage reads as "We could not load your checkout" with Try again, not as an
+  empty bag.
+- **An unanswered placement is not a refusal.** The BFF answers a backend NOT_FOUND
+  as 404 and everything else as 502; the browser reads a 4xx as `NOT_PLACED` and a
+  5xx, a transport failure or an unreadable reply as `UNCONFIRMED`, which says "We
+  could not confirm your order" and re-reads the bag — it used to say "Nothing has
+  been charged" about an order that may have been committed. `RESERVATION_EXPIRED`
+  re-reads the quote too.
+- **The order is protected, and found by number and mobile (§28.3).** Order
+  numbers are sequential, and the page used to answer any of them. The backend now
+  answers `GET /orders/{n}` only to the account that placed it (`x-account-key`) or
+  to a browser presenting an access token issued for that order (`x-order-access`);
+  anyone else gets the same 404 as an unknown number. Placement returns the token;
+  the BFF stores it in the httpOnly `aa_orders` cookie (7 days, at most 10 orders,
+  every entry parsed back with zod) and strips it from the browser's answer, so the
+  confirmation still opens at once. Elsewhere `/order/{n}` shows "Find your order":
+  `POST /orders/{n}/lookups {mobile}` compares digits only on the server, and a
+  match returns the order with a fresh token. Order numbers are compared in capitals
+  by the backend (`canonicalOrderNumber`); the BFF keeps a lookup's token under the
+  spelling typed as well, but a placement's only under the number issued, so a guest
+  opening `aa100001` in the placing browser is asked for the mobile once. The order
+  cache is keyed by reader as well as number, so sign-out cannot serve the previous
+  customer's order. Grants are append-only. Lookup rate limiting is the backend's.
+- **Bank transfer says where to pay.** `order.transferInstructions` (reference =
+  the order number, bank, account title, account number, IBAN) is non-null only for
+  a transfer, and the confirmation renders it when present — branching on the data,
+  not the method (§3.1). The mock's account is FIXTURE ("Example Bank", zeros).
+- **The confirmation is headed "Order placed"**, true in every order state, and the
+  order route has its own skeleton, error and not-found pages.
 
 ## M5 — what is left
 
 The payment gateway itself: the mock has no gateway to call, so `AUTHORIZED` is
-stated rather than obtained.
+stated rather than obtained. Payments and real auth wait for the backend.
+
+**DEFERRED by the operator (not dropped):** a find-my-order page where a customer
+types an order number (today the lookup is reached only through an order's own
+address), self-service cancellation within the window (§28.3), and a return-request
+form (§28.3 — returns are asked for by contacting the store, and the Returns page
+says so). Also not done: a longer timeout for placement, and opening an order whose
+placement reply was lost (both need a backend decision).
 
 **Order tracking and the confirmation step are OUT of the MVP** by operator
 decision, not pending. The confirmation page no longer carries a "what happens
@@ -414,6 +575,243 @@ frozen, so `Animation.currentTime` was set directly: empty at 0ms, disc alone at
 mark at 1000ms. Text is plain server-rendered markup; only decoration animates,
 so nothing repeats the blank-page bug below.
 
+## Notify Me — back-in-stock requests (§28.2)
+
+`src/features/back-in-stock/`, reached from the buy box through its client-safe
+`contract.ts` (it imports nothing from catalogue, so there is no cycle).
+
+- **One chip per sold-out size** under the SIMPLE selector, the SET's whole-set
+  selector (`pieceId: null` — the product as a whole in that size) and each
+  per-piece selector (that piece). The size radios are untouched: a sold-out size
+  still cannot be chosen to buy.
+- **A signed-in customer with an email presses once**; the backend writes to the
+  account's own address, which wins over any typed one. A guest (or a code-only
+  account — the backend answers `EMAIL_REQUIRED`) gets an email form. Busy chips use
+  `aria-busy` and stay enabled behind a latch; the answer's words are derived from
+  the mutation, never copied into state; `IN_STOCK` refreshes the page.
+- **Contract** — `POST /api/v1/back-in-stock/requests?locale=` with
+  `{productId, pieceId | null, sizeId, email | null}`; the account travels in
+  `x-account-key`, never the body. Answers are 200 with `RECORDED`,
+  `ALREADY_RECORDED`, `IN_STOCK` or `EMAIL_REQUIRED`; 400 a malformed body, 422 an
+  address the backend refuses (the BFF passes it back as 400, onto the field), 404 a
+  product, piece or size not sold. A typed email is never looked up against the
+  accounts, so the answer cannot reveal whether one exists.
+- **Mock** — `back-in-stock-db.ts`, append-only with no reset, one row per sold-out
+  piece, deduplicated on (lower-cased email, product, piece, size).
+- **Owned by the backend, not built:** sending the email (§23/§28.7), marking a
+  request notified, unsubscribing, rate limiting, and which §5.1 module keeps the
+  list. Nothing sends email today, so no request is ever answered.
+
+## Bag and saved items (§16 `moveToWishlist`, §28.3)
+
+- **Bag → saved items** — "Move to saved items" on each bag line, for a signed-in
+  customer on a line whose `movableToWishlist` is true. ONE backend operation,
+  `POST /carts/{cartId}/items/{lineId}/move-to-wishlist`, so a failure halfway cannot
+  lose the garment from both places: the product joins the account's list, the hold
+  is released, and the line is recorded with the new D6 reason `MOVED_TO_WISHLIST`
+  (or `EXPIRED` if its hold had lapsed). Answers `MOVED` / `NOT_IN_BAG` (both with the
+  summary) / `NOT_MOVABLE` for a cut line, which a saved item — a product id and
+  nothing else — could not carry. 401 without an account; 404 only for a cart that is
+  not a bag. The saved items are invalidated after a move.
+- **Saved items → bag** — on `/wishlist`, the card's quick add MOVES: the removal is
+  sent only after the add is answered `ADDED`, so the only failure state is "in the
+  bag and still saved", which the page says. There the bag panel does not open;
+  "{item} moved to your bag." appears in a live region above the list with a "View
+  bag" link that takes focus. No new endpoint: an add, then the existing removal.
+  `useSavedProducts` keeps the previous answer so a card leaving does not blank the
+  grid.
+- **The saved-items list has no size limit in the mock**, while the read contract
+  caps it at 100 ids: the backend must cap or refuse saves from the heart and from
+  the move, or a 101st item makes the list unreadable.
+
+## Saved sizes (§28.3)
+
+`src/features/saved-sizes/`, for a signed-in customer only.
+
+- **One current size per SIZE SET per account**, stored as an append-only event log
+  (`SAVED`, `FORGOTTEN`). A size id names one size of one set, so a product page
+  matches a saved size to a piece by id alone and the product projection gained no
+  field. The fixture has one set, "Clothing sizes", XS–XL.
+- **Saving is an explicit press** ("Remember size M"), never a side effect of Add to
+  bag — a bag is often for someone else. It is offered only when the choice comes
+  down to ONE size (a SIMPLE product, or a SET with every piece the same), only once
+  the list has been read, and never when it could not be.
+- **The pre-fill is derived, not stored** (`selection = chosen ?? prefilled`,
+  `useBuySelection`), never overwriting the customer's own press and never adding to
+  the bag. Every piece made in a saved size gets it — but only when the overlay
+  reports that size `IN_STOCK` or `LOW_STOCK` for EVERY such piece; a set is one
+  purchase, so if one piece cannot take it, no piece is given it (it used to leave a
+  set half-sized in the customer's size with Add to bag unavailable). A piece whose
+  chart has no saved size is left for the customer.
+  The saved size is marked "Your size" in every selector whether chosen or not; the
+  quick-add tray marks it but never presses it.
+- **Account** — a server-rendered "Your saved sizes" section with Forget, which names
+  the SIZE, so a page opened before the size changed elsewhere gets a 404 and says so.
+- **Contract** — `GET/POST /api/v1/account/saved-sizes`, `POST …/removal`, all with
+  `?locale=` and `x-account-key`; every change answers the whole list.
+
+## Store pages, policy pages and SEO (§28.4, §30.5)
+
+- **Six store pages as served content** — About us, Contact us, Delivery, Returns and
+  exchanges, Terms of sale, Privacy — through the same `page(slug, locale)` read as
+  the help pages, at `/help/<slug>`. `STORE_PAGE_SLUGS` sits beside `HELP_PAGE_SLUGS`
+  in `routes.ts`; one slug namespace behind one route keeps every page at one address.
+  The mock is `store-pages-db.ts` and `policy-pages-db.ts`, written through
+  `page-authoring.ts`, which forces both languages. A test fails if any of these
+  pages contains a digit (no figure config could change) or promises email, SMS or
+  tracking.
+- **The footer** is Shop, Help, Our store and the newsletter: one column on a
+  phone, three at `md` with the newsletter on its own row, one row at `lg`. When a
+  reader is in a non-default language while the header switch is off, the footer
+  carries the language switch (`localeSwitchPlace`) — otherwise a `?locale=ur` link
+  set Urdu for a year with no way back.
+- **Contact details are configuration, not content**: `CLIENT.contact` (phone,
+  WhatsApp, email, an address per locale, opening hours as data), rendered on the
+  Contact us page only, with day names and times formatted per locale. All FIXTURE.
+- **Structured data** — one escaping serialiser (`lib/utils/json-ld.ts`: `<`, `>`,
+  `&`, U+2028/9 as `\uXXXX`) and one `JsonLd` component. Product (price in PKR from
+  minor units, availability mapped one-to-one from the product-level overlay and
+  left out when that read failed, no rating) and BreadcrumbList on the product page;
+  BreadcrumbList on the listing; Organization and WebSite, name and URL only, on the
+  homepage. `Breadcrumbs` publishes its own list from the steps it draws.
+- **`/sitemap.xml`** (`app/sitemap.ts`) — the fixed public pages plus every
+  LAUNCHED product from a backend feed, `GET /api/v1/catalogue/products/sitemap`;
+  URLs XML-escaped because Next writes them verbatim; a failed feed keeps the fixed
+  pages. **`/robots.txt`** disallows `/api/` and every page that says `noindex`, and
+  `robots.test.ts` holds the two to each other.
+- **Canonicals and alternates** — every indexable page states its own canonical in
+  the language it rendered (`localeAlternates(path, locale)`): the default language
+  at the bare path, others at `?locale=`, plus `x-default`. `?locale=` is honoured
+  by `proxy.ts` and remembered for a year.
+- **Not-found pages** — the root, a product and an order, localised, through the
+  shared `NotFoundState`.
+
+## Size budget (PERF-10)
+
+Every route's gzipped first-load JavaScript is under 200 kB; before this round they
+were 345–366 KiB. Measured from the build manifests (Next 16 no longer prints First
+Load JS): `rootMainFiles` in `.next/build-manifest.json` plus every `entryJSFiles`
+list in the route's `page_client-reference-manifest.js`, each unique chunk gzipped
+at level 9, the nomodule polyfill left out. The shared root chunks are 127.8 kB.
+
+| Route | kB | Route | kB |
+| --- | --- | --- | --- |
+| `/stitched` | **196.5** | `/sign-in` | 180.0 |
+| `/catalogue/[slug]` | **189.6** | `/bag` | 179.6 |
+| `/checkout` | 184.9 | `/` | 179.5 |
+| `/order/[orderNumber]` | 183.8 | `/forgot-password` | 178.9 |
+| `/account/addresses` | 182.3 | `/sign-up` | 178.8 |
+| `/search` | 182.0 | `/account` | 169.9 |
+| `/catalogue` | 181.8 | `/help/[slug]` | 167.0 |
+| `/wishlist` | 181.1 | `/_not-found` | 166.6 |
+
+**The margins are thin**: `/stitched` has 3.5 kB left and the product page 10.4. The
+next addition to either needs a split or an explicit PERF-10 note. What remains is
+mostly fixed: the Next and React runtime, TanStack Query (~11 kB), tailwind-merge
+(~9 kB), React Hook Form on form routes (~10 kB) and `next/image` on card routes
+(~5.5 kB).
+
+How the budget was met, so it is not undone:
+
+- **Surfaces opened on demand download on demand** — the search panel, the bag's
+  contents and footer, the full-screen gallery, try-on, the Notify Me email form, the
+  studio's review, confirmation and tailored Add to bag, the card-photo view. Each is
+  an `onDemandPart` (`src/hooks/use-on-demand.ts`) rendered through `<OnDemand>`,
+  warmed on pointer enter, focus or touch, mounted on first open and kept. A failed
+  download is a VALUE: an in-place notice with Try again, and a retry downloads
+  again. It replaced `next/dynamic` for client-only parts, whose lazy component
+  THROWS on a failed chunk — in the studio that took every typed figure with it, and
+  for the bag and search, rendered from the root layout, it took down the whole store.
+  `StudioProductBanner` keeps `next/dynamic` (it renders on the server) with a loader
+  that never rejects.
+- **Zod is in no route's first load.** Browser BFF calls fetch their schema module
+  beside the response (`lib/api/browser-fetch.ts` `fetchWithContract`); a WRITE waits
+  for its schema before sending, so a schema that cannot download sends nothing and
+  "try again" is true. Forms load `zodResolver` on first focus (`onDemandResolver`);
+  if it cannot load, the values go unjudged to the server, which checks them again.
+  Constants a client needs moved out of schema modules (`search-options.ts`,
+  `made-to-measure/lib/entries.ts`). `GET /api/bag` answers 204 without a cart, so
+  the header's bag read loads no schema for a new visitor.
+- **`studio-first-load.test.ts`** walks the studio's static import graph and fails if
+  `zod` is reachable. It exists because the final verification found `/stitched` at
+  280.2 kB: the studio's breadcrumb imported the shared `Breadcrumbs`, whose JSON-LD
+  reaches `config/site` → `env.client` → Zod. A CLIENT component now uses
+  `BreadcrumbTrail` (no structured data, no env); `Breadcrumbs` is for Server
+  Components.
+- **Dead weight removed** — `motion` (the card reveal is CSS; the package is gone
+  from `package.json`), the messages context's default of the whole English
+  dictionary, `global-error` importing only its two sentences (`en-root-error.ts`),
+  and `sideEffects: ["*.css"]` so unused barrel re-exports drop. The footer
+  newsletter first draws a stand-in with byte-identical markup and swaps the real
+  form in when the customer reaches for it.
+- **Still loaded on first interaction, not first load:** Zod's chunk is ~84 kB gz,
+  ~70 kB of it bundled locales, because Turbopack does not tree-shake `z.locales` off
+  `import { z } from 'zod'` (see "Things that cost time"). Changing the import shape
+  in ~47 files would save ~70 kB on every such interaction — a separate change.
+
+## End-to-end suite (Playwright, TEST-07)
+
+`npm run test:e2e` — 17 journeys in 9 specs under `tests/e2e/`, Chromium only.
+`TESTING-USE-CASES.md` ("The automated journeys") lists what each covers. The last
+two full runs passed 17/17 in under two minutes each.
+
+- **It starts its own `next dev` on port 3107** (`reuseExistingServer: false`), with
+  `API_MOCKING=enabled`, `NEXT_PUBLIC_APP_URL` set to that server (the canonical link
+  Copy link copies) and **`JAVA_API_BASE_URL=http://127.0.0.1:9`** — the discard
+  port, so a request MSW does not intercept is refused at once instead of reaching a
+  Java service on this machine.
+- **Stop your own `npm run dev` first.** A different port keeps the suite from
+  testing your server; it does not let the two run together — Next 16 allows one
+  `next dev` per project directory (a lock on `.next/dev`). A separate `distDir` is
+  not the way round it: `next dev` then adds its types to `tsconfig.json` and a type
+  check sees two sets of route declarations.
+- **Clear `AI_AGENT` and `CLAUDECODE` before running it from an agent session**, or
+  `next dev` writes `AGENTS.md` and `CLAUDE.md` into the repository root (both are
+  gitignored now). In PowerShell:
+  `Remove-Item Env:AI_AGENT, Env:CLAUDECODE -ErrorAction SilentlyContinue; npm run test:e2e`
+- **The warm-up fails fast** (`tests/e2e/global-setup.ts`): if `/catalogue` renders no
+  `<article>` the mock is dead and the run stops there, by name. It then requests every
+  page the journeys visit and every `ROUTES.api` entry once, so no journey pays for a
+  first compile and a new route is warmed without being listed.
+- **One worker, no retries**, 90s per test. Every journey makes its own customer,
+  cart and measurements; a signed-in journey sets the D3 session cookie
+  (`SESSION_COOKIE` now lives in `src/features/auth/lib/session-cookie.ts` so the
+  suite does not copy the name).
+- **Journeys find products through the page, never by slug or code**, and read
+  their words from the message registry. Size radios are visually hidden inputs
+  under their labels: click the label text, then assert the radio.
+- **Still hard-coded:** the measurement figures in `tests/e2e/support/measurements.ts`,
+  which must clear the FIXTURE tailor's rules, and the guest's contact details.
+- **One flake seen, once**: on the first run after a fresh start, two nested dynamic
+  route handlers (`/api/bag/lines/{id}/removal` and `…/move-to-wishlist`) answered the
+  HTML not-found page; they passed alone and in the next three full runs. See
+  "Things that cost time". With `retries: 0` it fails a run when it happens.
+- **Wait for a closing modal before typing.** The guest journey failed in every full
+  run for a while and passed alone; see "A modal dialog keeps the page inert through
+  its exit" under "Things that cost time".
+
+## The review of 19 September, and what it left
+
+A four-area adversarial review (catalogue and product; bag, checkout and orders;
+account and identity; made-to-measure, content, shell and the new platform code)
+confirmed 56 findings; 63 fixes followed, most with a regression test shown to
+fail with its fix reverted. The two HIGH ones:
+
+- **Oversell when two bag lines share a (piece, size)** — see M4.
+- **Open redirect after sign-in** — see "Auth — what is built".
+
+The MEDIUM and LOW fixes are recorded in the module sections they belong to. What
+the fixers deliberately left, as separate changes: the `' — '` joining a size to
+its stock-status note in `SizeRadio`'s screen-reader text (the saved-size name is
+one message now), card overlay piece names always in English (the storefront sends
+no locale; nothing renders them), clearing withdrawn ids from a saved list, a
+sign-in link beside a signed-out "Remember size" refusal, a placement-specific
+timeout, bare `animate-pulse` (pulsing under reduced motion) in the home, account,
+address book, help, sign-in and wishlist skeletons, and the measurement figures
+hard-coded in the e2e suite. The vitest environment is `node` with no DOM library,
+so focus hand-offs and render-phase state were verified by markup tests and
+reasoning, not by driving them.
+
 ## Search — the full-width panel
 
 Rebuilt to the Gymshark pattern the operator asked for. It is a `<dialog>`
@@ -424,7 +822,12 @@ nowhere to put them.
 - **The panel is never empty.** Before a keystroke it shows TRENDING SEARCHES
   and BEST SELLERS with a View all; after one, SUGGESTIONS and PRODUCTS with
   `View all "term"`. Same two-column shape either way, so nothing jumps when the
-  first character lands.
+  first character lands. The empty-term View all opens the collection the backend
+  merchandised from (`suggestions.collection`, `best-sellers` in the mock), and the
+  polite count says "N products shown" only once results are in — never "0 results"
+  while loading. The panel downloads on first use (see "Size budget"), and the
+  button reports `aria-expanded` only once it is really open. Trending terms and
+  product names now match (`productNameFor` is the one place a name is assembled).
 - **The typed fragment is emboldened inside each suggestion** — `**Bos**ki`.
   That is what makes a row read as "your search, continued" rather than an
   unrelated word, and it is why the suggestions are query REFINEMENTS rather
@@ -475,12 +878,13 @@ Two rules follow from the fix and should not be undone casually:
 - **Prose sets its own, much narrower cap** inside the shell (`max-w-3xl` on help
   pages, `max-w-sm` on sign-in). Line length is a readability limit, roughly 65–75
   characters, and it does not belong in the page container.
-- **The filter rail sits on the gutter**, so it reads as pinned to the reading-start
-  edge rather than floating in from a centred column. That is why the cap is
-  160rem and not lower.
+- **The filter rail sat on the gutter** when there was one, which is why the cap
+  is 160rem and not lower; the rail has since gone (filters are a drawer at every
+  width), and the cap stayed.
 
-Measured after the change: 1440 → 4 columns at 246px, 1920 → 5 at 288px,
-2560 → 6 at 343px, all at 100% of viewport width.
+Measured after the change, before the rail and the 5-column step were removed:
+1440 → 4 columns at 246px, 1920 → 5 at 288px, 2560 → 6 at 343px. See "Grid" in M2
+for the current column counts.
 
 ## Hero — one screen, edge to edge
 
@@ -559,6 +963,34 @@ before — it claimed "Sign in" in every state. It is a USER ICON beside the oth
 header glyphs, and clicking it opens a native popover with the name, email and
 mobile plus a sign-out button; signed out, the same icon links to sign-in.
 
+Since the September repairs:
+
+- **Sign-in and sign-up return to the page they were entered from** (`?returnTo=`,
+  `ROUTES.signInFrom`). `lib/utils/return-path.ts` accepts only a same-origin path
+  whose first segment is on an allow-list built from `ROUTES` (no auth screens, no
+  `/api`), at most 512 characters, no backslash or control characters — and it
+  checks the path AFTER parsing. **That last check was the HIGH open redirect**:
+  `/.//evil.test` passed every check on the raw string and was then rebuilt by the
+  URL parser as `//evil.test`, a protocol-relative address to another site, which
+  `router.push` would have followed after a real sign-in.
+- **A mobile number is one identity however it is spaced.** The code request, code
+  sign-in and sign-up schemas transform the mobile to digits only
+  (`lib/domain/mobile.ts` `canonicalMobile`) before sending, and the mock compares
+  canonical numbers — `0300 1234567` used to sign in as a different, empty account.
+  Checkout, address and order-lookup mobiles are still sent as typed.
+- **An outage is not a refusal.** `authFailureOf` sorts a failure into
+  UNREACHABLE, RATE_LIMITED, INVALID or REFUSED, so a dead backend says "could not
+  reach" instead of "wrong password" or "enter a valid mobile". Password reset
+  validates the address in the form and still says the same sentence for every
+  backend answer. The code-sent notice no longer says "if that number has an
+  account", which was false — any number signs in and an unknown one becomes a new
+  customer.
+- **The menu closes after a link is chosen**, and signing out moves focus to the
+  header's sign-in link and says "You have signed out." (a failed sign-out says so).
+- `SESSION_COOKIE` (`session`) is in `features/auth/lib/session-cookie.ts`. The
+  capability cookies are named through `clientKey` (`aa_cart`, `aa_measurements`,
+  `aa_orders`); `session` and `locale` are not prefixed.
+
 ## Wishlist — what is built
 
 - **Contract** — `ENDPOINTS.catalogue.byIds`, several product projections in one
@@ -572,7 +1004,16 @@ mobile plus a sign-out button; signed out, the same icon links to sign-in.
   projection with the live availability overlay that §8.2 keeps separate. Ids
   are capped at 100 (SEC-02: the length is untrusted input).
 - **The list itself is the ACCOUNT's** since plan Phase 3 — see "the wishlist,
-  moved to the account" below. It is no longer per-browser.
+  moved to the account" below. It is no longer per-browser; a guest's own list
+  stays in `localStorage` under `aa_wishlist` (it was `al-asad.wishlist`, and a list
+  saved under the old key is not carried over), read through
+  `lib/utils/browser-storage.ts`, which treats blocked storage as empty instead of
+  crashing.
+- **"Unreadable" means the FIRST load failed.** A later read that fails — say after
+  a refused heart — keeps the list on screen with the refusal, rather than replacing
+  it with "could not load". The same rule holds for the address book and saved
+  sizes. When every saved product has been withdrawn, the page says so instead of
+  "Nothing saved yet".
 - **`features/catalogue/contract.ts`** — a second, CLIENT-SAFE barrel, on the
   precedent the bag already set (STRUCT-06). The main barrel re-exports
   `CatalogueScreen`, which reaches `next/headers` through
@@ -655,8 +1096,12 @@ TryOnPanel → POST /api/try-on → generateTryOn() → apiRequest → [MSW = mo
   module could then never use. The garment shot is converted AVIF→JPEG before it
   is sent, which is required rather than tidy.
 - **Seventh BFF**, `app/api/try-on`. It proxies and nothing else, never logs the
-  body, and is the first route to carry a SEC-08 origin check — see the note
-  under uncommitted work about the six that do not.
+  body, and was the first route to carry a SEC-08 origin check — every write route
+  has one now. It reads the form without throwing, and refuses before reading
+  anything a declared `Content-Length` above the offer's `maxPhotoBytes` plus a
+  64 KiB multipart allowance. A photo the module refuses is answered **422** by the
+  backend and passed to the browser as 400, so the panel says "not a photo we can
+  use" rather than "try again".
 
 ### The interface, after the operator saw it
 
@@ -694,7 +1139,9 @@ rather than a generated image.
 
 Three things stop it quietly becoming the real thing. The session records it as
 `SAMPLE` rather than `READY`, so the module's own history never claims a
-generation happened. The policy is PASSED IN (`sampleWhenUnconfigured`) rather
+generation happened — and since the September repairs the WIRE says `SAMPLE` too,
+so the result is headed "A sample, not your photo" and says it shows the model the
+garment was shot on. The policy is PASSED IN (`sampleWhenUnconfigured`) rather
 than read inside the module, which is what keeps both branches testable in one
 process — an env read inside would only ever be one value per run, and §28.5's
 honest unavailable path is the one that must not rot. And the enforcement still
@@ -704,6 +1151,12 @@ runs first, so the sample is not a way round the size and format checks.
 panel told the feature was off which then produced an image is a worse state
 than either alone. `TRY_ON_SAMPLE_RESULT=disabled` turns it off without a
 provider; a configured provider ignores it entirely.
+
+The panel keeps one persistent status line outside its three faces, moves focus to
+it while the image is made, then to the result's heading or back to the picker on a
+failure; Generate is latched so a double press cannot spend two generations; and
+the mock's session ids come from a counter, so overlapping generations keep a record
+each (D6). The panel downloads on first open.
 
 ### What is left
 
@@ -726,8 +1179,15 @@ carries the rule; this is where it landed.
   matches in `src/` and `app/`. The two that existed became POSTs to `/removal`
   sub-resources: `ENDPOINTS.bag.lineRemoval`, `ENDPOINTS.bag.codeRemoval`, and
   the BFF equivalents at `app/api/bag/lines/[lineId]/removal` and
-  `app/api/bag/code/removal`.
-- **`bag-reservations.ts` is now a ledger.** Every row carries
+  `app/api/bag/code/removal`. Saved items, addresses and saved sizes have their
+  own `/removal` paths since; a bag line moved to saved items is recorded with the
+  reason `MOVED_TO_WISHLIST`; a saved size is forgotten by a `FORGOTTEN` event;
+  Notify Me requests and order access grants are append-only too.
+- **Since the MOD-03 split** the rows live in `reservation-ledger.ts` and the
+  operations in `bag-reservations.ts`; cart lines and code events in
+  `cart-store.ts`, the projection in `bag-projection.ts`. What follows names the
+  functions, which kept their names.
+- **The reservation store is a ledger.** Every row carries
   `ACTIVE | RELEASED | EXPIRED | ALLOCATED` plus `settledAt`; `release`,
   `releaseCart` and `allocate` settle rows instead of splicing them, and
   `sweepExpired` MOVES non-active rows into an `ARCHIVE` array rather than
@@ -738,10 +1198,11 @@ carries the rule; this is where it landed.
 - **`reserve` only refreshes an ACTIVE row.** A settled one is history: re-adding
   a line the customer removed starts a NEW hold rather than resurrecting the
   released one, so the removal survives.
-- **`bag-db.ts`** marks lines removed (`CUSTOMER` or `EXPIRED`) and keeps a
-  `CodeEvent[]` per cart, so applying a second code lifts the first rather than
-  overwriting it. `summaryFor` returns the ACTIVE projection, so the customer
-  sees exactly what they saw before.
+- **Cart lines are marked removed** (`CUSTOMER`, `EXPIRED` or
+  `MOVED_TO_WISHLIST`) and each cart keeps a `CodeEvent[]`, so applying a second
+  code lifts the first rather than overwriting it. `summaryFor` returns the ACTIVE
+  projection and, since the repairs, records nothing: a lapse is recorded by the
+  next write or by placement, never by a read.
 - **`discardCart` became `convertCart(cartId, orderNumber)`.** A converted cart
   still exists but stops answering as a bag — `summaryFor` returns null, the
   handler answers 404, and the BFF already renders that as an empty bag. Zero
@@ -755,9 +1216,8 @@ Verified: **typecheck, lint and 198 tests pass**, and the bag was **exercised by
 hand in the running store** — adding a three-piece SET and then removing the line
 empties the bag and frees the size again on the product page, which is the whole
 `POST /api/bag/lines/{lineId}/removal` path across the real HTTP boundary. That
-is the part the tests cannot reach, since they stop at the mock layer.
-
-The production build has still NOT been run against this change.
+is the part the tests cannot reach, since they stop at the mock layer. (The
+production build has passed many times since.)
 
 ## Made-to-Measure (USP 2) — what is built
 
@@ -1602,13 +2062,23 @@ choices once had. **The Urdu still needs a native tailor's review before any dem
 the same kinds, the same bounds and the same instructions drive it; what differs
 is which picture the tape is laid on and how the instruction is worded.
 
-**Saved measurements cannot be read back.** A save is real (to the mock), but
-nothing reads a profile back into the fields, so a reload — or a style switch
-whose load FAILS, which unmounts the form — loses the figures on screen even though
-the saved profile is kept. Reading back belongs with the account area or with
-ordering. No stitching charge is priced yet either. The operator questions this
-raised (a guest signing in later, one profile per style, retention) are in the
-plan, under "For the operator".
+**Saved measurements ARE read back** (account plan Phase 1) and the stitching
+charge is priced (Phase 6, FIXTURE). **A style or path switch whose load fails no
+longer loses the figures**: both answers render one client `StudioHost`, which keeps
+the last list it loaded with every typed figure and says above the fields that the
+new guide could not be loaded, with Try again (`lib/studio-shown.ts`); the
+unavailable page shows only when nothing has loaded yet. A reload still loses
+unsaved figures — nothing typed is persisted until a save. The operator questions
+the save raised (a guest signing in later, one profile per style, retention) are in
+the plan, under "For the operator".
+
+**A list whose finishing choices could leave a garment with nothing to measure is
+refused by the contract** (`lib/choice-coverage.ts`, linear rather than enumerating
+combinations), so the loader's handled contract violation catches it before anyone
+types.
+
+**Holding cloth for a cut garment** — a cut line reserves nothing (Phase 6's
+stated deviation); metreage reservation has no contract yet.
 
 **Open for the operator** (plan, "For the operator"): whether a missing
 translation should keep taking the studio down in that language, and whether
@@ -1721,9 +2191,7 @@ summary gone, focus mode hides the band at `display: none`, and a save then a fr
 press offers the NEW figure rather than the superseded one. In Urdu at 375px the
 band and its status read right to left with 0 elements past the viewport.
 
-**Phases 2 to 7 are not started.** The profile page, the wishlist moving to the
-account, the address book, order history, the made-to-measure bag line with its
-stitching charge, and the product entry with the card mark are all still to come.
+Phases 2 to 7 followed and are done — see the sections below.
 
 ## Account and tailored-from-a-product — plan Phase 2: the account area
 
@@ -1747,8 +2215,9 @@ for a guest.
   table is the review's without its "Change" column, because on this page there is
   nothing to change into, and it reuses the review's CSS — including its container,
   so the typed figure moves under the name on a phone exactly as it does there.
-- **No client boundary.** Every part takes its words as a prop rather than from the
-  client context, so the page ships no JavaScript of its own.
+- **No client boundary** in the measurements section. Every part takes its words as
+  a prop rather than from the client context. (The page as a whole gained one small
+  client part later, the saved sizes' Forget.)
 - **One read per profile, and all of them cached.** A saved profile carries point
   IDS and no words (§34.3), so the page makes the same two content reads the studio
   makes plus one list per profile. A profile whose list or wording cannot be read
@@ -1880,20 +2349,13 @@ measurements", which a NEWER LIST superseding identical figures would make false
 once a real backend versions its lists. Five more comments claiming every save
 mints a version were corrected.
 
-**Deliberately NOT fixed here, and offered separately:**
-
-- **Function bodies already past MOD-03's 60-line hard ceiling grew a little**:
-  `ProductCard` +6, `ProductCardActions` +5, `AddToBagButton` +3, the bag BFF's
-  `POST` +1; and mock files already past 300 lines: `bag-db.ts` 733 → 745,
-  `handlers.ts` 515 → 522, `catalogue-db.ts` 354 → 359. (`product-detail-db.ts`
-  went DOWN, 661 → 635, and `bag.schema.ts` is now 192.) Splitting the card or the
-  §7.1 cart store is its own change (BOT-04).
-- **The danger red fails contrast in dark mode store-wide**: 3.88:1 at 12px on the
-  panel, against A11Y-07's 4.5:1, in about 25 error and notice lines. The new
-  line notice uses full ink instead; the token is a separate task.
-- **A stock add can still be answered NOT_FOUND for an unknown product or an
-  incomplete size cover**, which the BFF also reads as a dead cart. Older than this
-  work (M4), and reachable only by a malformed client.
+**Left for later at the time, and all three since fixed in the September
+repairs:** the function bodies and mock files past MOD-03's ceilings were split
+(`bag-db.ts` 745 → 277 lines, `handlers.ts` 522 → 47, every mock function body at 60
+lines or under); the danger red was re-solved for A11Y-07 (`oklch(0.52 0.19 25)`,
+at least 4.95:1 on the light surfaces, and a dark-theme `--dark-danger` at least
+5.11:1); and a stock add refused for an unknown product or an incomplete size cover
+answers `SELECTION_REFUSED` instead of `NOT_FOUND`.
 
 Verified: typecheck, lint, **505 tests** and the production build pass. In the
 running store, as a guest AND signed in: the mark on 22 of 24 tiles including both
@@ -1996,13 +2458,10 @@ Eleven further claims were refuted, including that a cut line's quantity is
 unbounded, that the cutoff promises a return the store cannot perform, and that
 the fulfilment kind should be a literal on the wire rather than a nullable field.
 
-**A rule this phase leaves worse and does not fix:** `src/lib/mocks/bag-db.ts` is
-**733 lines** against MOD-03's 300-line hard ceiling. It was already 517 before
-this change — a standing violation — and the cut-line paths added 216. No split of
-what was ADDED brings it near the limit; splitting the file properly means
-refactoring the §7.1 cart store, which is the correctness core and deserves its
-own change and its own review rather than being folded into this one (BOT-04). It
-is offered separately and recorded here so it is not discovered again.
+**`bag-db.ts` was left at 733 lines here** against MOD-03's 300 and split in the
+September repairs: the line operations stay in `bag-db.ts` (277), with
+`cart-store.ts`, `bag-projection.ts`, `bag-pricing.ts`, `bag-codes.ts`,
+`bag-stitched.ts` and `bag-selection.ts` beside it.
 
 Verified: typecheck, lint, **486 tests** (12 new) and the production build pass.
 In the running store: a cut line renders as "Made to your measurements / Kameez
@@ -2038,10 +2497,17 @@ block and no customer, and `contactEmail` was accepted and dropped.
   on the wire for a summary.
 - **A LIST, not tracking.** Order tracking is out of the MVP by operator
   decision, so no row carries a status and no sentence implies one. The list
-  points at `/order/{number}`, which already exists and is already bookmarkable.
-- **Server-rendered**, so `/account` still ships no JavaScript of its own —
-  checked rather than assumed: the page renders zero `<script>` elements inside
-  `main`.
+  points at `/order/{number}`, which already exists and is already bookmarkable
+  (and since September is readable only by its owner — see M5).
+- **Paged since the September repairs** — it was one read capped at 500.
+  `GET account/orders?limit=1..100&cursor=` answers `{ orders, nextCursor }`, keyset
+  paged by the order number's sequence. `/account` shows 20; "Show more orders" is a
+  plain link (`?orders=40#account-order-21`) that renders more rows in ONE request
+  and works without JavaScript; at 100 rows it becomes "Show older orders"
+  (`?ordersAfter=<cursor>`) with "Back to your latest orders".
+- **Server-rendered.** At the time `/account` rendered zero `<script>` elements
+  inside `main`; the saved-sizes section added since has one small client part,
+  because Forget is a write.
 
 Verified: typecheck, lint, **473 tests** (3 new) and the production build pass.
 Driven in the running store as a guest and as a customer: a signed-in order
@@ -2088,8 +2554,8 @@ skeptic; 5 of 16 stood, and they were four distinct defects):
 Eleven further claims were refuted by their skeptics, including that a 501st
 order would make a history permanently unreadable (the store is in memory and
 dies with the dev server), that the place route's missing origin check is new
-(it is the pre-existing SEC-08 gap this file already records, and the change
-makes a forged order attributable rather than anonymous), and three MOD-03
+(it was the pre-existing SEC-08 gap, closed since, and the change made a forged
+order attributable rather than anonymous), and three MOD-03
 ceiling claims counted against raw lines rather than code.
 
 Re-verified after the fixes: an order of two different products reads "Plain
@@ -2225,8 +2691,15 @@ of 22 stood, and they were nine distinct defects seen from more than one side):
   body.** A removed card unmounts and the form closes on save, so the control
   that was pressed stops existing; the card's buttons also DISABLED on busy,
   which is the same defect the studio's Check and Save buttons were fixed for.
-  They carry `aria-busy` now, a `role="status"` line says what happened, and
-  focus is put on "Add an address", the one control that is always there.
+  They carry `aria-busy` now and a `role="status"` line says what happened. Focus
+  was put on "Add an address" — but that button is not there while the form is
+  open, so it still fell to the body; the September review fixed it
+  (`useAddressBookEditing` opens and closes the form inside `flushSync`): opening
+  or editing focuses the editor's heading, and Save, Cancel, Remove and Make default
+  land on "Add an address" once it exists. Each card's buttons are named with their
+  address ("Remove address: {recipient}, {line}"), a book with no default is a
+  contract violation rather than "no address yet", and a session that ended mid-page
+  shows a sign-in link.
 - **A session that had ENDED was reported as a passing network problem** and the
   customer was told to try again in a moment, which could never work. The
   refusal mapping is one pure function taking the ERROR UNION rather than a
@@ -2287,7 +2760,7 @@ used to live in `localStorage` and be invisible to the operator.
   did not have: `isUnreadable`, so a list that could not be READ is never shown
   as a list that is empty.
 - **The account page has a saved-items section** — count and a way in, read on
-  the server, so `/account` still ships no JavaScript of its own. It does not
+  the server, so the section adds no JavaScript. It does not
   repeat the grid: the grid is the catalogue's client card, hearts and all, and a
   second copy of it here would put every one of those on the one page whose point
   is that it has none.
@@ -2436,10 +2909,40 @@ tray's X being the X, which then closes the tray.
 
 ## Deliberate gaps — do not "fix" these
 
-- **Product imagery is now the client's own.** Fourteen photographs in
-  `public/products/`, converted to 4:5 AVIF from the originals kept in
-  `assets/photography/`. See "Photography" below for what this changed and what
-  is still missing.
+- **DEFERRED by the operator (19 September) — built later, not dropped:**
+  - a **find-my-order page** where a customer types an order number (the mobile
+    lookup exists, but only on an order's own address);
+  - **self-service cancellation** within the window (§28.3);
+  - a **return-request form** (§28.3) — the Returns page says returns are asked for
+    by contacting the store;
+  - three **card and filter details** from §28.1/§28.4: the WORK TYPE on the card
+    (it is on the card contract and never drawn), the PIECE COUNT on a phone ("Set" /
+    "Single piece" is only in the hover reveal; a length's metreage does show on
+    touch since the review), and FABRIC EXPLAINERS in the filter (a facet entry
+    carries no explainer; the product page has them).
+  **Payments and real auth wait for the backend.**
+- **FIXTURE the client must replace** — every item is a placeholder shaped like the
+  real thing, and a demo should say so aloud:
+  - **Contact details** — `CLIENT.contact` in `src/config/client.ts`: phone and
+    WhatsApp `+92 300 0000000`, `contact@example.com`, "Shop address to be
+    confirmed". **The opening hours, Monday to Saturday 10:00–19:00, LOOK real and
+    are not.**
+  - **The bank-transfer account** — `checkout-config-db.ts`: "Example Bank", all
+    zeros, IBAN `PK00EXMP…`.
+  - **Terms of sale and Privacy** — `policy-pages-db.ts`, with NO legal authority;
+    the client's lawyer must replace both. Privacy describes cookies by purpose, not
+    lifetime (the code sets the bag 30 days, a guest's measurements 1 year, the
+    session and order access 7 days, language, theme and grid 1 year).
+  - **About us, Contact us, Delivery, Returns and exchanges** — `store-pages-db.ts`.
+    About invents no history; Returns says 7 days, unworn with tags, and leaves how
+    refunds are paid to be agreed. The store name is written into About and Terms.
+  - The stitching charges, every measurement bound, card convention and tailor's
+    rule row (see Made-to-Measure); the collections' membership; the related-products
+    rule; the neutral `app/icon.svg`.
+  - **All Urdu**, including everything written in this round, awaits a native
+    reader — the studio's in particular before any demo.
+- **Product imagery** — see "Photography": 24 products, most frames generated, ten
+  products with no real photograph.
 - **Auth is still D3's placeholder, now with a real shape.** The seeded account
   is `customer@example.com` / `password1234`, and it lives ONLY in the mock
   layer — `API_MOCKING=disabled` removes both the account and the hint printed
@@ -2470,63 +2973,80 @@ tray's X being the X, which then closes the tray.
   ONE request through `/api/products`, a BFF that also merges the live
   availability overlay, so a list of twenty is not twenty round trips. Quick add stays available to guests, because guest checkout is
   Release 1 scope (§28.2) and a guest really can buy.
-- **The language switcher is OFF**, via `CLIENT.features.languageSwitcher`.
+- **The header language switcher is OFF**, via `CLIENT.features.languageSwitcher`.
   Nothing about the bilingual build was removed — `LOCALES`, both message files
   and the RTL layout are untouched, and turning it back on is one word. It is
   off because D2's closing phase (Nastaliq, protected terms) is unfinished, and
   offering a switch to a half-reviewed translation is worse than offering none.
+  Urdu is still reachable: every page publishes a `?locale=ur` alternate, which
+  sets the language for a year — so a reader in Urdu gets the switch in the FOOTER
+  as the way back to English.
 - **No confirmation SMS, and nothing that mentions one.** §28.2 has one and §7.2
   step 8 enqueues it, but no SMS provider is wired up — so neither the
   confirmation page nor the payment guide says a message is coming. The auth
   code path is the one place an SMS is still named, and there the mock RETURNS
   the code on screen rather than pretending to send it.
+- **No email is ever sent.** A Notify Me request and a password reset are
+  recorded and never delivered; the pages promise only what the backend will do
+  (§23/§28.7), never that something was sent.
 - **No payment gateway.** Card and wallet orders come back `AUTHORIZED` because
   the mock says so. §7.2's honest consequence — an order existing in
   `AWAITING_PAYMENT` before authorisation returns — is modelled in the states,
   but there is no authorisation to fail.
-- **Carts live in memory.** A dev-server restart empties every bag and releases
-  every hold. That is the mock standing in for a database, not a design. The
-  BFF's add path recovers from it: a cookie naming a cart the backend no longer
-  has is discarded and replaced once, rather than failing forever.
+- **Carts, orders, profiles and every other mock store live in memory.** A
+  dev-server restart empties every bag and releases every hold. That is the mock
+  standing in for a database, not a design. The BFF's add path recovers from it: a
+  cookie naming a cart the backend no longer has — confirmed by a HEAD on the cart —
+  is discarded and replaced once, rather than failing forever.
 
 ## Photography
 
-The client is **Al-Asad Collections**, and the store sells **menswear**, not the
-women's lawn suits the fixture had been assuming. Sixteen photographs arrived;
-fourteen are product shots and two are marketing collateral.
+The client is **Al-Asad Collections**, and the store sells **menswear**. Sixteen
+photographs arrived from the client — fourteen product shots and two pieces of
+marketing collateral — and on 18 September the operator supplied a second set of
+Gemini collages. The catalogue is now **ONE PRODUCT PER PHOTOGRAPH: 24 products**,
+98 frames in `public/products/` (4:5 AVIF).
 
-What that forced, beyond dropping the files in:
+| Garment | Products | Pieces |
+| --- | --- | --- |
+| Waistcoat suit | 14 | 3 (waistcoat, kameez, shalwar) — SET |
+| Kameez shalwar | 6 | 2 — SET |
+| Kurta (the unstitched line) | 2 | 1 — SIMPLE, sold by length (2.5m and 4.5m) |
+| Boys' kurta | 2 | 1 — SIMPLE, no stitching offer |
 
-- **The fixture vocabulary was womenswear and had to change with the pictures.**
-  Lawn / chiffon / cambric became wash-n-wear / boski / karandi / cotton; rose
-  and sage became the twelve colours actually photographed. A filter reading
-  "Chiffon · Rose" over a photograph of a maroon waistcoat is not a cosmetic
-  mismatch, it is a lying card.
-- **Colour is now READ FROM the photograph, not computed from the index.**
-  `PHOTOGRAPHY` in `catalogue-db.ts` is the table; anything a customer can see in
-  the picture comes from there, and only what the picture does not settle
-  (fabric, work type, price, date) is still generated.
-- **Piece counts follow the garment.** A waistcoat suit is the three-piece SET
-  the domain model exists for — waistcoat, kameez, shalwar, each sized on its
-  own — and a kameez shalwar is two. `PIECE_NAMES` is keyed by garment, because
-  position 0 is "Waistcoat" in one and "Kameez" in the other.
-- **28 products over 14 photographs**, each garment offered in two cloths. The
-  two instances never disagree about colour, because both read it from the photo.
-- **`hoverImageUrl` is null everywhere.** One shot per garment is what exists,
-  and pointing the hover at a different garment is worse than no hover.
+- **`src/lib/mocks/catalogue-photography.ts` is the table**, one row per photograph
+  in listing order (the first is the newest). Anything a customer can SEE is read
+  from it — colour, which garment, and where the picture settles it, the WORK TYPE
+  (`work`); fabric, price, launch date and the older photographs' work type are
+  generated in `catalogue-db.ts`. A row can pin its LEAD frame (`lead`), so
+  colourways shot on one model in one pose rest on different views and no two tiles
+  read as one picture. Garments from the same shoot are placed apart. Three rows are
+  fixture rules, not free to move: the two adult kurtas sit at positions 1 and 5 so
+  their metreage lands on 2.5m and 4.5m (all three Fabric Calculator verdicts
+  reachable), and positions 3, 10 and 17 are the products never received.
+- **It used to be 28 products over 14 photographs**, each garment offered twice in
+  two cloths, which put the same picture on two tiles of one page. That went with
+  the new photographs. Slugs are `{fabric}-{garment}-{colour}-{n}` and **every slug
+  changed** — nothing should hard-code one (the e2e suite does not).
+- **Colours** (`catalogue-vocabulary.ts`): the original thirteen plus Camel, Black,
+  Chocolate, Ash Grey, Royal Blue and Antique Gold, each with an Urdu label.
+- **Piece counts follow the garment** (`PIECES` in `catalogue-db.ts`), and a
+  SET's piece names are keyed by garment.
+- **Frames.** The fourteen original garments have five each: the client's own
+  photograph plus four generated views (full length, three-quarter, side profile,
+  collar detail) cropped from one Gemini 2x2 collage each. Of the ten new products,
+  six have four generated views each, from the operator's 1x4 collages, and four
+  have a single generated frame, cut from one collage of four different garments.
+  The collages (21) are in `assets/photography/collages/`, gitignored for size; the
+  client's originals are beside it.
 - The product page's gallery is ONE LINE that scrolls, not a wrapping strip.
   Wrapping made its height depend on how many shots a garment happened to have,
   so the buy box moved down the page from one product to the next; a scroller is
   a fixed 91px whatever the count, and a half-visible thumbnail at the edge is
   its own affordance. The thin themed scrollbar comes from the global rule that
   already covers nested scrollers.
-- The PRODUCT PAGE now shows all five frames too. Its mock was still returning
-  one, with a comment explaining that one shot was all that existed — true when
-  it was written, and outlived by the generated frames. Both surfaces read
-  `frameUrls` now, so the card and the gallery cannot disagree about how many
-  pictures a garment has.
-- The sold-out overlay named "Dupatta", a piece no menswear set has. Now Shalwar,
-  the one piece both SET garments share.
+- The card and the product page both read `frameUrls`, so they cannot disagree
+  about how many pictures a garment has or which one it rests on.
 
 Copy that contradicted the new catalogue was updated with it: hero headline,
 meta description, search placeholder, the fabric glossary, the care guide and
@@ -2536,17 +3056,19 @@ the size guide, in both locales.
 
 - **No cloth photography.** The unstitched line (the adult kurta) shows a
   stitched example, because no photograph of fabric on the bolt exists yet.
-- **Four of every five frames are GENERATED, not photographed.** Each garment
-  now has five: the client's own photograph, plus full-length, three-quarter,
-  side-profile and collar-detail views cropped from one Gemini 2x2 collage
-  (originals in `collage/`). They are consistent with the real photograph and
-  with each other, but they are not a second shoot — real alternate angles
-  replace them file-for-file, and `FRAMES` in `catalogue-db.ts` is the one
-  number to change.
+- **Most frames are GENERATED, not photographed — and ten products have no real
+  photograph at all.** Only the fourteen original garments' lead shots are the
+  client's photographs; every other frame, and every frame of the ten new products,
+  is cropped from a Gemini collage. They are consistent with themselves but they are
+  not a shoot, and a demo should say so. Real photographs replace them
+  file-for-file (`<file>.avif`, `<file>-2.avif`, …); the frame count is the row's
+  `frames` in `catalogue-photography.ts`.
 
-  Mapping the collages to garments was done by COMPARING each against the
+  Mapping the first collages to garments was done by COMPARING each against the
   original photograph, not by reading filenames — the filenames are opaque
   hashes, and three of the fourteen would have been mis-assigned on a glance.
+- **The photographs are 1200px wide**, so the gallery's 2× magnifier upscales on a
+  large screen; 1600–2400px sources would be sharp.
 - **The two brand pieces are unused** — `assets/photography/brand-poster-lion.jpeg`
   carries the gold lion crest and would make a real logo and favicon; both it and
   `brand-banner-rust.jpeg` have a phone number burned into them, so neither is
@@ -2563,12 +3085,15 @@ Verified at the time: **typecheck, lint, 182 tests and the production build all
 pass**, with `/api/try-on` registered in the build output. The suite has since
 grown to **198** with the D6 provenance tests and the try-on additions.
 
-**SEC-08 gap, stated rather than bundled.** `/api/try-on` verifies the request
-origin via `lib/utils/request.ts`. The six BFF routes that predate it — bag,
-bag lines, bag code, both checkout routes, products — do NOT, and several of
-them genuinely mutate state. That is a pre-existing gap; BOT-04 says adjacent
-cleanup is offered separately rather than smuggled into an unrelated change, so
-it is offered here and not done. The helper is already shared and named.
+**The SEC-08 gap this section used to record is CLOSED.** It also named the
+wrong routes: two of the six it listed (the checkout quote and products) are GETs,
+and both `/removal` POSTs were missing. Every state-changing route handler — 19 of
+them, 18 POST and one PATCH — now calls `isSameOrigin` before it reads a body, a
+cookie, a parameter or the session, and `src/lib/utils/request-policy.test.ts` reads
+every `app/api/**/route.ts` and fails if a write handler lacks the check or runs it
+late. GETs are left without it on purpose: SEC-08 is written for mutations, the
+capability cookies are `SameSite=Lax`, and without CORS headers another site cannot
+read the answer.
 
 ## How M4 was verified (historical — committed)
 
@@ -2616,11 +3141,25 @@ out, and `/order/AA100001` still renders on a fresh load.
 - **"We could not reach the store" on every page means MSW stopped
   intercepting. Restart the dev server; do NOT delete `.next`.**
 
+  **The cause was found in Next's source (September repairs), and `node.ts` now
+  handles it.** Next 16.3.4's router captures the original `fetch` at boot and
+  gives the hot reloader a `resetFetch()`, which it calls whenever any server
+  output changes — discarding MSW's patch. Server Fast Refresh then re-evaluates
+  only the changed modules, so `node.ts` was never re-run and nothing re-armed:
+  that is why it died after "one or two edits, one of them a comment" and survived
+  edits inside the mock graph. The registry now also records the `fetch` the active
+  server installed; when the `fetch` in force is not that one, the old server is
+  closed and the SAME handlers are armed again (so the stores do not change layer —
+  Turbopack keeps a separate instance of every mock module per layer).
+  `node.test.ts` replays Next's reset-and-wrap. It has not yet been confirmed over a
+  long editing session, so the notes below still apply if it recurs.
+
   The symptom is total: every outbound call escapes to `JAVA_API_BASE_URL`,
   gets `ECONNREFUSED`, and every page that reads data renders `ErrorState`.
   Two probes tell it apart from anything else in seconds — `/api/quick-add?slug=x`
   answers **502** rather than the 404 a live mock gives, and `/api/suggest`
-  answers `{"terms":[],"products":[]}`.
+  answers the empty suggestions. The most reliable probe is the one the e2e
+  warm-up uses: count `<article` occurrences in `/catalogue`'s own HTML.
 
   **Observed cause, September 2026: accumulated hot reloads, with no build
   involved.** The dev server had been up for ~25 minutes across edits to
@@ -2846,7 +3385,8 @@ out, and `/order/AA100001` still renders on a fresh load.
   be readable.** Motion writes the `initial` styles into the SERVER HTML, so
   until that client leaf hydrates the content is invisible — the order
   confirmation rendered blank. Decoration animates via CSS (no hydration, no
-  bundle); text is plain server-rendered markup.
+  bundle); text is plain server-rendered markup. (`motion` has since been removed
+  from the project entirely.)
 - **A header child that pins its own text colour will not follow the bar over
   the hero.** `body:has([data-hero]) header[data-scrolled='false']` sets
   `color: on-media`, and anything carrying `text-fg` or `text-fg-muted`
@@ -2994,7 +3534,10 @@ out, and `/order/AA100001` still renders on a fresh load.
   down and the figure looked like it was dissolving.
 - **`next/dynamic` with `ssr: false` is what keeps a heavy scene off every other
   route.** three's core lands in its own ~1.5 MB chunk that only `/stitched` asks
-  for.
+  for. But its lazy component THROWS when the chunk fails to download, to the
+  nearest error boundary — for a part rendered from the root layout that is
+  `global-error`. Client-only parts now use `onDemandPart` / `<OnDemand>`
+  (`src/hooks/use-on-demand.ts`), which treats a failed download as a value.
 - **Writing a ref during render is a lint error, not a style note**
   (`react-hooks/refs`). Keeping a callback fresh for a long-lived imperative scene
   means assigning it in an effect.
@@ -3368,11 +3911,64 @@ out, and `/order/AA100001` still renders on a fresh load.
   is the probe's healthy answer too. The route's own 404 has NO content type; the
   not-found page is `text/html`. Wait for port 3000 to free and a few seconds more
   before starting again, and read the content type beside the status.
+
+  **It happened again on 19 September, in the first e2e run after a fresh start**
+  (straight after a production build): `POST /api/bag/lines/{id}/removal` and the
+  move-to-wishlist POST — both nested dynamic `[lineId]/*` handlers — came back as
+  the HTML not-found page, while a `PATCH /api/bag/lines/{id}` in the same test
+  answered 200. Both are in the build output; both specs passed alone and in the
+  next three full runs, including one straight after a fresh build, so the
+  build-then-dev theory did not reproduce. No product fault was found. The suite's
+  web server has `stdout: 'ignore'`, so that run's server log was not kept — turn it
+  on before chasing it. With `retries: 0` it fails a run when it happens.
 - **A fetch interceptor installed from the console can leave the studio in a state
   a customer never reaches**: a save went through with the interceptor in place
   and the page came back with an empty form, and the same steps without it showed
   the saved step every time. Prefer the store's own routes, called directly, over
   wrapping `window.fetch` mid-flow.
+- **SendMessage to a RUNNING workflow subagent starts a second copy of it; it does
+  not reach the running one.** During the features pass the Playwright agent was
+  messaged mid-run, and two copies of it then worked in the same tree: one killed the
+  other's dev server with `taskkill /PID … /T /F` believing it was its own, the
+  replacement then made the other's fail with `EADDRINUSE` on 3107, and both were
+  about to write the same files. One copy noticed and stood down. Wait for a running
+  agent to finish, or stop it and resume with an edited prompt — never message it.
+- **`next dev` writes `AGENTS.md` and a `CLAUDE.md` containing `@AGENTS.md` into the
+  project root whenever it detects a coding agent** (`CLAUDECODE`, `CLAUDE_CODE`,
+  `AI_AGENT` and others, read by `@vercel/detect-agent` inside Next 16.3). Any dev
+  server an agent starts — including the Playwright suite's — dirties the tree with
+  them. Both are gitignored now (`/AGENTS.md`, `/CLAUDE.md`); clear the variables
+  before `npm run test:e2e`. The project-wide off switch is `agentRules: false` in
+  `next.config.ts`, which is the operator's decision and is not set.
+- **A shared component can put Zod back into a route's first load.** The studio's
+  breadcrumb used the shared `Breadcrumbs`, which gained JSON-LD, which imports
+  `config/site`, which imports `env.client`, which validates `NEXT_PUBLIC_APP_URL`
+  with Zod — so `/stitched` went from under budget to 280.2 kB while the studio's
+  own code still loaded Zod on demand. Nothing in the studio changed; the import
+  arrived through a shared file. Measuring at the end caught it;
+  `studio-first-load.test.ts` now walks the studio's static import graph and fails
+  if `zod` is reachable. Client components use `BreadcrumbTrail`; `Breadcrumbs`
+  (with JSON-LD) is for Server Components.
+- **A modal dialog keeps the page inert through its exit, and Playwright's `fill`
+  does not notice.** `useNativeDialog` calls `close()` only after the 220ms exit
+  transition, so the bag panel is still MODAL while it slides away, and everything
+  outside a modal dialog is inert. From "Go to checkout", on a WARM server the form
+  was drawn inside that window; `fill` checks visible, enabled and editable but not
+  inert, so it typed into fields that could not take focus, and the order was refused
+  as empty. It failed in every full run and passed alone (a cold compile outlasted
+  the 220ms), and one run kept only the City (the panel finished closing mid-fill).
+  Two wrong theories cost time first — a hot update remounting the form, answered by
+  warming checkout in a browser in the global setup, which made it fail alone too. A
+  value-setter and MutationObserver probe settled it: nothing emptied the fields,
+  because nothing had ever reached them. The journey now waits for the panel to be
+  hidden. No person types within 220ms of a page appearing, so the product is
+  unchanged; a click in that window does land on the backdrop.
+- **Turbopack does not tree-shake Zod's locales.** `import { z } from 'zod'` brings
+  the whole namespace, including `z.locales` — French and Polish error messages
+  were found in the built chunk. It is ~70 kB of Zod's ~84 kB gzipped chunk. Zod is
+  out of every first load now, so this is paid on the first interaction that parses
+  a response, not on paint; the fix is a different import shape (named imports, or a
+  vendor wrapper under IMP-03) across ~47 files, not yet done.
 
 ## Commands
 
@@ -3382,4 +3978,18 @@ npm run dev
 
 ```bash
 npm run typecheck && npm run lint && npm run test && npm run build
+```
+
+The operator's shell is PowerShell 5.1, which has no `&&`:
+
+```powershell
+npm run typecheck; if ($?) { npm run lint }; if ($?) { npm run test }; if ($?) { npm run build }
+```
+
+The end-to-end suite starts its own dev server on port 3107 — stop your own
+`npm run dev` first, and clear the agent variables so `next dev` does not write
+`AGENTS.md` and `CLAUDE.md`:
+
+```powershell
+Remove-Item Env:AI_AGENT, Env:CLAUDECODE -ErrorAction SilentlyContinue; npm run test:e2e
 ```

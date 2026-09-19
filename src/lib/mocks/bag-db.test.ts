@@ -18,7 +18,8 @@ import {
   sweepExpired,
 } from './bag-reservations';
 import { CATALOGUE } from './catalogue-db';
-import { onHandFor, toProductDetail } from './product-detail-db';
+import { onHandFor } from './inventory-db';
+import { toProductDetail } from './product-detail-db';
 
 /**
  * Architecture §7.1 and §7.3 are "the correctness core of the system" (§7), and
@@ -213,7 +214,7 @@ describe('§16 cart invariants', () => {
     const cart = createCart();
 
     const result = addItem(cart, productId, selections.slice(0, 1), 1, 'en');
-    expect(result.kind).toBe('NOT_FOUND');
+    expect(result.kind).toBe('SELECTION_REFUSED');
   });
 
   it('shows per-piece sizes on the line, which is what §28.2 displays', () => {
@@ -367,5 +368,54 @@ describe('pricing is the backend’s answer', () => {
     expect(summary?.pricing.deliveryMinor).toBe(0);
     expect(summary?.pricing.totalMinor).toBe(0);
     expect(summary?.freeDelivery.isMet).toBe(false);
+  });
+});
+
+/*
+ * NOT_FOUND on an add means "no such cart" and nothing else, because the BFF
+ * answers it by throwing the cart cookie away and starting a new cart. A product
+ * or size cover the cart cannot take used to come back as NOT_FOUND too, which
+ * cost a customer with a perfectly good bag that bag.
+ */
+describe('§16 an add refused on what it names keeps the cart', () => {
+  type Selections = { pieceId: string; sizeId: string }[];
+
+  const refusals: [string, (productId: string, selections: Selections) => [string, Selections]][] =
+    [
+      ['a product the store does not sell', (_id, picks) => [crypto.randomUUID(), picks]],
+      ['a cover missing a piece', (id, picks) => [id, picks.slice(1)]],
+      [
+        'a size the piece is not offered in',
+        (id, picks) => [id, picks.map((pick) => ({ ...pick, sizeId: crypto.randomUUID() }))],
+      ],
+      ['one piece named twice', (id, picks) => [id, [...picks.slice(1), at(picks, 1)]]],
+    ];
+
+  it.each(refusals)('refuses %s as SELECTION_REFUSED, not NOT_FOUND', (_label, bend) => {
+    const { productId, selections } = candidate('SET');
+    const cart = createCart();
+    const [named, picks] = bend(productId, selections);
+
+    expect(addItem(cart, named, picks, 1, 'en').kind).toBe('SELECTION_REFUSED');
+  });
+
+  it.each(refusals)('leaves the bag and its holds exactly as they were after %s', (_l, bend) => {
+    const { productId, selections } = candidate('SET');
+    const cart = createCart();
+    addItem(cart, productId, selections, 1, 'en');
+    const before = summaryFor(cart, 'en');
+    const [named, picks] = bend(productId, selections);
+
+    addItem(cart, named, picks, 1, 'en');
+
+    expect(summaryFor(cart, 'en')).toEqual(before);
+    expect(cartHistory(cart)?.status).toBe('ACTIVE');
+    expect(reservedQuantity(at(selections, 0).pieceId, at(selections, 0).sizeId)).toBe(1);
+  });
+
+  it('answers NOT_FOUND only for a cart the store does not have', () => {
+    const { productId, selections } = candidate('SIMPLE');
+
+    expect(addItem(crypto.randomUUID(), productId, selections, 1, 'en').kind).toBe('NOT_FOUND');
   });
 });

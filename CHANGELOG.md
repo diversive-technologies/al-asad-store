@@ -25,7 +25,131 @@ entry names no hash — it does not have one until it is committed.
 
 ## Unreleased
 
-### _(this commit)_ — 2026-09-08
+### _(this commit)_ — 2026-09-19
+
+**Repair the whole storefront, finish the product page and the account, move the
+catalogue to one product per photograph, add the store's policy pages and search
+engine files, put the main journeys under a browser test, and test every use case
+by hand.**
+
+Five passes over 17–19 September, committed together. The sixteen commits between
+`b0c3cbe` and this one (`62363d3` to `621e384`) have no entries of their own; their
+commit messages say what they did and `.claude/PROGRESS.md` records the state they
+left. This entry does not backfill them.
+
+**1. A repair pass over everything built so far.**
+
+- **Every state-changing BFF route now refuses another origin (SEC-08)** before it
+  reads a body, a cookie or a parameter. PROGRESS had listed the six routes missing
+  the check, and listed them wrongly — two of the six it named were GETs and both
+  `/removal` POSTs were missing. `request-policy.test.ts` now reads every
+  `app/api/**/route.ts` and fails if any write handler lacks the check or runs it
+  late.
+- **An order could be read by anyone who guessed its number.** Numbers are
+  sequential, and the order page answered any of them. The backend now answers an
+  order only to the account that placed it or to a browser holding an access token
+  issued at placement; anyone else gets a "Find your order" form that asks for the
+  order's mobile number (§28.3's "by number and mobile"). A shared order link no
+  longer shows the order.
+- **A refused add is its own answer.** An unknown product or an incomplete set of
+  sizes used to come back as `NOT_FOUND`, which the bag BFF reads as "this cart is
+  gone" — and it threw the customer's real bag away. It is `SELECTION_REFUSED` now,
+  and the BFF confirms a cart is really gone (a HEAD on it) before discarding the
+  cookie.
+- **Availability is one computation.** The card overlay, the "In stock only" filter
+  and its count, and the best sellers read a stored flag while the product page read
+  the stock ledger, so a card could say "In stock" over a product whose page said
+  sold out. All of them now read the ledger.
+- **The unstitched kurta could not be bought at all**: the add contract had no way
+  to name a piece with no size. A sizeless piece is now resolved by the backend as
+  its one size.
+- Order history is paged, bank transfer shows where to pay, `/bag` has its own
+  loading and error pages, a product or order that does not exist gets a proper
+  not-found page, every page states its own canonical address, `?locale=` works,
+  sign-in returns to the page it was entered from, and the mock files and oversized
+  components were split under MOD-03's ceilings.
+- **The MSW-dies-on-hot-reload problem has a found cause.** Next captures the
+  original `fetch` at boot and puts it back on every server hot reload, discarding
+  MSW's patch; Server Fast Refresh then never re-evaluates the mock module, so
+  nothing re-arms. `node.ts` now notices the swap and re-arms the same handlers.
+
+**2. The rest of the product page and the account (§28.2, §28.3).** Size guide in a
+dialog, WhatsApp and copy-link sharing, "You may also like", a desktop magnifier and
+a full-screen gallery, Notify Me on sold-out sizes, moving a line between the bag
+and the saved items, and saved sizes that pre-fill the size selector.
+
+- **The first-load JavaScript budget (PERF-10) is met on every route.** Routes were
+  shipping 345–366 KiB gzipped against 200 kB. The search panel, the bag's contents,
+  the full-screen gallery, try-on and the studio's review now download when first
+  wanted; Zod is no longer in any route's first load; `motion` was replaced by a CSS
+  transition and removed; the messages context stopped defaulting to the whole
+  English dictionary.
+- **A Playwright suite**, `npm run test:e2e`: seventeen journeys on the store's own
+  `next dev`, on port 3107.
+
+**3. The catalogue is one product per photograph.** The operator supplied new
+collages, which became ten new products and 28 frames. The fixture used to offer
+each of fourteen garments twice, in two cloths, which put the same picture on two
+tiles of one page; it now has 24 products, each its own photograph, with six new
+colours. The page size went from 24 to 12, so a 24-product catalogue pages at all;
+12 still divides every column count.
+
+**4. Store pages, search engines, a review and its fixes.** About, Contact,
+Delivery, Returns and exchanges, Terms of sale and Privacy, as served content under
+`/help/[slug]`, with a regrouped footer; the contact details are placeholders in
+`CLIENT.contact`. Product, breadcrumb and organisation structured data through one
+escaping serialiser; `sitemap.xml` from a backend feed; `robots.txt`. Then a
+four-area adversarial review — 56 confirmed findings, 63 fixes — including two HIGH
+defects:
+
+- **One cart could hold more of a size than exists.** A reservation left out every
+  hold of the whole cart, not only the line being changed, so two lines of one
+  garment sharing a (piece, size) each passed alone and together oversold; placement
+  then allocated past `on_hand`. The check now sets aside only the same line's
+  holds, and allocation sums each (piece, size) before comparing.
+- **An open redirect after sign-in.** `returnTo=/.//evil.test` passed every check on
+  the raw string and was then rebuilt by the URL parser as `//evil.test`, a
+  protocol-relative address to another site. The rebuilt path is checked now.
+
+Also from the review: search results are read uncached, because they carry the
+in-stock count; a placement whose answer never arrived no longer says "nothing has
+been charged"; the delivery option is the one the quote states rather than a
+hard-coded `standard`; a mobile number means the same account however it is spaced;
+and a part of the page whose download fails now says so in place, where it used to
+take the page down with it.
+
+**5. A by-hand pass over every use case, in the browser**, logged in
+`TESTING-USE-CASES.md`, and the last small fixes, from that pass and the review
+before it: the order page got its own loading skeleton;
+a saved size is pre-filled on a set only when every piece can take it in stock (it
+used to leave a set half-sized, with Add to bag unavailable); the largest image on
+the product page and the hero loads eagerly at high priority (Next 16 deprecates
+`priority`); the bag line's quantity is formatted per locale; the saved-size radio's
+accessible name is one message; the footer's "English" is marked as English, so a
+screen reader on an Urdu page says it in English; and an unknown payment method or
+delivery option is refused at placement instead of being priced as the first.
+
+**Worth knowing.**
+
+- **The last verification** (19 September, after the by-hand fixes): typecheck,
+  lint, 1,586 unit tests, `npm run build` and 17/17 Playwright journeys, two full
+  runs in a row. The guest checkout journey had been failing in every full run: the
+  bag panel stays modal through its 220ms exit, so the page under it is inert, and
+  on a warm server Playwright typed into the checkout form inside that window. The
+  journey now waits for the panel to close. An earlier verification found `/stitched` back over budget —
+  280 kB — because a shared `Breadcrumbs` imported the client environment module,
+  which validates with Zod. It is 196.5 kB now, and `studio-first-load.test.ts`
+  fails if Zod is reachable from the studio's first load again. `/stitched` (196.5)
+  and the product page (189.6) have little room left.
+- **`next dev` writes `AGENTS.md` and `CLAUDE.md` into the repository root** when it
+  runs inside an agent session. Both are now in `.gitignore`.
+- The contact details, the bank transfer account, the terms, the privacy page, the
+  stitching charges and the tailor's rules are all placeholders, and all the Urdu
+  written in this round still needs a native reader.
+
+---
+
+### `b0c3cbe` — 2026-09-08
 
 **Backfill the three entries this file had started missing.**
 

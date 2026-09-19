@@ -1,11 +1,15 @@
+import type { Ref } from 'react';
+
 import { ButtonLink } from '@/components/ui/button';
-import { SaveAddressOffer } from '@/features/addresses/contract';
 import { ROUTES } from '@/config/routes';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { formatDate, formatMoneyMinor, formatPlural } from '@/lib/utils/format';
+import { formatDate, formatTemplate } from '@/lib/utils/format';
 
 import type { Order } from '../schemas/checkout.schema';
+import { OrderDeliveryDetails } from './OrderDeliveryDetails';
+import { OrderLines } from './OrderLines';
+import { OrderPaymentDetails } from './OrderPaymentDetails';
 import { OrderPlacedHero } from './OrderPlacedHero';
 import { OrderSummary } from './OrderSummary';
 
@@ -13,6 +17,8 @@ export interface OrderConfirmationProps {
   order: Order;
   locale: Locale;
   messages: Messages;
+  /** Handed to the page heading, for a page that moves focus there. */
+  headingRef?: Ref<HTMLHeadingElement> | undefined;
 }
 
 /**
@@ -21,14 +27,14 @@ export interface OrderConfirmationProps {
  * There is no "what happens next" section, and that is deliberate rather than
  * missing: this MVP has no confirmation step and no order tracking, so anything
  * written there would be a promise nothing behind it can keep. What the page
- * does say is what is already true — the order exists, here is its number, and
- * here is what was bought.
+ * does say is what is already true — the order exists, here is its number, here
+ * is what was bought, and, for a transfer, where the money goes.
  *
  * It is rendered by `OrderScreen`, which reads the order in the browser, so it
  * is part of that client subtree. Nothing here holds state of its own: the mark
  * at the top animates in CSS and the one control is a leaf of its own.
  */
-export function OrderConfirmation({ order, locale, messages }: OrderConfirmationProps) {
+export function OrderConfirmation({ order, locale, messages, headingRef }: OrderConfirmationProps) {
   const t = messages.order;
 
   return (
@@ -37,103 +43,16 @@ export function OrderConfirmation({ order, locale, messages }: OrderConfirmation
         title={t.title}
         orderNumberLabel={t.numberLabel}
         orderNumber={order.orderNumber}
-        placedLabel={t.placedLabel}
-        placedAt={formatDate(order.placedAt, locale)}
+        placedLine={formatTemplate(t.placedOn, { date: formatDate(order.placedAt, locale) })}
+        headingRef={headingRef}
       />
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-2">
-        <div>
-          <h2 className="text-fg text-sm font-medium">{t.deliveringTo}</h2>
-          <p className="text-fg-muted mt-1 text-sm">{order.contactName}</p>
-          <p className="text-fg-muted text-sm">{order.deliveryAddress}</p>
-          <p className="text-fg-muted text-sm">{order.deliveryCity}</p>
-          <p className="text-fg-muted text-sm">{order.contactMobile}</p>
-          <p className="text-fg-muted mt-2 text-sm">{order.deliveryLabel}</p>
-
-          {/*
-           * §28.3 — offered AFTER the order, never during it: §7.2 has no address
-           * step and its own rule keeps non-critical work outside the commit.
-           *
-           * The rename is §6.5's: an order snapshots `delivery_address` and
-           * `delivery_city` beside its contact block, and a saved address calls
-           * the same four fields by its own names.
-           */}
-          <SaveAddressOffer
-            messages={messages}
-            address={{
-              recipientName: order.contactName,
-              recipientMobile: order.contactMobile,
-              line: order.deliveryAddress,
-              city: order.deliveryCity,
-            }}
-          />
-        </div>
-
-        <div>
-          <h2 className="text-fg text-sm font-medium">{t.paymentLabel}</h2>
-          <p className="text-fg-muted mt-1 text-sm">{order.paymentLabel}</p>
-          {!order.isGift ? null : (
-            <>
-              <p className="text-fg-muted mt-2 text-sm">{t.giftNote}</p>
-              {order.giftMessage.length === 0 ? null : (
-                <p className="text-fg-muted text-sm italic">“{order.giftMessage}”</p>
-              )}
-            </>
-          )}
-        </div>
+      <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <OrderDeliveryDetails order={order} messages={messages} />
+        <OrderPaymentDetails order={order} locale={locale} messages={messages} />
       </div>
 
-      <h2 className="text-fg mt-8 text-sm font-medium">{t.itemsHeading}</h2>
-      <ul className="border-border mt-2 divide-y border-t">
-        {order.lines.map((line) => (
-          <li key={line.productCode} className="flex items-start justify-between gap-4 py-3">
-            <div>
-              {/* The SNAPSHOT (§6.5). Renaming the product later must not change
-                  what this order says was bought. */}
-              <p className="text-fg text-sm">{line.productName}</p>
-              <ul className="text-fg-muted text-xs">
-                {line.pieces.map((piece) => (
-                  <li key={piece.pieceCode}>
-                    {piece.name} · {piece.size}
-                  </li>
-                ))}
-              </ul>
-
-              {/*
-               * §34.7 — what it was cut from, on the record the customer keeps.
-               * The figures themselves are the order's snapshot; what belongs
-               * here is which measurements they were, so the two can be matched.
-               */}
-              {line.stitching === null ? null : (
-                <div className="text-fg-muted mt-1 text-xs">
-                  <p className="text-fg">{messages.stitched.madeToMeasure}</p>
-                  <p>
-                    <bdi>{line.stitching.styleLabel}</bdi>
-                  </p>
-                  <p>
-                    <bdi>
-                      {formatPlural(
-                        messages.stitched.figures,
-                        line.stitching.measurements.length,
-                        locale,
-                      )}
-                    </bdi>
-                  </p>
-                  <p>
-                    {messages.stitched.charge} ·{' '}
-                    {formatMoneyMinor(line.stitching.chargeMinor, locale)}
-                  </p>
-                  <p>{messages.stitched.noReturns}</p>
-                </div>
-              )}
-              <p className="text-fg-muted mt-1 text-xs">× {line.quantity}</p>
-            </div>
-            <p className="text-fg shrink-0 text-sm">
-              {formatMoneyMinor(line.lineTotalMinor, locale)}
-            </p>
-          </li>
-        ))}
-      </ul>
+      <OrderLines lines={order.lines} locale={locale} messages={messages} />
 
       <div className="mt-6 max-w-sm">
         <OrderSummary totals={order.totals} locale={locale} messages={messages} />

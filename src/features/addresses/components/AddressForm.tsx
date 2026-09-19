@@ -1,17 +1,14 @@
 'use client';
 
-import { useRef, type FormEvent } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { CLIENT } from '@/config/client';
+import { useLatchedSubmit } from '@/hooks/use-latched-submit';
 import type { Messages } from '@/i18n/messages/en';
-import { addressDetailSchema, type AddressDetail } from '@/lib/domain/address';
-import { formatTemplate } from '@/lib/utils/format';
+import type { AddressDetail } from '@/lib/domain/address';
+import { onDemandResolver } from '@/lib/utils/on-demand-resolver';
+
+import { AddressFields } from './AddressFields';
 
 export interface AddressFormProps {
   messages: Messages;
@@ -21,6 +18,17 @@ export interface AddressFormProps {
   onSave: (address: AddressDetail) => Promise<boolean>;
   onCancel: () => void;
 }
+
+/*
+ * Deliberate code split (IMP-01a, PERF-10): the form's validation is fetched when
+ * it is first focused rather than with the page (`onDemandResolver` has the
+ * reasoning).
+ */
+const validation = onDemandResolver<AddressDetail>(() =>
+  Promise.all([import('@hookform/resolvers/zod'), import('@/lib/domain/address')]).then(
+    ([{ zodResolver }, { addressDetailSchema }]) => zodResolver(addressDetailSchema),
+  ),
+);
 
 const EMPTY: AddressDetail = { recipientName: '', recipientMobile: '', line: '', city: '' };
 
@@ -37,94 +45,27 @@ const EMPTY: AddressDetail = { recipientName: '', recipientMobile: '', line: '',
  */
 export function AddressForm({ messages, initial, onSave, onCancel }: AddressFormProps) {
   const t = messages.account;
-  const c = messages.checkout;
-  // FORM-06, synchronously: `isSubmitting` only flips after a re-render.
-  const inFlight = useRef(false);
 
   const form = useForm<AddressDetail>({
-    resolver: zodResolver(addressDetailSchema),
+    resolver: validation.resolver,
     defaultValues: initial ?? EMPTY,
   });
-  const { errors } = form.formState;
 
-  async function submit(address: AddressDetail): Promise<void> {
+  // FORM-06: one submission at a time, released however validation went.
+  const handleSubmit = useLatchedSubmit(form, async (address) => {
     const saved = await onSave(address);
     // Kept on a refusal, so nothing typed is lost while the caller says why.
     if (saved) form.reset(EMPTY);
-  }
-
-  /* FORM-06, and the `.finally` is load-bearing: `handleSubmit(...)()` settles
-     on every path, so a failed validation cannot leave the latch stuck. */
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-    if (inFlight.current) {
-      event.preventDefault();
-      return;
-    }
-
-    inFlight.current = true;
-    void form
-      .handleSubmit(submit)(event)
-      .finally(() => {
-        inFlight.current = false;
-      });
-  }
+  });
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-      <Field
-        id="recipientName"
-        label={t.recipientLabel}
-        hint={t.recipientHint}
-        error={errors.recipientName === undefined ? undefined : c.nameInvalid}
-      >
-        {(aria) => <Input {...aria} autoComplete="name" {...form.register('recipientName')} />}
-      </Field>
-
-      <Field
-        id="recipientMobile"
-        label={c.mobileLabel}
-        error={
-          errors.recipientMobile === undefined
-            ? undefined
-            : formatTemplate(c.mobileInvalid, { example: CLIENT.market.mobile.example })
-        }
-      >
-        {(aria) => (
-          <Input
-            {...aria}
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            /* D5 — the example comes from the client profile, beside the pattern
-               that validates it, so the two cannot drift. */
-            placeholder={CLIENT.market.mobile.example}
-            {...form.register('recipientMobile')}
-          />
-        )}
-      </Field>
-
-      <Field
-        id="line"
-        label={c.addressLabel}
-        error={errors.line === undefined ? undefined : c.addressInvalid}
-      >
-        {(aria) => (
-          <Input
-            {...aria}
-            autoComplete="street-address"
-            placeholder={c.addressPlaceholder}
-            {...form.register('line')}
-          />
-        )}
-      </Field>
-
-      <Field
-        id="city"
-        label={c.cityLabel}
-        error={errors.city === undefined ? undefined : c.cityInvalid}
-      >
-        {(aria) => <Input {...aria} autoComplete="address-level2" {...form.register('city')} />}
-      </Field>
+    <form
+      onSubmit={handleSubmit}
+      onFocus={validation.warmUp}
+      noValidate
+      className="flex flex-col gap-4"
+    >
+      <AddressFields form={form} messages={messages} />
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" isLoading={form.formState.isSubmitting}>

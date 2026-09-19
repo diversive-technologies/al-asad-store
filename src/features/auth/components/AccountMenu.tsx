@@ -1,16 +1,26 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 import { ROUTES } from '@/config/routes';
 import type { Messages } from '@/i18n/messages/en';
-import { Heart, LogOut, User } from '@/lib/vendor/icons';
+import { returnPathFrom } from '@/lib/utils/return-path';
+import { User } from '@/lib/vendor/icons';
 
-import { signOutAction } from '../actions';
+import { useSignOutLanding } from '../hooks/use-sign-out-landing';
+import { AccountMenuPanel } from './AccountMenuPanel';
 import { useSession } from './SessionProvider';
+
+export interface AccountMenuProps {
+  messages: Messages;
+}
+
+/** The bar's icon-control geometry, shared by the signed-out link and the menu button. */
+const ICON_CONTROL =
+  'focus-visible:ring-brand-500 rounded-full p-2 transition-opacity hover:opacity-70 focus-visible:ring-2 focus-visible:outline-none';
 
 /**
  * Who you are, and the way out — as an icon, like everything else in the bar.
@@ -19,102 +29,66 @@ import { useSession } from './SessionProvider';
  * particular took a fixed muted colour that did not follow the header when it
  * turns transparent over the hero. One glyph, and the details behind it.
  *
- * Built on the native popover API for the same reason `InfoPopover` is: the
- * platform gives the top layer, light-dismiss, `Escape` and focus return, and
- * `popoverTarget` wires the button to the panel with no JavaScript, so it works
- * before hydration (A11Y-08, BASE-01).
+ * Signed out, the glyph is a link to sign-in that REMEMBERS THIS PAGE, so signing
+ * in returns the customer here rather than to the homepage. The page is read back
+ * through `returnPathFrom` (SEC-06); the homepage needs no reminder.
+ *
+ * Signed in, it opens `AccountMenuPanel`. The panel is KEYED on the path: this
+ * menu lives in the root layout, which survives a client-side navigation, and so
+ * does an open popover — a new key replaces the element, which is how a popover
+ * closes anyway (the same fix `SortControl` carries).
+ *
+ * Signing out from the panel lands focus on the sign-in link that replaces it and
+ * says so in a status line kept mounted in BOTH states, so its words are announced
+ * when they arrive (`useSignOutLanding`).
  *
  * No colour is pinned anywhere here — everything inherits from the header, so
  * both the transparent-over-film and solid states stay legible.
  */
-export function AccountMenu({ messages }: { messages: Messages }) {
+export function AccountMenu({ messages }: AccountMenuProps) {
   const t = messages.auth;
-  const router = useRouter();
-  const { isSignedIn, displayName, email, mobile } = useSession();
-  // CMP-11: generated, so two instances could never collide on the id.
+  const pathname = usePathname();
+  const session = useSession();
+  // Generated, so two instances could never collide on the id.
   const id = useId();
-
-  if (!isSignedIn) {
-    return (
-      <Link
-        href={ROUTES.signIn}
-        // A11Y-04: an icon-only control still has to say what it is.
-        aria-label={t.signInCta}
-        className="focus-visible:ring-brand-500 rounded-full p-2 transition-opacity hover:opacity-70 focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <User className="h-5 w-5" aria-hidden />
-      </Link>
-    );
-  }
+  const signInLink = useRef<HTMLAnchorElement>(null);
+  const landing = useSignOutLanding(session.isSignedIn, signInLink);
+  const returnTo = returnPathFrom(pathname);
 
   return (
     <>
-      <button
-        type="button"
-        popoverTarget={id}
-        aria-label={t.accountMenuLabel}
-        className="focus-visible:ring-brand-500 rounded-full p-2 transition-opacity hover:opacity-70 focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <User className="h-5 w-5" aria-hidden />
-      </button>
-
-      <div
-        id={id}
-        popover="auto"
-        aria-labelledby={`${id}-name`}
-        className="account-popover popover-animated"
-      >
-        <p id={`${id}-name`} className="text-fg text-sm font-medium">
-          {displayName}
-        </p>
-
-        {/* Only what the account actually holds. An empty line for a customer
-            who signed in by code would be a field pretending to be data. */}
-        {email.length === 0 ? null : <p className="text-fg-muted mt-0.5 text-xs">{email}</p>}
-        {mobile.length === 0 ? null : <p className="text-fg-muted text-xs">{mobile}</p>}
-
-        {/*
-         * The account area. It is the only way in from the bar, and a guest has
-         * one too — but a guest has no menu to hang it from, so theirs is reached
-         * from the studio's own confirmation instead.
-         */}
+      {session.isSignedIn ? (
+        <>
+          <button
+            type="button"
+            popoverTarget={id}
+            aria-label={t.accountMenuLabel}
+            className={ICON_CONTROL}
+          >
+            <User className="h-5 w-5" aria-hidden />
+          </button>
+          <AccountMenuPanel
+            key={pathname}
+            id={id}
+            session={session}
+            messages={messages}
+            onSignedOut={landing.signingOut}
+          />
+        </>
+      ) : (
         <Link
-          href={ROUTES.account}
-          className="border-border text-fg hover:bg-surface-muted focus-visible:ring-brand-500 rounded-card mt-3 flex w-full items-center justify-center gap-2 border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+          ref={signInLink}
+          href={ROUTES.signInFrom(returnTo === ROUTES.home ? null : returnTo)}
+          // A11Y-04: an icon-only control still has to say what it is.
+          aria-label={t.signInCta}
+          className={ICON_CONTROL}
         >
-          <User className="h-4 w-4" aria-hidden />
-          {messages.account.navLabel}
+          <User className="h-5 w-5" aria-hidden />
         </Link>
-
-        {/*
-         * The saved items live here because they are the customer's, and the
-         * heart that fills them is hidden from guests for the same reason. It
-         * is the only way into the page, so without it the heart would keep
-         * saving into a list with nowhere to open it.
-         */}
-        <Link
-          href={ROUTES.wishlist}
-          className="border-border text-fg hover:bg-surface-muted focus-visible:ring-brand-500 rounded-card mt-2 flex w-full items-center justify-center gap-2 border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
-        >
-          {/* I18N-05: a heart is not directional, so it must not mirror. */}
-          <Heart className="h-4 w-4" aria-hidden />
-          {messages.wishlist.navLabel}
-        </Link>
-
-        <button
-          type="button"
-          onClick={() => {
-            void signOutAction().then(() => {
-              // The cookie is gone; the server has to be asked again.
-              router.refresh();
-            });
-          }}
-          className="border-border text-fg hover:bg-surface-muted focus-visible:ring-brand-500 rounded-card mt-2 flex w-full items-center justify-center gap-2 border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <LogOut className="h-4 w-4 rtl:rotate-180" aria-hidden />
-          {t.signOut}
-        </button>
-      </div>
+      )}
+      <span role="status" className="sr-only">
+        {landing.hasSignedOut ? t.signedOutStatus : null}
+      </span>
     </>
   );
 }

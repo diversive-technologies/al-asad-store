@@ -1,9 +1,13 @@
+import type { Ref } from 'react';
+
 export interface OrderPlacedHeroProps {
   title: string;
   orderNumberLabel: string;
   orderNumber: string;
-  placedLabel: string;
-  placedAt: string;
+  /** "Placed: 17 September 2026", whole — the date inside one message (I18N-06). */
+  placedLine: string;
+  /** The heading, for a page that has to move focus to it (a lookup that matched). */
+  headingRef?: Ref<HTMLHeadingElement> | undefined;
 }
 
 /** The burst rays. Eight is enough to read as a burst without becoming a star. */
@@ -35,8 +39,8 @@ export function OrderPlacedHero({
   title,
   orderNumberLabel,
   orderNumber,
-  placedLabel,
-  placedAt,
+  placedLine,
+  headingRef,
 }: OrderPlacedHeroProps) {
   return (
     <div className="flex flex-col items-center text-center">
@@ -56,7 +60,15 @@ export function OrderPlacedHero({
         </svg>
       </div>
 
-      <h1 className="text-fg mt-8 text-3xl font-semibold">{title}</h1>
+      {/* `tabIndex={-1}`: never in the tab order, but focusable by the page when
+          the order replaces the form that found it (A11Y-02). */}
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="text-fg mt-8 text-3xl font-semibold outline-none"
+      >
+        {title}
+      </h1>
 
       <div className="border-border rounded-card mt-6 w-full max-w-sm border p-5">
         <p className="text-fg-muted text-xs tracking-wide uppercase">{orderNumberLabel}</p>
@@ -64,10 +76,11 @@ export function OrderPlacedHero({
          * The largest text on the page — the one thing worth remembering, and
          * what a customer would quote if they ring about the order.
          */}
-        <p className="text-fg text-3xl font-semibold tracking-wider">{orderNumber}</p>
-        <p className="text-fg-muted mt-2 text-xs">
-          {placedLabel}: {placedAt}
+        <p className="text-fg text-3xl font-semibold tracking-wider">
+          {/* I18N-04 — a Latin identifier isolated from the Urdu around it. */}
+          <bdi>{orderNumber}</bdi>
         </p>
+        <p className="text-fg-muted mt-2 text-xs">{placedLine}</p>
       </div>
     </div>
   );

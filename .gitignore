@@ -16,6 +16,13 @@ coverage/
 .eslintcache
 .vitest/
 
+# Playwright (`npm run test:e2e`): run results, traces kept from a failure, an
+# HTML report if one is asked for, and the browser cache it can keep locally.
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # Environment — never committed (see .claude/GIT.md §6)
 .env
 .env.local
@@ -72,3 +79,9 @@ yarn-error.log*
 
 # Vercel CLI project linkage (project id, pulled env). Machine-local.
 .vercel
+
+# Written into the repository root by `next dev` whenever it runs inside an agent
+# session (AI_AGENT or CLAUDECODE set). Generated, not project instructions; the
+# project's own agent instructions live in .claude/.
+/AGENTS.md
+/CLAUDE.md

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 
-import Link from 'next/link';
-
+import { Breadcrumbs } from '@/components/shared/Breadcrumbs';
 import { AddressBookScreen } from '@/features/addresses/contract';
 import { ROUTES } from '@/config/routes';
 import { getMessages } from '@/i18n';
@@ -26,31 +25,22 @@ export default async function AccountAddressesPage() {
 
   return (
     <div className="page-shell py-10">
-      {/* §30.5 asks for breadcrumbs; A11Y-01 makes them a real nav. */}
-      <nav aria-label={t.addressesHeading} className="text-fg-muted mb-4 text-sm">
-        <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <li>
-            <Link href={ROUTES.home} className="hover:text-fg py-2">
-              {messages.catalogue.breadcrumbHome}
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href={ROUTES.account} className="hover:text-fg py-2">
-              {t.title}
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li className="text-fg">{t.addressesHeading}</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        label={messages.common.breadcrumbLabel}
+        steps={[
+          { label: messages.catalogue.breadcrumbHome, href: ROUTES.home },
+          { label: t.title, href: ROUTES.account },
+          { label: t.addressesHeading },
+        ]}
+      />
 
       <h1 className="text-fg mb-2 text-2xl font-semibold">{t.addressesHeading}</h1>
       <p className="text-fg-muted mb-6 max-w-2xl text-sm">{t.addressesLead}</p>
 
-      <main className="max-w-2xl">
+      {/* A11Y-01: a `div`, because the root layout's `<main>` already holds this page. */}
+      <div className="max-w-2xl">
         <AddressBookScreen messages={messages} />
-      </main>
+      </div>
     </div>
   );
 }

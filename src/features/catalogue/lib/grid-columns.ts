@@ -12,8 +12,9 @@
  * This list is load-bearing arithmetic rather than decoration. `DEFAULT_PAGE_SIZE`
  * must divide exactly by every entry, because a count it does not divide by ends
  * the page on a part-filled row while the next products sit on page 2 — a hole
- * in the grid with stock behind it. That is why 5 is absent: 24 / 5 is 4.8, so a
- * five-column layout showed four tiles in its last row at every page.
+ * in the grid with stock behind it. That is why 5 is absent: at the page size of
+ * 24 it then had, 24 / 5 was 4.8, so a five-column layout showed four tiles in
+ * its last row at every page — and 12 / 5 would be worse.
  *
  * `grid-columns.test.ts` asserts the division, so adding a count that does not
  * divide fails the suite rather than showing up as a gap on a wide monitor.

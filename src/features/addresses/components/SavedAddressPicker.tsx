@@ -6,6 +6,8 @@ import type { Messages } from '@/i18n/messages/en';
 import type { AddressDetail } from '@/lib/domain/address';
 
 import { useAddresses } from '../hooks/use-addresses';
+import { detailOf } from '../lib/address-detail';
+import { SavedAddressOption } from './SavedAddressOption';
 
 export interface SavedAddressPickerProps {
   messages: Messages;
@@ -71,46 +73,18 @@ export function SavedAddressPicker({
       <legend className="text-fg px-1 text-sm font-medium">{t.addressUseSaved}</legend>
 
       {book.addresses.map((address) => (
-        <label
+        <SavedAddressOption
           key={address.id}
-          className="hover:bg-surface-muted flex cursor-pointer items-start gap-3 rounded p-2"
-        >
-          <input
-            type="radio"
-            name="savedAddress"
-            className="mt-1"
-            checked={chosenId === address.id}
-            onChange={() => {
-              onChoose(detailOf(address), address.id);
-            }}
-          />
-          <span className="text-fg text-sm">
-            {/* I18N-04 — `bdi`, because an address here mixes scripts. */}
-            <bdi>{address.recipientName}</bdi>
-            {/* The space, not only the margin — see `AddressCard`. */}
-            {address.isDefault ? (
-              <>
-                {' '}
-                <span className="text-fg-muted ms-1 text-xs">{t.addressDefaultMark}</span>
-              </>
-            ) : null}
-            <span className="text-fg-muted block">
-              <bdi>{`${address.line}, ${address.city}`}</bdi>
-            </span>
-          </span>
-        </label>
+          address={address}
+          isChosen={chosenId === address.id}
+          onChoose={() => {
+            onChoose(detailOf(address), address.id);
+          }}
+          messages={messages}
+        />
       ))}
 
       <p className="text-fg-muted text-xs">{t.addressPickerHint}</p>
     </fieldset>
   );
-}
-
-function detailOf(address: AddressDetail): AddressDetail {
-  return {
-    recipientName: address.recipientName,
-    recipientMobile: address.recipientMobile,
-    line: address.line,
-    city: address.city,
-  };
 }

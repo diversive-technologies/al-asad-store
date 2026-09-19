@@ -1,24 +1,34 @@
 import type { Locale } from '@/i18n/locales';
 
+import { lineNameFor, summaryFor, type BagSummaryPayload } from './bag-projection';
+import { release, reserve, type ReservationKey } from './bag-reservations';
+import { resolveSelections } from './bag-selection';
+import { addStitched } from './bag-stitched';
+import {
+  activeCart,
+  activeLines,
+  isLapsed,
+  markRemoved,
+  mockId,
+  type CartLineRecord,
+  type CartRecord,
+} from './cart-store';
 import { CATALOGUE, type CatalogueRecord } from './catalogue-db';
-import { expiryFor, release, releaseCart, reserve, type ReservationKey } from './bag-reservations';
-import { styleLabelFor } from './measurement-sets-db';
+import { sizeLabelOf } from './product-content-db';
 import { toProductDetail } from './product-detail-db';
-import { isCurrentProfile, profileById, type ProfileOwnerRow } from './profiles-db';
+import type { ProfileOwnerRow } from './profiles-db';
 
 /**
  * D1 — architecture §16 `CartService`, standing in for the Java module.
  *
- * The reservation transaction lives next door in `bag-reservations.ts`; this
- * file owns carts, lines and the money. The split follows §16's own note: Cart
+ * This file is the service's line OPERATIONS and its one public surface. What
+ * they write is `cart-store.ts`, what the customer sees is `bag-projection.ts`,
+ * the money is `bag-pricing.ts`, codes are `bag-codes.ts`, a cut line is
+ * `bag-stitched.ts`, and the reservation transaction lives next door in
+ * `bag-reservations.ts` (MOD-03). The split follows §16's own note: Cart
  * "carries the composite logic" of knowing a set is a set, while Inventory
  * "reserves whatever keys it is handed and has no opinion about whether they
  * form a set". `toKeys` below is the whole of that composite logic.
- *
- * DATA-13 is why the pricing constants are HERE and not in the frontend: the
- * free-delivery threshold, the delivery charge and the promotional codes are
- * all commercial settings the operator changes in an admin panel, and a copy on
- * the other side of the wire would drift the first time they did.
  *
  * ## D6 — nothing here is ever destroyed
  *
@@ -28,139 +38,14 @@ import { isCurrentProfile, profileById, type ProfileOwnerRow } from './profiles-
  * the store keeps a complete record of what was in the bag and what left it.
  */
 
-/** Pricing settings the operator owns. Minor units throughout (DATA-11). */
-const DELIVERY_CHARGE_MINOR = 25_000;
-const FREE_DELIVERY_THRESHOLD_MINOR = 1_500_000;
-
-interface PromoCode {
-  /** Either a percentage off the subtotal, or a flat amount. Never both. */
-  readonly kind: 'PERCENT' | 'FLAT';
-  readonly value: number;
-  readonly description: Record<Locale, string>;
-}
-
-const PROMO_CODES: Record<string, PromoCode> = {
-  EID10: {
-    kind: 'PERCENT',
-    value: 10,
-    description: { en: '10% off your order', ur: 'آپ کے آرڈر پر 10٪ رعایت' },
-  },
-  WELCOME500: {
-    kind: 'FLAT',
-    value: 50_000,
-    description: { en: 'Rs 500 off your first order', ur: 'پہلے آرڈر پر 500 روپے کی رعایت' },
-  },
-};
-
-const REJECTION: Record<Locale, string> = {
-  en: 'That code is not valid.',
-  ur: 'یہ کوڈ درست نہیں ہے۔',
-};
-
-/**
- * D6 — why a line left the bag.
- *
- * `CUSTOMER` and `EXPIRED` are different facts and the difference is worth
- * keeping: one is someone changing their mind, the other is the store taking
- * the item back because a hold ran out. §26's reporting can tell them apart.
- */
-type LineRemovalReason = 'CUSTOMER' | 'EXPIRED';
-
-interface CartLineRecord {
-  id: string;
-  productId: string;
-  selections: readonly { pieceId: string; sizeId: string }[];
-  quantity: number;
-  /**
-   * §34.8 — the saved profile VERSION this line is cut from, or null when it is
-   * picked off the shelf.
-   *
-   * An id and nothing else: the figures, the style and the date are read from
-   * the profile when the line is projected, so a line cannot come to hold a
-   * stale copy of a record that lives somewhere else.
-   */
-  stitchingProfileId: string | null;
-  /**
-   * WHOSE measurements they are, recorded when the line was added.
-   *
-   * Every read of a profile is owner-scoped, and a bag summary is rendered long
-   * after the request that carried the owner has gone — so the line remembers
-   * who it was cut for. It is not on the wire: it is an identity, and the bag
-   * has no reason to tell a browser one.
-   */
-  stitchingOwner: ProfileOwnerRow | null;
-  /** D6 — null while the line is in the bag; set once, never unset. */
-  removedAt: number | null;
-  removalReason: LineRemovalReason | null;
-}
-
-/**
- * D6 — a cart is never deleted. Placing its order CONVERTS it, which is better
- * provenance than discarding it: an order can be traced back to the bag that
- * produced it, including the lines that were removed before checkout.
- */
-type CartStatus = 'ACTIVE' | 'CONVERTED';
-
-interface CartRecord {
-  lines: CartLineRecord[];
-  status: CartStatus;
-  /** The order this cart became, once it became one. */
-  orderNumber: string | null;
-}
-
-/** D6 — every code ever applied, in order. The last un-lifted one is in force. */
-interface CodeEvent {
-  code: string;
-  appliedAt: number;
-  liftedAt: number | null;
-}
-
-const CARTS = new Map<string, CartRecord>();
-const CART_CODES = new Map<string, CodeEvent[]>();
-
-let nextId = 0;
-
-/** Deterministic, RFC-4122-shaped so the schemas' `z.uuid()` accepts them. */
-function mockId(group: string): string {
-  nextId += 1;
-  return `b1c2d3e4-${group}-4c8a-8f21-${String(nextId).padStart(12, '0')}`;
-}
-
-export function createCart(): string {
-  const id = mockId('0001');
-  CARTS.set(id, { lines: [], status: 'ACTIVE', orderNumber: null });
-  return id;
-}
-
-export function cartExists(cartId: string): boolean {
-  return CARTS.get(cartId)?.status === 'ACTIVE';
-}
-
-/**
- * §7.2 — the cart becomes the order. D6: marked, not deleted.
- *
- * Its holds are released rather than dropped, and the cart stops answering as a
- * bag: `summaryFor` returns null for a converted cart, which the handler turns
- * into the same 404 a missing cart gives, so the customer's bag reads empty
- * exactly as it did before this policy.
- */
-export function convertCart(cartId: string, orderNumber: string): void {
-  const cart = CARTS.get(cartId);
-  if (cart === undefined) return;
-
-  releaseCart(cartId);
-  cart.status = 'CONVERTED';
-  cart.orderNumber = orderNumber;
-}
-
 /**
  * §16 — the one place that knows a set is a set.
  *
  * A three-piece SET becomes three keys and a SIMPLE product becomes one; both
  * are handed to the same reservation routine, which has no idea which it got.
  */
-function toKeys(line: CartLineRecord): ReservationKey[] {
-  return line.selections.map((selection) => ({ ...selection, quantity: line.quantity }));
+function toKeys(line: CartLineRecord, quantity: number): ReservationKey[] {
+  return line.selections.map((selection) => ({ ...selection, quantity }));
 }
 
 function sameSelections(
@@ -173,277 +58,25 @@ function sameSelections(
   );
 }
 
-/** The lines still in the bag. D6: a projection, not the whole record. */
-function activeLines(cart: CartRecord): CartLineRecord[] {
-  return cart.lines.filter((line) => line.removedAt === null);
-}
-
-/** The code currently in force, if any. D6: the last un-lifted event. */
-function activeCode(cartId: string): string | undefined {
-  const events = CART_CODES.get(cartId) ?? [];
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index];
-    if (event !== undefined && event.liftedAt === null) return event.code;
-  }
-  return undefined;
-}
-
-export interface BagLinePayload {
-  id: string;
-  productId: string;
-  slug: string;
-  name: string;
-  imageUrl: string;
-  type: 'SIMPLE' | 'SET';
-  pieces: { pieceId: string; name: string; sizeId: string; sizeLabel: string }[];
-  quantity: number;
-  unitPriceMinor: number;
-  lineTotalMinor: number;
-  /** Null for a made-to-measure line: it holds nothing, so nothing lapses. */
-  reservationExpiresAt: string | null;
-  stitching: {
-    garmentStyle: string;
-    styleLabel: string;
-    profileId: string;
-    savedAt: string;
-    figureCount: number;
-    measurementsChanged: boolean;
-    chargeMinor: number;
-    leadTimeDays: number;
-  } | null;
-}
-
-export interface BagSummaryPayload {
-  lines: BagLinePayload[];
-  itemCount: number;
-  pricing: {
-    subtotalMinor: number;
-    discountMinor: number;
-    deliveryMinor: number;
-    totalMinor: number;
-    appliedCode: { code: string; description: string } | null;
-  };
-  freeDelivery: { thresholdMinor: number; remainingMinor: number; isMet: boolean };
-}
-
-function toLinePayload(line: CartLineRecord, locale: Locale): BagLinePayload | null {
-  const record = CATALOGUE.find((entry) => entry.id === line.productId);
-  if (record === undefined) return null;
-
-  const detail = toProductDetail(record, locale);
-
-  /*
-   * §34.8 — a garment being CUT. It holds nothing, so there is no expiry to
-   * check and no size to show: it is not competing for a row on a shelf, and
-   * §16's "every line holds a live reservation" is the invariant this one line
-   * kind departs from, deliberately and in one place.
-   */
-  if (line.stitchingProfileId !== null) return toStitchedPayload(line, record, detail, locale);
-
-  const expiresAt = expiryFor(line.id);
-  // A line whose hold has lapsed is no longer a line (§16: "Every line holds a
-  // live reservation"), so it drops out of the summary rather than showing as
-  // an item the customer no longer has.
-  if (expiresAt === null) return null;
-
-  const pieces = line.selections.flatMap((selection) => {
-    const piece = detail.pieces.find((entry) => entry.id === selection.pieceId);
-    const size = piece?.sizes.find((entry) => entry.id === selection.sizeId);
-    if (piece === undefined || size === undefined) return [];
-    return [{ pieceId: piece.id, name: piece.name, sizeId: size.id, sizeLabel: size.label }];
-  });
-
-  return {
-    id: line.id,
-    productId: record.id,
-    slug: record.slug,
-    name: detail.name,
-    imageUrl: detail.media[0]?.url ?? '',
-    type: record.type,
-    pieces,
-    quantity: line.quantity,
-    unitPriceMinor: record.currentMinor,
-    // Stated, not derived on the other side of the wire (DATA-13).
-    lineTotalMinor: record.currentMinor * line.quantity,
-    reservationExpiresAt: new Date(expiresAt).toISOString(),
-    stitching: null,
-  };
-}
-
-/**
- * A line that is being cut rather than picked.
- *
- * The charge is a LINE COMPONENT (§34.8): the garment keeps its own unit price
- * and the stitching is its own figure, so the line total is the two of them
- * together, per garment. A customer buying two identical kameez is charged for
- * cutting two.
- *
- * A profile the store cannot find drops the line, the way a lapsed hold does.
- * It is only reachable after a restart — profiles live in memory too — and a
- * line that cannot say what it is cut from is not a line anybody can check.
- */
-function toStitchedPayload(
-  line: CartLineRecord,
-  record: CatalogueRecord,
-  detail: ReturnType<typeof toProductDetail>,
-  locale: Locale,
-): BagLinePayload | null {
-  const profile = stitchingProfileOf(line);
-  if (profile === null) return null;
-
-  /*
-   * Priced from the PRODUCT's own offer, never the profile's style.
-   *
-   * They are two declarations of the same thing and only one of them is the
-   * backend's answer to "what is this garment cut as": \`STITCHING_STYLE\` on the
-   * product. Taking the charge and the lead time off the profile let a kameez
-   * profile price a waistcoat at the kameez's rate — and the add path now
-   * refuses the mismatch outright, so this is the second lock on one door.
-   */
-  const offer = detail.stitching;
-  if (offer === null || offer.garmentStyle !== profile.garmentStyle) return null;
-
-  const styleLabel = styleLabelFor(profile.garmentStyle, locale);
-  if (styleLabel === null) return null;
-
-  return {
-    id: line.id,
-    productId: record.id,
-    slug: record.slug,
-    name: detail.name,
-    imageUrl: detail.media[0]?.url ?? '',
-    type: record.type,
-    pieces: [],
-    quantity: line.quantity,
-    unitPriceMinor: record.currentMinor,
-    lineTotalMinor: (record.currentMinor + offer.stitchingChargeMinor) * line.quantity,
-    reservationExpiresAt: null,
-    stitching: {
-      garmentStyle: profile.garmentStyle,
-      styleLabel,
-      profileId: profile.id,
-      savedAt: profile.createdAt,
-      figureCount: profile.values.length,
-      measurementsChanged: !isCurrentProfile(profile.id),
-      chargeMinor: offer.stitchingChargeMinor,
-      leadTimeDays: offer.leadTimeDays,
-    },
-  };
-}
-
-/** The profile a cut line names, read as its own owner — never by id alone. */
-function stitchingProfileOf(line: CartLineRecord) {
-  if (line.stitchingProfileId === null || line.stitchingOwner === null) return null;
-  return profileById(line.stitchingProfileId, line.stitchingOwner);
-}
-
-/**
- * The figures a cut line will be cut to, for the order's snapshot (§34.7).
- *
- * It lives here because the owner the profile is read as lives here, and neither
- * belongs on the wire. Checkout asks the bag rather than the profile store, so
- * there is one place that knows whose measurements a line names.
- */
-export function stitchingFiguresFor(
-  cartId: string,
-  lineId: string,
-): { pointId: string; mm: number }[] {
-  const cart = CARTS.get(cartId);
-  if (cart === undefined) return [];
-
-  const line = activeLines(cart).find((entry) => entry.id === lineId);
-  const profile = line === undefined ? null : stitchingProfileOf(line);
-  return (profile?.values ?? []).map((value) => ({
-    pointId: value.pointId,
-    mm: value.valueMm,
-  }));
-}
-
-function priceCart(cartId: string, lines: BagLinePayload[], locale: Locale) {
-  const subtotalMinor = lines.reduce((total, line) => total + line.lineTotalMinor, 0);
-
-  const code = activeCode(cartId);
-  const promo = code === undefined ? undefined : PROMO_CODES[code];
-
-  const discountMinor =
-    promo === undefined
-      ? 0
-      : promo.kind === 'PERCENT'
-        ? Math.round((subtotalMinor * promo.value) / 100)
-        : Math.min(promo.value, subtotalMinor);
-
-  const payable = subtotalMinor - discountMinor;
-  const isMet = payable >= FREE_DELIVERY_THRESHOLD_MINOR;
-
-  // An empty bag is not "free delivery earned"; it has nothing to deliver.
-  const deliveryMinor = lines.length === 0 || isMet ? 0 : DELIVERY_CHARGE_MINOR;
-
-  return {
-    pricing: {
-      subtotalMinor,
-      discountMinor,
-      deliveryMinor,
-      totalMinor: payable + deliveryMinor,
-      appliedCode:
-        code === undefined || promo === undefined
-          ? null
-          : { code, description: promo.description[locale] },
-    },
-    freeDelivery: {
-      thresholdMinor: FREE_DELIVERY_THRESHOLD_MINOR,
-      remainingMinor: Math.max(0, FREE_DELIVERY_THRESHOLD_MINOR - payable),
-      isMet: isMet && lines.length > 0,
-    },
-  };
-}
-
-/** §16 `summary(cart) -> {lines[], pricing, freeDeliveryProgress}`. */
-export function summaryFor(cartId: string, locale: Locale): BagSummaryPayload | null {
-  const cart = CARTS.get(cartId);
-  // D6: a converted cart still exists, but it is no longer anybody's bag.
-  if (cart === undefined || cart.status !== 'ACTIVE') return null;
-
-  const lines: BagLinePayload[] = [];
-
-  for (const line of activeLines(cart)) {
-    const payload = toLinePayload(line, locale);
-
-    if (payload === null) {
-      /*
-       * D6 — the hold lapsed, so the line leaves the bag. It is MARKED rather
-       * than spliced, and the reason is recorded: this is the one removal the
-       * customer did not ask for, and telling it apart from one they did is
-       * exactly what the policy is for.
-       */
-      line.removedAt = Date.now();
-      line.removalReason = 'EXPIRED';
-      continue;
-    }
-
-    lines.push(payload);
-  }
-
-  return {
-    lines,
-    // A set counts as one item. Whether it counts as three is the operator's
-    // call, which is exactly why the number is stated rather than summed
-    // client-side.
-    itemCount: lines.reduce((total, line) => total + line.quantity, 0),
-    ...priceCart(cartId, lines, locale),
-  };
-}
-
 export type CartWriteResult =
   | { kind: 'ADDED'; summary: BagSummaryPayload }
   | { kind: 'UNAVAILABLE'; pieceId: string; pieceName: string; sizeLabel: string }
   | { kind: 'NOT_FOUND' };
 
 /**
- * An ADD can also be refused on its measurements (§34). Kept apart from
- * NOT_FOUND on purpose: that one means "no such cart", and the BFF answers it by
- * replacing the cart — which is exactly wrong for a cart that is fine.
+ * An ADD can also be refused on its measurements (§34), or on the product and
+ * sizes it names. Both are kept apart from NOT_FOUND on purpose: that one means
+ * "no such cart", and the BFF answers it by replacing the cart — which is exactly
+ * wrong for a cart that is fine.
  */
-export type AddItemResult = CartWriteResult | { kind: 'MEASUREMENTS_REFUSED' };
+export type AddItemResult =
+  CartWriteResult | { kind: 'MEASUREMENTS_REFUSED' } | { kind: 'SELECTION_REFUSED' };
+
+/** The bag after a write, or NOT_FOUND for a cart that stopped being a bag. */
+function added(cartId: string, locale: Locale): CartWriteResult {
+  const summary = summaryFor(cartId, locale);
+  return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
+}
 
 /** Names the piece that failed, in the customer's language (§7.1). */
 function unavailable(
@@ -460,7 +93,7 @@ function unavailable(
     kind: 'UNAVAILABLE',
     pieceId,
     pieceName: piece?.name ?? '',
-    sizeLabel: piece?.sizes.find((entry) => entry.id === sizeId)?.label ?? '',
+    sizeLabel: piece === undefined ? '' : (sizeLabelOf(piece, sizeId, locale) ?? ''),
   };
 }
 
@@ -474,11 +107,12 @@ export function addItem(
   stitchingProfileId: string | null = null,
   stitchingOwner: ProfileOwnerRow | null = null,
 ): AddItemResult {
-  const cart = CARTS.get(cartId);
+  const cart = activeCart(cartId);
+  if (cart === null) return { kind: 'NOT_FOUND' };
+
+  // A product this store does not sell is a refused ADD, never a missing cart.
   const record = CATALOGUE.find((entry) => entry.id === productId);
-  if (cart === undefined || cart.status !== 'ACTIVE' || record === undefined) {
-    return { kind: 'NOT_FOUND' };
-  }
+  if (record === undefined) return { kind: 'SELECTION_REFUSED' };
 
   /*
    * §34.8 — a garment to be CUT takes a different path through this function
@@ -491,27 +125,44 @@ export function addItem(
     return addStitched(cartId, cart, record, stitchingProfileId, stitchingOwner, quantity, locale);
   }
 
-  // §16 invariant: a line cannot exist without a size for EVERY piece. Only the
-  // backend knows how many pieces the product has, so only the backend can
-  // check it — the frontend's schema cannot.
-  const detail = toProductDetail(record, locale);
-  const covered = detail.pieces.every((piece) =>
-    selections.some((selection) => selection.pieceId === piece.id),
-  );
-  if (!covered || selections.length !== detail.pieces.length) return { kind: 'NOT_FOUND' };
+  // §16 invariant: a size for EVERY piece that has sizes, each one it is offered in;
+  // §7.1 step 1 resolves the key of a piece that has none.
+  const resolved = resolveSelections(toProductDetail(record, locale), selections);
+  if (resolved === null) return { kind: 'SELECTION_REFUSED' };
 
+  return addStocked(cartId, cart, record, resolved, quantity, locale);
+}
+
+/** A garment off the shelf, reserved through §7.1 before the line exists. */
+function addStocked(
+  cartId: string,
+  cart: CartRecord,
+  record: CatalogueRecord,
+  selections: readonly { pieceId: string; sizeId: string }[],
+  quantity: number,
+  locale: Locale,
+): AddItemResult {
   /*
    * D6 — only an ACTIVE line is merged into. Re-adding something the customer
    * removed starts a NEW line, so the removal stays in the record rather than
    * being undone.
    */
-  const existing = activeLines(cart).find(
-    (line) => line.productId === productId && sameSelections(line.selections, selections),
+  const matching = activeLines(cart).find(
+    (line) => line.productId === record.id && sameSelections(line.selections, selections),
   );
+
+  /*
+   * A matching line whose hold LAPSED is not merged into either. It stopped
+   * being in the bag when its hold ran out (§16), so adding again is a new line
+   * of what was asked for — not the old quantity revived with the new one on
+   * top. The lapse is recorded as the store taking the item back.
+   */
+  if (matching !== undefined && isLapsed(matching)) markRemoved(matching, 'EXPIRED');
+  const existing = matching?.removedAt === null ? matching : undefined;
 
   const line: CartLineRecord = existing ?? {
     id: mockId('0002'),
-    productId,
+    productId: record.id,
     selections: [...selections],
     quantity: 0,
     removedAt: null,
@@ -521,10 +172,10 @@ export function addItem(
   };
 
   const wanted = line.quantity + quantity;
-  const outcome = reserve(cartId, line.id, toKeys({ ...line, quantity: wanted }));
+  const outcome = reserve(cartId, line.id, toKeys(line, wanted));
 
   if (outcome.kind === 'UNAVAILABLE') {
-    return unavailable(productId, outcome.pieceId, outcome.sizeId, locale);
+    return unavailable(record.id, outcome.pieceId, outcome.sizeId, locale);
   }
 
   // §16: "Reservation and cart line are created in the same transaction." The
@@ -532,77 +183,7 @@ export function addItem(
   line.quantity = wanted;
   if (existing === undefined) cart.lines.push(line);
 
-  const summary = summaryFor(cartId, locale);
-  return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
-}
-
-/**
- * A garment to be cut, added to the bag.
- *
- * The line is merged on (product, PROFILE), so asking for a second kameez to the
- * same figures raises the quantity rather than making a second line — and asking
- * for one to DIFFERENT figures makes its own line, because it is a different
- * garment however alike the two look.
- *
- * A profile that is unknown, not this owner's, or taken for a different garment
- * than the product is cut as is MEASUREMENTS_REFUSED — never NOT_FOUND. That one
- * means "no such cart", and the BFF answers it by throwing the cart cookie away
- * and starting a new cart, which is exactly wrong for a cart that is fine.
- */
-function addStitched(
-  cartId: string,
-  cart: CartRecord,
-  record: CatalogueRecord,
-  stitchingProfileId: string,
-  stitchingOwner: ProfileOwnerRow | null,
-  quantity: number,
-  locale: Locale,
-): AddItemResult {
-  /*
-   * WHOSE measurements, before anything else. The id comes from a browser and
-   * what it buys is cloth cut to those figures, so "does this exist" is not the
-   * question — "is it yours" is. No owner at all is no.
-   */
-  if (stitchingOwner === null) return { kind: 'MEASUREMENTS_REFUSED' };
-  const profile = profileById(stitchingProfileId, stitchingOwner);
-  if (profile === null) return { kind: 'MEASUREMENTS_REFUSED' };
-
-  /*
-   * And WHETHER THIS GARMENT is cut at all, and as what.
-   *
-   * \`STITCHING_STYLE\` is the backend's declaration — a boy's kurta maps to null
-   * deliberately, because every served bound is an adult's. Without this a
-   * kameez profile could be attached to a waistcoat suit, and the line would
-   * have been priced from the kameez's charge with the kameez's figures sent to
-   * the workshop. It is the same check \`addItem\` makes for sizes, for the same
-   * reason: only the backend knows what the product is.
-   */
-  const offer = toProductDetail(record, locale).stitching;
-  if (offer === null || offer.garmentStyle !== profile.garmentStyle) {
-    return { kind: 'MEASUREMENTS_REFUSED' };
-  }
-
-  const productId = record.id;
-  const existing = activeLines(cart).find(
-    (line) => line.productId === productId && line.stitchingProfileId === stitchingProfileId,
-  );
-
-  const line: CartLineRecord = existing ?? {
-    id: mockId('0002'),
-    productId,
-    selections: [],
-    quantity: 0,
-    removedAt: null,
-    removalReason: null,
-    stitchingProfileId,
-    stitchingOwner,
-  };
-
-  line.quantity += quantity;
-  if (existing === undefined) cart.lines.push(line);
-
-  const summary = summaryFor(cartId, locale);
-  return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
+  return added(cartId, locale);
 }
 
 /** §16 `updateQuantity(cart, line, qty)`. */
@@ -612,29 +193,33 @@ export function updateQuantity(
   quantity: number,
   locale: Locale,
 ): CartWriteResult {
-  const cart = CARTS.get(cartId);
-  if (cart === undefined || cart.status !== 'ACTIVE') return { kind: 'NOT_FOUND' };
+  const cart = activeCart(cartId);
+  if (cart === null) return { kind: 'NOT_FOUND' };
 
   const line = activeLines(cart).find((entry) => entry.id === lineId);
   if (line === undefined) return { kind: 'NOT_FOUND' };
 
-  /* A cut garment holds nothing, so there is nothing to re-reserve: asking for
-     two is asking the workshop to cut two, which no shelf has to agree to. */
-  if (line.stitchingProfileId !== null) {
-    line.quantity = quantity;
-    const stitched = summaryFor(cartId, locale);
-    return stitched === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary: stitched };
+  /*
+   * A line whose hold lapsed is no longer in the bag, so there is nothing to
+   * change — the same answer a line the summary no longer shows has always had.
+   * The lapse is recorded rather than quietly re-reserved into a new hold.
+   */
+  if (isLapsed(line)) {
+    markRemoved(line, 'EXPIRED');
+    return { kind: 'NOT_FOUND' };
   }
 
-  const outcome = reserve(cartId, line.id, toKeys({ ...line, quantity }));
-  if (outcome.kind === 'UNAVAILABLE') {
-    return unavailable(line.productId, outcome.pieceId, outcome.sizeId, locale);
+  /* A cut garment holds nothing, so there is nothing to re-reserve: asking for
+     two is asking the workshop to cut two, which no shelf has to agree to. */
+  if (line.stitchingProfileId === null) {
+    const outcome = reserve(cartId, line.id, toKeys(line, quantity));
+    if (outcome.kind === 'UNAVAILABLE') {
+      return unavailable(line.productId, outcome.pieceId, outcome.sizeId, locale);
+    }
   }
 
   line.quantity = quantity;
-
-  const summary = summaryFor(cartId, locale);
-  return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
+  return added(cartId, locale);
 }
 
 /**
@@ -642,104 +227,53 @@ export function updateQuantity(
  *
  * D6: the line is marked removed, not spliced out. The hold is released on the
  * same call, so stock frees up exactly as before; what changes is that the bag
- * still knows the line was there.
+ * still knows the line was there — and why it left, which is EXPIRED rather
+ * than CUSTOMER when the hold had already run out.
  */
 export function removeLine(cartId: string, lineId: string, locale: Locale): CartWriteResult {
-  const cart = CARTS.get(cartId);
-  if (cart === undefined || cart.status !== 'ACTIVE') return { kind: 'NOT_FOUND' };
+  const cart = activeCart(cartId);
+  if (cart === null) return { kind: 'NOT_FOUND' };
 
   const line = activeLines(cart).find((entry) => entry.id === lineId);
   if (line !== undefined) {
+    const reason = isLapsed(line) ? 'EXPIRED' : 'CUSTOMER';
     release(lineId);
-    line.removedAt = Date.now();
-    line.removalReason = 'CUSTOMER';
+    markRemoved(line, reason);
   }
 
-  const summary = summaryFor(cartId, locale);
-  return summary === null ? { kind: 'NOT_FOUND' } : { kind: 'ADDED', summary };
-}
-
-export type CodeResult =
-  { kind: 'APPLIED'; summary: BagSummaryPayload } | { kind: 'REJECTED'; reason: string };
-
-/** §16 `applyCode(cart, code)`. Validity is Pricing's answer, never the UI's. */
-export function applyCode(cartId: string, code: string, locale: Locale): CodeResult {
-  const normalised = code.trim().toUpperCase();
-  const cart = CARTS.get(cartId);
-
-  if (cart === undefined || cart.status !== 'ACTIVE' || PROMO_CODES[normalised] === undefined) {
-    return { kind: 'REJECTED', reason: REJECTION[locale] };
-  }
-
-  const now = Date.now();
-  const events = CART_CODES.get(cartId) ?? [];
-
-  /*
-   * D6 — applying a second code lifts the first rather than overwriting it, so
-   * the bag's record shows both and the order in which they were tried.
-   */
-  for (const event of events) {
-    if (event.liftedAt === null) event.liftedAt = now;
-  }
-
-  events.push({ code: normalised, appliedAt: now, liftedAt: null });
-  CART_CODES.set(cartId, events);
-
-  const summary = summaryFor(cartId, locale);
-  return summary === null
-    ? { kind: 'REJECTED', reason: REJECTION[locale] }
-    : { kind: 'APPLIED', summary };
-}
-
-/** Lifting a code. D6: recorded as lifted, never erased. */
-export function removeCode(cartId: string, locale: Locale): CodeResult {
-  const now = Date.now();
-  for (const event of CART_CODES.get(cartId) ?? []) {
-    if (event.liftedAt === null) event.liftedAt = now;
-  }
-
-  const summary = summaryFor(cartId, locale);
-  return summary === null
-    ? { kind: 'REJECTED', reason: REJECTION[locale] }
-    : { kind: 'APPLIED', summary };
+  return added(cartId, locale);
 }
 
 /**
- * D6 — the full history of a cart, including what left it.
+ * §7.2 step 1 — "verify every reservation is still active. If any has expired,
+ * ROLLBACK and return the customer to the bag naming the expired items."
  *
- * The projection `summaryFor` returns is what the customer sees; this is what
- * the store keeps. Read by the tests that pin the guarantee.
+ * Returns the names of the lines whose hold lapsed, and records each lapse, so
+ * the customer is told once and a second attempt goes on to the rest of §7.2
+ * rather than being refused for the same line for ever. Empty means every hold
+ * is live.
  */
-export function cartHistory(cartId: string): {
-  status: CartStatus;
-  orderNumber: string | null;
-  lines: readonly {
-    id: string;
-    productId: string;
-    quantity: number;
-    removalReason: LineRemovalReason | null;
-  }[];
-  codes: readonly { code: string; liftedAt: number | null }[];
-} | null {
-  const cart = CARTS.get(cartId);
-  if (cart === undefined) return null;
+export function expireLapsedLines(cartId: string, locale: Locale): string[] {
+  const cart = activeCart(cartId);
+  if (cart === null) return [];
 
-  return {
-    status: cart.status,
-    orderNumber: cart.orderNumber,
-    lines: cart.lines.map(({ id, productId, quantity, removalReason }) => ({
-      id,
-      productId,
-      quantity,
-      removalReason,
-    })),
-    codes: (CART_CODES.get(cartId) ?? []).map(({ code, liftedAt }) => ({ code, liftedAt })),
-  };
+  const lapsed = activeLines(cart).filter(isLapsed);
+  for (const line of lapsed) markRemoved(line, 'EXPIRED');
+
+  // Named once each: two sizes of one garment that both lapsed are one thing to look at.
+  return [...new Set(lapsed.map((line) => lineNameFor(line, locale)))];
 }
 
-/** Test seam. */
-export function resetCarts(): void {
-  CARTS.clear();
-  CART_CODES.clear();
-  nextId = 0;
-}
+/*
+ * The rest of §16's surface. The records, the projection and the history moved
+ * out under MOD-03; the service a handler or a test talks to did not.
+ */
+export { applyCode, removeCode, type CodeResult } from './bag-codes';
+export { moveToWishlist, type MoveToWishlistResult } from './bag-wishlist-move';
+export { cartExists, cartHistory, convertCart, createCart, resetCarts } from './cart-store';
+export {
+  stitchingFiguresFor,
+  summaryFor,
+  type BagLinePayload,
+  type BagSummaryPayload,
+} from './bag-projection';

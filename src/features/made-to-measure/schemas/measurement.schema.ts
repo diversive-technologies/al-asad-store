@@ -41,10 +41,8 @@ export function buildMeasurementSchema(
 
 /**
  * The form's own values are strings — an input holds text, and an empty field is
- * `''` rather than `NaN`.
+ * `''` rather than `NaN`. The empty form is `emptyEntry` in `lib/entries.ts`,
+ * which carries no Zod, so the studio can draw its fields before this module
+ * has been downloaded (PERF-10).
  */
 export type MeasurementEntry = Record<string, string>;
-
-export function emptyEntry(points: readonly MeasurementPoint[]): MeasurementEntry {
-  return Object.fromEntries(points.map((point) => [point.id, '']));
-}

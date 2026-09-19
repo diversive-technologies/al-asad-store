@@ -2,12 +2,10 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 
-import { unwrap } from '@/lib/result';
-
-import { postSavedItemRemoval, postSavedItems } from '../api/saved-items-browser';
 import { useLocalWishlist } from './use-local-wishlist';
+import { useSavedItemChange } from './use-saved-item-change';
 import { useSavedItemsQuery } from './use-saved-items-query';
 
 /** One shared empty list, so an unread account list is a STABLE reference. */
@@ -29,9 +27,13 @@ export interface Wishlist {
    */
   readonly isReady: boolean;
   /**
-   * The account's list could not be READ — which is not the same as empty, and
+   * The account's list has never been READ — which is not the same as empty, and
    * must not be shown as it. An empty list says the customer saved nothing; this
    * says we could not find out, and their items are still on file.
+   *
+   * A LATER read that fails does not count: a refused heart asks the server again,
+   * TanStack keeps the list it had when that read fails too, and the page used to
+   * swap every card for "could not load" over one refused press.
    */
   readonly isUnreadable: boolean;
   readonly isSaved: (productId: string) => boolean;
@@ -45,13 +47,6 @@ export interface Wishlist {
   readonly changeFailed: boolean;
 }
 
-/** One press: which product, which way, and the list it was pressed against. */
-interface Change {
-  readonly productId: string;
-  readonly saving: boolean;
-  readonly was: readonly string[];
-}
-
 /**
  * §28.3's saved items — the account's, for a signed-in customer.
  *
@@ -63,43 +58,14 @@ interface Change {
  *
  * The toggle is OPTIMISTIC. A heart that waited for a round trip would feel
  * broken on a slow connection, and the server's answer replaces the guess as
- * soon as it lands; a failure puts the question back to the server rather than
- * leaving a wrong answer on screen.
+ * soon as it lands (`useSavedItemChange`); a failure puts the list back rather
+ * than leaving a wrong answer on screen.
  */
 export function useWishlist(): Wishlist {
   const { key, query, isSignedIn } = useSavedItemsQuery();
   const local = useLocalWishlist();
   const client = useQueryClient();
-
-  const change = useMutation({
-    /*
-     * SCOPED, so two presses on one heart queue instead of racing. Saving and
-     * removing are different routes on different connections: unscoped, a
-     * double press could have the removal reach the store BEFORE the save it was
-     * undoing, which is a no-op on a row that does not exist yet — leaving the
-     * product saved after the customer's last action was to unsave it.
-     */
-    scope: { id: 'saved-items' },
-    mutationFn: (next: Change) =>
-      unwrap(
-        next.saving ? postSavedItems([next.productId]) : postSavedItemRemoval([next.productId]),
-      ),
-    onSuccess: (items) => {
-      client.setQueryData(key, items);
-    },
-    /*
-     * PUT BACK what was on screen before the press, rather than only asking the
-     * server again: the refetch can fail too (it does not retry), and TanStack
-     * keeps the last data it had — which is the guess — so an unanswered failure
-     * would leave the heart filled for the life of the page on a product that
-     * was never saved. The invalidate still runs, so the server has the last
-     * word when it can be reached; `changeFailed` is what SAYS so.
-     */
-    onError: (_error, next) => {
-      client.setQueryData(key, { ids: next.was });
-      void client.invalidateQueries({ queryKey: key });
-    },
-  });
+  const change = useSavedItemChange(key);
 
   /*
    * Memoised because `?? EMPTY` is only stable while the account's list is
@@ -126,7 +92,7 @@ export function useWishlist(): Wishlist {
   return {
     ids,
     isReady: isSignedIn ? query.isSuccess || query.isError : local.isReady,
-    isUnreadable: isSignedIn && query.isError,
+    isUnreadable: isSignedIn && query.isError && query.data === undefined,
     isSaved: useCallback((productId: string) => ids.includes(productId), [ids]),
     toggle,
     changeFailed: change.isError,

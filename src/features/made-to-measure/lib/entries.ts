@@ -10,12 +10,18 @@
 
 import type { MeasurementPointId } from '@/lib/domain/ids';
 
+import type { MeasurementEntry } from '../schemas/measurement.schema';
 import type { MeasurementPoint } from '../schemas/measurement-set.schema';
 import { acceptsEntry } from './conversion';
 import type { Unit } from './units';
 
 /** Raw form values, as the fields hold them — strings, possibly absent. */
 export type MeasurementEntries = Readonly<Record<string, string | undefined>>;
+
+/** The form's starting values: every point asked, and nothing in it yet. */
+export function emptyEntry(points: readonly MeasurementPoint[]): MeasurementEntry {
+  return Object.fromEntries(points.map((point) => [point.id, '']));
+}
 
 export function takenIds(
   points: readonly MeasurementPoint[],

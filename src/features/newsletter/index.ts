@@ -1,6 +1,10 @@
 /** STRUCT-04 / STRUCT-06 — the public barrel for the Newsletter feature. */
 export { subscribeToNewsletterAction } from './actions';
-export { NewsletterForm } from './components/NewsletterForm';
+/*
+ * The footer's entry, not the form: `NewsletterForm` carries React Hook Form and
+ * is downloaded on demand by `NewsletterSignup` (PERF-10), so it is not exported.
+ */
+export { NewsletterSignup } from './components/NewsletterSignup';
 export {
   newsletterSubscribeSchema,
   newsletterSubscriptionSchema,

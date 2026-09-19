@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { CLIENT } from '@/config/client';
+import { canonicalMobile } from '@/lib/domain/mobile';
 
 /**
  * SSOT-09 / FORM-01 — the wire contract for architecture §11 Identity and
@@ -45,15 +46,21 @@ export const passwordSignInSchema = z.object({
 export type PasswordSignInInput = z.infer<typeof passwordSignInSchema>;
 
 /**
- * §11 `issueCode(mobile)`.
+ * A mobile number as §11 receives it.
  *
  * D5: the national number format belongs to the CLIENT profile, not to this
  * schema. Another market changes one entry and both the validation and the
  * placeholder follow, because they read the same source (PD-01).
+ *
+ * ON THE WIRE it is canonical — digits only, no spaces or dashes — because the
+ * number names an account, and `0300 1234567` signing in as a different, empty
+ * customer from `03001234567` loses them their addresses, saved items and orders
+ * (`canonicalMobile`).
  */
-export const codeRequestSchema = z.object({
-  mobile: z.string().trim().regex(CLIENT.market.mobile.pattern),
-});
+const mobile = z.string().trim().regex(CLIENT.market.mobile.pattern).transform(canonicalMobile);
+
+/** §11 `issueCode(mobile)`. */
+export const codeRequestSchema = z.object({ mobile });
 
 export type CodeRequestInput = z.infer<typeof codeRequestSchema>;
 
@@ -80,7 +87,7 @@ export const signUpSchema = z
   .object({
     fullName: z.string().trim().min(2).max(80),
     email: z.email(),
-    mobile: z.string().trim().regex(CLIENT.market.mobile.pattern),
+    mobile,
     password,
     confirmPassword: z.string(),
   })
@@ -96,17 +103,22 @@ export const signUpSchema = z
 export type SignUpInput = z.infer<typeof signUpSchema>;
 
 /**
+ * A `-> void` operation's answer: no body at all, or an empty object. The Java
+ * contract notes disagree on which of the two a void call serves, so both are
+ * accepted rather than one of them breaking the call that receives it.
+ */
+export const voidReplySchema = z.union([z.null(), z.object({})]);
+
+/**
  * What `issueCode` answers with.
  *
  * §11 returns VOID — the code goes by SMS and the caller learns nothing, which
  * is also what stops the endpoint enumerating accounts. `devCode` exists only
  * because no SMS provider is wired up, so without it the code path could not be
- * exercised at all. Optional on purpose: the real backend omits it and the
- * interface must not depend on it.
+ * exercised at all. Optional on purpose, and the whole body NULLABLE: a real
+ * backend that answers with nothing must not turn a sent code into a failure.
  */
-export const codeIssuedSchema = z.object({
-  devCode: z.string().optional(),
-});
+export const codeIssuedSchema = z.object({ devCode: z.string().optional() }).nullable();
 
 /** §11 `resetPassword(email)`. */
 export const passwordResetSchema = z.object({ email: z.email() });

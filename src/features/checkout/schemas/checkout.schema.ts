@@ -5,6 +5,7 @@ import {
   garmentStyleIdSchema,
   measurementPointIdSchema,
   orderIdSchema,
+  orderNumberSchema,
   productIdSchema,
   profileIdSchema,
 } from '@/lib/domain/ids';
@@ -68,35 +69,48 @@ export const orderTotalsSchema = z.object({
 export type OrderTotals = z.infer<typeof orderTotalsSchema>;
 
 /** §17 `quote(cart, address, deliveryOption) -> {totals, availableMethods}`. */
-export const checkoutQuoteSchema = z.object({
-  totals: orderTotalsSchema,
-  deliveryOptions: z.array(deliveryOptionSchema).min(1),
-  paymentMethods: z.array(paymentMethodSchema).min(1),
-  /** Whether gift wrapping is offered, and what it costs (§28.2). */
-  gift: z.object({ isOffered: z.boolean(), chargeMinor: z.number().int().nonnegative() }),
-  /**
-   * §34.7 — whether anything in this bag is being CUT, and how long the longest
-   * of them takes.
-   *
-   * A fact rather than the lines themselves: checkout renders no lines and does
-   * not need to start. What it needs is to say, on the same screen as the price
-   * and before payment, that a cut garment cannot be sent back — and the backend
-   * is what decides which lines are cut, so it is what answers (DATA-13).
-   */
-  madeToMeasure: z.object({
-    isPresent: z.boolean(),
-    leadTimeDays: z.number().int().nonnegative(),
+export const checkoutQuoteSchema = z
+  .object({
+    totals: orderTotalsSchema,
     /**
-     * Whether anything in the order is NOT being cut.
+     * The option `totals` is priced with: the one asked for, or — on a first quote,
+     * which names none — the backend's default, which checkout then shows chosen.
      *
-     * The notice says what is still returnable, and that sentence is false on an
-     * order of nothing but cut garments — which is the commonest made-to-measure
-     * order there is. The backend answers it, because the backend is what knows
-     * which lines are cut (DATA-13).
+     * Stated because the options are the backend's list (§3.1). The interface used
+     * to open on an id it had written itself, `'standard'`, which prices nothing
+     * and marks no radio the day the backend names its options differently.
      */
-    hasOtherItems: z.boolean(),
-  }),
-});
+    deliveryOptionId: z.string().min(1),
+    deliveryOptions: z.array(deliveryOptionSchema).min(1),
+    paymentMethods: z.array(paymentMethodSchema).min(1),
+    /** Whether gift wrapping is offered, and what it costs (§28.2). */
+    gift: z.object({ isOffered: z.boolean(), chargeMinor: z.number().int().nonnegative() }),
+    /**
+     * §34.7 — whether anything in this bag is being CUT, and how long the longest
+     * of them takes.
+     *
+     * A fact rather than the lines themselves: checkout renders no lines and does
+     * not need to start. What it needs is to say, on the same screen as the price
+     * and before payment, that a cut garment cannot be sent back — and the backend
+     * is what decides which lines are cut, so it is what answers (DATA-13).
+     */
+    madeToMeasure: z.object({
+      isPresent: z.boolean(),
+      leadTimeDays: z.number().int().nonnegative(),
+      /**
+       * Whether anything in the order is NOT being cut.
+       *
+       * The notice says what is still returnable, and that sentence is false on an
+       * order of nothing but cut garments — which is the commonest made-to-measure
+       * order there is. The backend answers it, because the backend is what knows
+       * which lines are cut (DATA-13).
+       */
+      hasOtherItems: z.boolean(),
+    }),
+  })
+  .refine((quote) => quote.deliveryOptions.some((option) => option.id === quote.deliveryOptionId), {
+    error: 'A quote is priced with one of the delivery options it offers.',
+  });
 
 export type CheckoutQuote = z.infer<typeof checkoutQuoteSchema>;
 
@@ -128,43 +142,15 @@ export const checkoutFormSchema = z.object({
   contactEmail: z.union([z.email(), z.literal('')]),
   addressLine: ADDRESS_RULES.line,
   addressCity: ADDRESS_RULES.city,
-  deliveryOptionId: z.string().min(1),
+  /* No delivery option: the choice lives with the QUOTE it re-prices
+     (`useCheckoutQuote`), and placement sends the option that quote was priced
+     with, so the order and the total the customer saw cannot disagree. */
   paymentMethodId: z.string().min(1),
   isGift: z.boolean(),
   giftMessage: z.string().trim().max(200),
 });
 
 export type CheckoutFormInput = z.infer<typeof checkoutFormSchema>;
-
-/**
- * §28.3's order history — one row per order, and no more than a row.
- *
- * Deliberately NOT `orderSchema`. A list needs enough to recognise an order and
- * follow it; the order page already holds every snapshotted line and piece, and
- * shipping all of them to draw a date and a total would put a customer's whole
- * purchase history on the wire for a summary.
- *
- * It is a LIST and not tracking. Order tracking is out of the MVP by operator
- * decision, so nothing here carries a status, and no wording implies one.
- */
-export const accountOrderSchema = z.object({
-  orderNumber: z.string().min(1),
-  placedAt: z.iso.datetime(),
-  totalMinor: z.number().int().nonnegative(),
-  /** How many PRODUCTS, because that is what "and 2 more" counts. */
-  lineCount: z.number().int().nonnegative(),
-  /** The first line's name AS IT WAS — what makes an order recognisable. */
-  firstItem: z.string(),
-});
-
-export const accountOrdersSchema = z.object({
-  /* SEC-02 — a served list is untrusted input however friendly the sender
-     looks. Far above any real history, and the point is that it is bounded. */
-  orders: z.array(accountOrderSchema).max(500),
-});
-
-export type AccountOrder = z.infer<typeof accountOrderSchema>;
-export type AccountOrders = z.infer<typeof accountOrdersSchema>;
 
 /** A line as it was at placement — §6.5 requires snapshots, not references. */
 export const orderLineSchema = z.object({
@@ -229,10 +215,30 @@ export const paymentStateSchema = z.enum([
   'FAILED',
 ]);
 
+/**
+ * How to pay an order whose method is a transfer the customer makes themselves.
+ *
+ * Present exactly when the backend says the chosen method needs it and `null`
+ * otherwise, so the confirmation renders what it was given and never branches on
+ * which method was chosen (§3.1). The REFERENCE is the order number: the one
+ * identifier the customer already has is what matches the money to the order.
+ * SEC-02 — every field is bounded, because a served account is untrusted input.
+ */
+export const transferInstructionsSchema = z.object({
+  reference: orderNumberSchema,
+  bankName: z.string().min(1).max(120),
+  accountTitle: z.string().min(1).max(120),
+  accountNumber: z.string().min(1).max(34),
+  /** ISO 13616 caps an IBAN at 34 characters; a Pakistani one is 24. */
+  iban: z.string().min(15).max(34),
+});
+
+export type TransferInstructions = z.infer<typeof transferInstructionsSchema>;
+
 export const orderSchema = z.object({
   id: orderIdSchema,
   /** What the customer quotes on the phone if they call about the order. */
-  orderNumber: z.string().min(1),
+  orderNumber: orderNumberSchema,
   state: orderStateSchema,
   paymentState: paymentStateSchema,
   placedAt: z.iso.datetime(),
@@ -246,53 +252,7 @@ export const orderSchema = z.object({
   giftMessage: z.string(),
   lines: z.array(orderLineSchema).min(1),
   totals: orderTotalsSchema,
+  transferInstructions: transferInstructionsSchema.nullable(),
 });
 
 export type Order = z.infer<typeof orderSchema>;
-
-/**
- * §7.2's outcomes, as a discriminated union (TS-06).
- *
- * Two of these are not errors and must not be rendered as one — they are the
- * transaction doing exactly what §7.2 says:
- *
- * - **`RESERVATION_EXPIRED`** — step 1. "ROLLBACK and return the customer to
- *   the bag naming the expired items." So the names travel with it.
- * - **`PRICE_CHANGED`** — step 2. "Prices are never silently changed under a
- *   customer at payment." The new totals come back for explicit confirmation,
- *   and the customer re-submits or leaves.
- * - **`MEASUREMENTS_CHANGED`** — §34.7's equivalent for cloth. A garment to be
- *   cut names the measurements it was added against; saving them again with
- *   anything changed mints a new version, and cutting to figures the customer never confirmed is the one
- *   mistake this whole feature exists to avoid. The garments are named, for the
- *   reason §7.1 names the piece that failed.
- */
-export const placeOrderResultSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('PLACED'), order: orderSchema }),
-  z.object({
-    kind: z.literal('RESERVATION_EXPIRED'),
-    expiredItems: z.array(z.string().min(1)).min(1),
-  }),
-  z.object({
-    kind: z.literal('MEASUREMENTS_CHANGED'),
-    restitchedItems: z.array(z.string().min(1)).min(1),
-  }),
-  z.object({ kind: z.literal('PRICE_CHANGED'), totals: orderTotalsSchema }),
-  /** §7.2 step 7: authorisation failed after commit, so the order was cancelled. */
-  z.object({ kind: z.literal('PAYMENT_FAILED'), reason: z.string().min(1) }),
-]);
-
-export type PlaceOrderResult = z.infer<typeof placeOrderResultSchema>;
-
-/**
- * What the customer's browser sends to place an order.
- *
- * `expectedTotalMinor` is what makes §7.2 step 2 possible. The backend compares
- * it against a fresh re-price and refuses if they differ, which is the whole
- * mechanism behind "prices are never silently changed under a customer".
- */
-export const placeOrderRequestSchema = checkoutFormSchema.extend({
-  expectedTotalMinor: z.number().int().nonnegative(),
-});
-
-export type PlaceOrderRequest = z.infer<typeof placeOrderRequestSchema>;

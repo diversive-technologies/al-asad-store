@@ -3,9 +3,11 @@
 // I18N-02 exception, stated rather than buried: global-error replaces the root
 // layout, so the MessagesProvider that layout seeds does not exist here and
 // useMessages() would resolve nothing. Falling back to the default locale is
-// exactly what I18N-10 prescribes for content that cannot be resolved.
-import { en } from '@/i18n/messages/en';
+// exactly what I18N-10 prescribes for content that cannot be resolved. Only its
+// two sentences are imported, not the dictionary: this boundary loads with every
+// page (PERF-10, `en-root-error.ts`).
 import { DEFAULT_LOCALE, DIRECTION } from '@/i18n/locales';
+import { enRootError } from '@/i18n/messages/en-root-error';
 
 export interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -21,9 +23,9 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
     <html lang={DEFAULT_LOCALE} dir={DIRECTION[DEFAULT_LOCALE]}>
       <body>
         <div role="alert">
-          <p>{en.errors.unexpected}</p>
+          <p>{enRootError.unexpected}</p>
           <button type="button" onClick={reset}>
-            {en.common.retry}
+            {enRootError.retry}
           </button>
         </div>
       </body>

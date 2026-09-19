@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { ErrorState } from '@/components/shared/ErrorState';
-import { fetchPage } from '@/features/content';
+import { ROUTES, STORE_PAGE_SLUGS } from '@/config/routes';
+import { fetchPage, StaticPageArticle, StoreContactDetails } from '@/features/content';
 import { getLocale, getMessages } from '@/i18n';
-import { assertNever } from '@/lib/result';
+import { localeAlternates } from '@/lib/utils/locale-alternates';
 import { logApiError } from '@/lib/utils/log';
 
 export interface HelpPageProps {
@@ -16,16 +17,26 @@ export async function generateMetadata({ params }: HelpPageProps): Promise<Metad
   const [{ slug }, locale] = await Promise.all([params, getLocale()]);
   const page = await fetchPage(slug, locale);
 
-  // NEXT-11 / section 30.5: a unique title per page, from the content itself.
+  // NEXT-11 / section 30.5: a unique title and canonical address, from the content itself.
   if (!page.ok || page.value === null) return {};
-  return { title: page.value.title, description: page.value.intro };
+  return {
+    title: page.value.title,
+    description: page.value.intro,
+    alternates: localeAlternates(ROUTES.help.page(page.value.slug), locale),
+  };
 }
 
 /**
- * The four help pages of section 28.4, served by section 21's Content module.
+ * Section 28.4's help pages AND its static pages (about, contact, delivery,
+ * returns, terms, privacy), all served by section 21's Content module.
  *
  * One route for all of them: they differ only in content, so a route each would
- * be four copies of the same composition (PD-01).
+ * be copies of the same composition (PD-01) — and §21 serves them from ONE slug
+ * namespace, so a second route over it would put every page at two addresses.
+ * STRUCT-02: the rendering of a page's blocks is the Content feature's.
+ *
+ * Contact us is the one page given something the content does not carry: the
+ * store's contact details, which are configuration (D5), not copy.
  */
 export default async function HelpPage({ params }: HelpPageProps) {
   const [{ slug }, locale] = await Promise.all([params, getLocale()]);
@@ -39,43 +50,11 @@ export default async function HelpPage({ params }: HelpPageProps) {
   // ERR-06: notFound() is a framework control-flow signal, not error handling.
   if (result.value === null) notFound();
 
-  const page = result.value;
-
   return (
-    <article className="page-shell max-w-3xl py-12">
-      <h1 className="text-fg text-3xl font-semibold">{page.title}</h1>
-      <p className="text-fg-muted mt-3 text-lg">{page.intro}</p>
-
-      <div className="mt-8 flex flex-col gap-6">
-        {page.blocks.map((block) => {
-          switch (block.kind) {
-            case 'HEADING':
-              return (
-                // A11Y-09: headings descend in order from the h1 above.
-                <h2 key={block.id} className="text-fg text-xl font-medium">
-                  {block.text}
-                </h2>
-              );
-            case 'PARAGRAPH':
-              return (
-                <p key={block.id} className="text-fg-muted">
-                  {block.text}
-                </p>
-              );
-            case 'DEFINITION':
-              return (
-                <div key={block.id} className="border-border border-s-2 ps-4">
-                  {/* I18N-09: a protected term is rendered exactly as supplied. */}
-                  <h2 className="text-fg font-medium">{block.term}</h2>
-                  <p className="text-fg-muted mt-1">{block.description}</p>
-                </div>
-              );
-            default:
-              // TS-07: a new block kind without a renderer is a compile error.
-              return assertNever(block);
-          }
-        })}
-      </div>
-    </article>
+    <StaticPageArticle page={result.value}>
+      {result.value.slug === STORE_PAGE_SLUGS.contact ? (
+        <StoreContactDetails locale={locale} messages={messages} />
+      ) : null}
+    </StaticPageArticle>
   );
 }

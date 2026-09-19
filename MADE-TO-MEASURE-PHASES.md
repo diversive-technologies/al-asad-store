@@ -183,6 +183,33 @@ tests — which is the honest argument for continuing to do both.
 
 ---
 
+## Three repairs made afterwards (September 2026)
+
+**A failed switch no longer loses the figures.** Choosing another garment, or the
+other way of measuring, loads a new list. If that load failed — a dropped
+connection, a store that did not answer — the whole measuring page was replaced by
+"the guide could not be loaded", and every figure typed so far went with it. Now
+the page keeps the list it already had, with the figures still in it, and says
+above the fields that the new guide could not be loaded, with a "Try again"
+button. The "could not be loaded" page is shown only when nothing has loaded yet,
+so there is nothing on screen to lose.
+
+**A list that could leave a garment with nothing to measure is refused.** The
+finishing choices decide which measurements are asked. A badly written list could
+contain a combination of choices under which a garment asks for nothing at all —
+the workshop would then be sent a garment with no figures. The store now checks
+every list for this when it arrives and treats such a list as broken, the same way
+it treats any other broken row, before a customer types anything.
+
+**The review and the confirmation are downloaded when they are needed.** To keep
+the page quick to open, the review of every figure, the saved confirmation and the
+"Add to bag" that follows are fetched while the measurements are being checked,
+not when the page first loads. If that download fails, the customer is told so
+where the review would have been, with "Try again" and a way back to the fields —
+which never left the page, so no figure is lost.
+
+---
+
 ## What the client still needs to send
 
 1. **Three to five real measurement cards** (names and numbers blacked out),

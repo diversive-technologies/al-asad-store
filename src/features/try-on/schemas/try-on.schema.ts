@@ -81,9 +81,20 @@ export const tryOnImageSchema = z.object({
 
 export type TryOnImage = z.infer<typeof tryOnImageSchema>;
 
-/** §24 `Image | Unavailable`, as a discriminated union (ERR-03). */
+/**
+ * §24 `Image | Unavailable`, as a discriminated union (ERR-03) — plus the one
+ * outcome §24 does not have, stated rather than disguised.
+ *
+ * `SAMPLE` is what the module answers while no provider is connected and the
+ * operator has asked for a demonstrable interface (§28.5): the garment's own
+ * catalogue photograph, which shows the MODEL it was shot on and not the
+ * customer. It used to travel as `READY`, so the page headed a photograph of a
+ * stranger "You in this piece" and described it as a generated image of them.
+ * Its own status is what lets the interface say what it is.
+ */
 export const tryOnResultSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('READY'), image: tryOnImageSchema }),
+  z.object({ status: z.literal('SAMPLE'), image: tryOnImageSchema }),
   z.object({ status: z.literal('UNAVAILABLE'), reason: tryOnUnavailableReasonSchema }),
 ]);
 

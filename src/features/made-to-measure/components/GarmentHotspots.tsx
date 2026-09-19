@@ -20,9 +20,9 @@ export interface GarmentHotspotsProps {
   readonly onSelect: ((id: MeasurementPointId) => void) | null;
 }
 
-/* STY-01a — a per-point coordinate, unbounded and not enumerable as a utility.
-   I18N-04 does not apply: the drawing is an image of a garment and does not
-   mirror, so these resolve to physical `left`/`top` in the stylesheet on purpose. */
+/* STY-01a — a per-point coordinate, unbounded and not enumerable as a utility; the
+   `as` is TS-03(4), custom properties on `style`. I18N-04 does not apply: the
+   drawing does not mirror, so these resolve to physical `left`/`top` on purpose. */
 function placeAt(drawing: GarmentDrawing, geometry: Geometry): CSSProperties {
   const anchor = anchorOf(geometry);
   return {

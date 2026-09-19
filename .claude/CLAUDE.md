@@ -4,8 +4,17 @@ Custom-built storefront for the Pakistani domestic market, English and Urdu.
 Next.js 16 App Router frontend against a Java REST/JSON backend. Modular
 monolith, single market, single currency (PKR), single warehouse.
 
-**Status:** greenfield. No application code exists yet — no `package.json`,
-no `app/`. The two documents below are the entire project.
+**Status:** built against mocked backend responses (D1); what is done, what is
+left and what is deliberately missing is in `PROGRESS.md`, imported below.
+
+## Repository layout
+
+This repository is the STOREFRONT alone. The Java service is a separate git
+repository, checked out beside this one as `../backend` on the operator's
+machine, and the two are versioned and deployed separately — this one to Vercel
+through `.github/workflows/vercel-deploy.yml`. Nothing here builds, imports or
+deploys the backend: the boundary between them is the typed API client
+(guidelines §8), and the MSW mocks stand in for the service until it answers (D1).
 
 ---
 
@@ -161,14 +170,16 @@ website" and "gone" are different things, and the second never happens.
 **The verb follows the policy rather than decorating it.** `DELETE` on a resource
 promises the resource is gone afterwards, and that promise would be false here.
 Removals are a POST to a `/removal` sub-resource, which says what actually
-occurs: a removal is RECORDED. Two paths carry that today — `bag.lineRemoval`
-and `bag.codeRemoval` — and any future one takes the same shape.
+occurs: a removal is RECORDED. `bag.lineRemoval`, `bag.codeRemoval`,
+`account.savedItemRemoval`, `account.addressRemoval` and
+`account.savedSizeRemoval` carry that today, and any future one takes the same
+shape.
 
 Where this bites, beyond the two verbs:
 
 | Thing | Was | Is |
 | --- | --- | --- |
-| Cart line | spliced out | marked, with `CUSTOMER` or `EXPIRED` as the reason |
+| Cart line | spliced out | marked, with `CUSTOMER`, `EXPIRED` or `MOVED_TO_WISHLIST` as the reason |
 | Promotional code | overwritten | the previous one is LIFTED; every code tried is kept |
 | Reservation (§7.1/§7.2 step 4) | `DELETE the row` | `ACTIVE` → `RELEASED` / `EXPIRED` / `ALLOCATED` |
 | Cart at placement (§7.2) | discarded | `CONVERTED`, carrying its order number |

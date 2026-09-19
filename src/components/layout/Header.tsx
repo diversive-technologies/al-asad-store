@@ -44,6 +44,22 @@ export interface HeaderProps {
  * The bag control arrives as a slot for the same reason the search field does:
  * it needs the cart's server state and its open/close context, both of which
  * live in `features/bag`, and `components/` may not import from `features/`.
+ *
+ * §34 — "Stitched to size" is the one call to action the bar carries. It is not
+ * navigation: the argument above is against three links to one listing, and this
+ * is the only way into a different feature.
+ *
+ * GOLD, not jade, and that is what lets it sit in this bar. Jade is what takes
+ * money — Add to bag, Place order — and gold is the studio's own mark, the accent
+ * every measurement ring is drawn in. Neither `accent-400` nor `on-accent` is
+ * redefined for dark, so one declaration is legible over the hero film, over the
+ * solid bar, and in both themes.
+ *
+ * A plain `<Link>` rather than `ButtonLink`: the neighbours are a 36px geometry
+ * set of bare glyphs, not buttons, and matching that set is the fix for a control
+ * that did not sit in the row. `sr-only` is absolutely positioned, so below `sm`
+ * the label is not a flex item and the control is exactly 36x36 — while the name
+ * survives in the accessibility tree (A11Y-04).
  */
 export function Header({ messages, localeSwitcher, search, bagTrigger, accountMenu }: HeaderProps) {
   return (
@@ -64,24 +80,7 @@ export function Header({ messages, localeSwitcher, search, bagTrigger, accountMe
         <div className="flex min-w-0 flex-1 justify-end">{search}</div>
 
         <div className="flex shrink-0 items-center gap-1">
-          {/*
-           * §34 — the one call to action the bar carries. It is not navigation:
-           * the argument above is against three links to one listing, and this is
-           * the only way into a different feature.
-           *
-           * GOLD, not jade, and that is what lets it sit in this bar. Jade is what
-           * takes money — Add to bag, Place order — and gold is the studio's own
-           * mark, the accent every measurement ring is drawn in. Neither
-           * `accent-400` nor `on-accent` is redefined for dark, so one declaration
-           * is legible over the hero film, over the solid bar, and in both themes.
-           *
-           * A plain `<Link>` rather than `ButtonLink`: the neighbours are a 36px
-           * geometry set of bare glyphs, not buttons, and matching that set is the
-           * fix for a control that did not sit in the row. `sr-only` is absolutely
-           * positioned, so below `sm` the label is not a flex item and the control
-           * is exactly 36x36 — while the name survives in the accessibility tree
-           * (A11Y-04).
-           */}
+          {/* §34's call to action — see the note above on why it is gold and a plain link. */}
           <Link
             href={ROUTES.stitched}
             className="bg-accent-400 text-on-accent rounded-pill hover:bg-accent-500 me-1 flex h-9 w-9 shrink-0 items-center justify-center gap-2 text-sm font-medium transition-colors sm:w-auto sm:ps-3 sm:pe-3.5"

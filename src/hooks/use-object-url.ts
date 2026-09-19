@@ -7,6 +7,8 @@ export interface UseObjectUrlResult {
   readonly url: string | null;
   /** Holds a newly chosen file, releasing the one it replaces. */
   readonly hold: (file: File) => void;
+  /** Lets go of the file in hand, if any, so nothing is shown and nothing is pinned. */
+  readonly release: () => void;
 }
 
 /**
@@ -34,6 +36,9 @@ export function useObjectUrl(): UseObjectUrlResult {
     url,
     hold: (file) => {
       setUrl(URL.createObjectURL(file));
+    },
+    release: () => {
+      setUrl(null);
     },
   };
 }

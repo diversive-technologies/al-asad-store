@@ -2,65 +2,27 @@ import Link from 'next/link';
 
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { assertNever } from '@/lib/result';
-import { formatMoneyMinor, formatTemplate } from '@/lib/utils/format';
+import { formatTemplate } from '@/lib/utils/format';
 import { X } from '@/lib/vendor/icons';
 
 import {
-  clearFilters,
   listActiveFilters,
   removeActiveFilter,
-  toQueryString,
-  type ActiveFilter,
-} from '../lib/search-params';
+  type ServedCollection,
+} from '../lib/active-filters';
+import { activeFilterLabel } from '../lib/filter-labels';
+import { clearFilters } from '../lib/query-changes';
+import { toQueryString } from '../lib/search-params';
 import type { CatalogueQuery, SearchFacets } from '../schemas/search.schema';
 
 export interface FilterChipsProps {
   query: CatalogueQuery;
   facets: SearchFacets | null;
+  /** The collection the backend served, which names the collection chip. */
+  collection: ServedCollection;
   basePath: string;
   locale: Locale;
   messages: Messages;
-}
-
-/**
- * The user-visible wording for a chip.
- *
- * It lives here rather than in `search-params.ts` on purpose: that module is
- * pure and React-free, and putting English in it would embed copy in a layer
- * that has no locale (I18N-01). It hands over the facts; this resolves them
- * against SSOT-07.
- */
-function chipLabel(chip: ActiveFilter, locale: Locale, messages: Messages): string {
-  const t = messages.catalogue;
-
-  switch (chip.kind) {
-    case 'facet':
-      // Already localised by the backend — fabric and colour are protected
-      // vocabularies and must be rendered exactly as supplied (I18N-09).
-      return chip.label;
-
-    case 'price': {
-      const min = chip.minMinor === null ? null : formatMoneyMinor(chip.minMinor, locale);
-      const max = chip.maxMinor === null ? null : formatMoneyMinor(chip.maxMinor, locale);
-
-      // I18N-06: three whole parameterised messages, never a sentence built by
-      // gluing "From" to a number to "to" to another number.
-      if (min !== null && max !== null) return formatTemplate(t.priceRange, { min, max });
-      if (min !== null) return formatTemplate(t.priceFrom, { min });
-      if (max !== null) return formatTemplate(t.priceUpTo, { max });
-
-      // Unreachable: a price chip is only emitted when a bound is set.
-      return t.filterPrice;
-    }
-
-    case 'inStock':
-      return t.inStockOnly;
-
-    default:
-      // TS-07: a new chip kind without wording is a compile error, not a blank.
-      return assertNever(chip);
-  }
 }
 
 /**
@@ -70,8 +32,15 @@ function chipLabel(chip: ActiveFilter, locale: Locale, messages: Messages): stri
  * narrower URL, not a mutation. "Clear all" keeps the search term — dropping
  * filters is not abandoning the search — which `clearFilters` already decides.
  */
-export function FilterChips({ query, facets, basePath, locale, messages }: FilterChipsProps) {
-  const chips = listActiveFilters(query, facets);
+export function FilterChips({
+  query,
+  facets,
+  collection,
+  basePath,
+  locale,
+  messages,
+}: FilterChipsProps) {
+  const chips = listActiveFilters(query, facets, collection);
   if (chips.length === 0) return null;
 
   const t = messages.catalogue;
@@ -81,7 +50,7 @@ export function FilterChips({ query, facets, basePath, locale, messages }: Filte
       {/* A11Y-01: a real list with a name, not a bare row of divs. */}
       <ul aria-label={t.activeFiltersLabel} className="flex flex-wrap items-center gap-2">
         {chips.map((chip) => {
-          const label = chipLabel(chip, locale, messages);
+          const label = activeFilterLabel(chip, locale, messages);
 
           return (
             <li key={chip.id}>

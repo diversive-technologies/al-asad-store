@@ -5,10 +5,10 @@ import type { Messages } from '@/i18n/messages/en';
 import { assertNever } from '@/lib/result';
 import { formatList, formatTemplate } from '@/lib/utils/format';
 
-import type { PlaceOrderResult } from '../schemas/checkout.schema';
+import type { CheckoutOutcome } from '../lib/placement-outcome';
 
 export interface CheckoutOutcomeAlertProps {
-  outcome: PlaceOrderResult;
+  outcome: CheckoutOutcome;
   locale: Locale;
   messages: Messages;
 }
@@ -29,8 +29,12 @@ export interface CheckoutOutcomeAlertProps {
  */
 export function CheckoutOutcomeAlert({ outcome, locale, messages }: CheckoutOutcomeAlertProps) {
   const t = messages.checkout;
-
-  if (outcome.kind === 'PLACED') return null;
+  /* Both refusals are fixed in the BAG, and an unconfirmed order is checked
+     there — a placed order empties it — so that is where the way out goes. */
+  const offersBag =
+    outcome.kind === 'RESERVATION_EXPIRED' ||
+    outcome.kind === 'MEASUREMENTS_CHANGED' ||
+    outcome.kind === 'UNCONFIRMED';
 
   return (
     // A11Y-05 / ERR-04: announced, and specific about what happened.
@@ -38,8 +42,7 @@ export function CheckoutOutcomeAlert({ outcome, locale, messages }: CheckoutOutc
       <h2 className="text-fg text-sm font-medium">{titleFor(outcome, t)}</h2>
       <p className="text-fg-muted mt-1 text-sm">{bodyFor(outcome, locale, t)}</p>
 
-      {/* Both of these are fixed in the BAG, so that is where the way out goes. */}
-      {outcome.kind === 'RESERVATION_EXPIRED' || outcome.kind === 'MEASUREMENTS_CHANGED' ? (
+      {offersBag ? (
         <div className="mt-3">
           <ButtonLink href={ROUTES.bag} variant="secondary">
             {t.backToBag}
@@ -50,10 +53,8 @@ export function CheckoutOutcomeAlert({ outcome, locale, messages }: CheckoutOutc
   );
 }
 
-function titleFor(outcome: PlaceOrderResult, t: Messages['checkout']): string {
+function titleFor(outcome: CheckoutOutcome, t: Messages['checkout']): string {
   switch (outcome.kind) {
-    case 'PLACED':
-      return '';
     case 'RESERVATION_EXPIRED':
       return t.expiredTitle;
     case 'PRICE_CHANGED':
@@ -62,15 +63,15 @@ function titleFor(outcome: PlaceOrderResult, t: Messages['checkout']): string {
       return t.measurementsChangedTitle;
     case 'PAYMENT_FAILED':
       return t.failedTitle;
+    case 'UNCONFIRMED':
+      return t.unconfirmedTitle;
     default:
       return assertNever(outcome);
   }
 }
 
-function bodyFor(outcome: PlaceOrderResult, locale: Locale, t: Messages['checkout']): string {
+function bodyFor(outcome: CheckoutOutcome, locale: Locale, t: Messages['checkout']): string {
   switch (outcome.kind) {
-    case 'PLACED':
-      return '';
     case 'RESERVATION_EXPIRED':
       // I18N-06: the locale's own list conjunction, not a hard-coded comma.
       return formatTemplate(t.expiredBody, { items: formatList(outcome.expiredItems, locale) });
@@ -83,6 +84,9 @@ function bodyFor(outcome: PlaceOrderResult, locale: Locale, t: Messages['checkou
     case 'PAYMENT_FAILED':
       // ERR-11: the backend's own reason, which is authored copy on that side.
       return outcome.reason;
+    case 'UNCONFIRMED':
+      // ERR-02: no answer, so neither "not placed" nor "nothing charged" is known.
+      return t.unconfirmedBody;
     default:
       return assertNever(outcome);
   }

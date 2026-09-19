@@ -3,9 +3,12 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 import { ErrorState } from '@/components/shared/ErrorState';
+import { HELP_PAGE_SLUGS, ROUTES } from '@/config/routes';
 import { fetchProduct, fetchProductAvailability, ProductScreen } from '@/features/catalogue';
+import { fetchHelpPage, InlineHelpPage } from '@/features/content';
 import { fetchTryOnOffer, ProductTryOn } from '@/features/try-on';
 import { getLocale, getMessages } from '@/i18n';
+import { localeAlternates } from '@/lib/utils/locale-alternates';
 import { logApiError } from '@/lib/utils/log';
 
 export interface ProductPageProps {
@@ -13,35 +16,32 @@ export interface ProductPageProps {
   params: Promise<{ slug: string }>;
 }
 
-/**
- * NEXT-11 / §30.5 — the product's own name and description, not a template. The
- * second read hits the cache entry the route below fills, so it is cheap.
- */
+/** NEXT-11 / §30.5 — name, description and canonical, off the cached read the route shares. */
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const locale = await getLocale();
+  const [{ slug }, locale] = await Promise.all([params, getLocale()]);
   const [messages, product] = await Promise.all([getMessages(), fetchProduct(slug, locale)]);
 
   if (!product.ok || product.value === null) return { title: messages.product.notFoundHeading };
 
-  return { title: product.value.name, description: product.value.description };
+  const { name, description } = product.value;
+  const path = ROUTES.catalogue.detail(slug);
+  return { title: name, description, alternates: localeAlternates(path, locale) };
 }
 
 /**
  * STRUCT-02 — the route composes; it does not implement. Architecture 8.2 as
- * reads with different caching intents: the product projection caches for hours,
- * the per-size availability overlay not at all, §24's try-on offer for a minute.
+ * reads with different caching intents: the product projection and §21's size
+ * guide are cached, the per-size availability overlay is not, §24's offer briefly.
  */
 export default async function ProductPage({ params }: ProductPageProps) {
-  const { slug } = await params;
+  const [{ slug }, locale] = await Promise.all([params, getLocale()]);
 
-  const locale = await getLocale();
-
-  // PERF-02: three independent reads, never a waterfall.
-  const [messages, product, offer] = await Promise.all([
+  // PERF-02: four independent reads, never a waterfall.
+  const [messages, product, offer, sizeGuide] = await Promise.all([
     getMessages(),
     fetchProduct(slug, locale),
     fetchTryOnOffer(),
+    fetchHelpPage(HELP_PAGE_SLUGS.sizeGuide, locale),
   ]);
 
   if (!product.ok) {
@@ -49,8 +49,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     return <ErrorState className="m-gutter" message={messages.errors.network} />;
   }
 
-  // A slug matching nothing is ordinary, not an error — people follow stale
-  // links. `notFound()` renders the 404 rather than a "cannot reach store" lie.
+  // A stale link matching nothing is ordinary: the 404, not a "cannot reach store" lie.
   if (product.value === null) notFound();
 
   const availability = await fetchProductAvailability(product.value.id);
@@ -74,6 +73,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           messages={messages}
         />
       }
+      sizeGuide={<InlineHelpPage read={sizeGuide} messages={messages} />}
     />
   );
 }

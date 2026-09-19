@@ -24,8 +24,12 @@
   --color-accent-400: oklch(0.82 0.11 75);
   --color-accent-500: oklch(0.74 0.13 75);
 
-  /* Status */
-  --color-danger-500: oklch(0.58 0.2 25);
+  /* Status. The danger red is TEXT in about twenty-five places (every field error,
+     every refusal), so its lightness is solved for A11Y-07's 4.5:1 on the
+     strongest surface it can sit on, not picked: at 0.58 it measured 3.86:1 on
+     surface-strong here and 3.08:1 in dark mode. 0.52 gives at least 4.95:1 on
+     all three light surfaces; the dark theme redefines it below. */
+  --color-danger-500: oklch(0.52 0.19 25);
   --color-success-500: oklch(0.6 0.13 150);
 
   /*
@@ -329,6 +333,57 @@ body:has([data-hero]) header[data-scrolled='false']::before {
 
 @utility product-card {
   container-type: inline-size;
+}
+
+/*
+ * The card's secondary detail — piece count, metreage, sold out — rising over
+ * the lower image on intent (`ProductCardReveal`): a 220ms ease-out fade and a
+ * 0.75rem rise, in both directions.
+ *
+ * CSS rather than an animation library (PERF-10): this was the only use of
+ * `motion` in the store, about 45 kB gzipped on every page with a card on it,
+ * for one fade. The panel is always rendered and hidden with `visibility`,
+ * which takes it out of the accessibility tree while it is concealed, as
+ * unmounting it did. `visibility` switches at once on the way in and only after
+ * the fade on the way out, so the exit is seen rather than cut off.
+ */
+@utility card-reveal {
+  opacity: 0;
+  translate: 0 0.75rem;
+  visibility: hidden;
+  transition:
+    opacity 220ms ease-out,
+    translate 220ms ease-out,
+    visibility 0s linear 220ms;
+
+  &[data-revealed='true'] {
+    opacity: 1;
+    translate: 0 0;
+    visibility: visible;
+    transition:
+      opacity 220ms ease-out,
+      translate 220ms ease-out,
+      visibility 0s linear 0s;
+  }
+
+  /* A11Y-10 — the fade stays; only the travel goes. */
+  @media (prefers-reduced-motion: reduce) {
+    translate: 0 0;
+  }
+}
+
+/*
+ * Said only where nothing can hover. The reveal above carries the metreage on
+ * intent — a pointer resting on the tile, or focus — and a touch screen has
+ * neither, so §28.1's metreage never reached a phone. Under `(hover: none)` the
+ * card's strip says it instead; where the reveal can be had, it is not said twice.
+ */
+@utility card-touch-only {
+  display: none;
+
+  @media (hover: none) {
+    display: inline;
+  }
 }
 
 /*
@@ -741,7 +796,11 @@ body:has([data-hero]) header[data-scrolled='false']::before {
    */
   padding: 0.5rem;
   text-align: center;
-  background: linear-gradient(to top, color-mix(in oklab, black 85%, transparent), transparent);
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, var(--color-media-scrim) 85%, transparent),
+    transparent
+  );
   animation: card-tray-rise 200ms ease-out both;
 }
 
@@ -1591,6 +1650,8 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   --dark-fg: oklch(0.96 0.005 90);
   --dark-fg-muted: oklch(0.72 0.008 90);
   --dark-border: oklch(0.34 0.009 90);
+  /* At least 5.11:1 on all three dark surfaces. */
+  --dark-danger: oklch(0.7 0.15 25);
 }
 
 /*
@@ -1610,6 +1671,7 @@ body:has([data-hero]) header[data-scrolled='false']::before {
     --color-fg: var(--dark-fg);
     --color-fg-muted: var(--dark-fg-muted);
     --color-border: var(--dark-border);
+    --color-danger-500: var(--dark-danger);
   }
 }
 
@@ -1620,6 +1682,7 @@ body:has([data-hero]) header[data-scrolled='false']::before {
   --color-fg: var(--dark-fg);
   --color-fg-muted: var(--dark-fg-muted);
   --color-border: var(--dark-border);
+  --color-danger-500: var(--dark-danger);
 }
 
 /*
@@ -1866,6 +1929,139 @@ input[type='search']::-webkit-search-decoration {
       translate: 0 0;
       scale: 1;
     }
+  }
+}
+
+/*
+ * The WHOLE-SCREEN modal of `FullscreenDialog`, the third sibling of
+ * `slide-over` and `modal-dialog`: a product's photographs, as large as the
+ * screen allows.
+ *
+ * The element's defaults are undone the way `slide-over` undoes them — a
+ * `<dialog>` arrives centred, bordered and sized to its content — and the panel
+ * fills the screen in the theme's own surface, so the bar, the arrows and the
+ * position line keep the contrast they have on every other surface, in both
+ * themes, whatever the photograph looks like.
+ *
+ * Nothing here sets `touch-action`, on purpose (§30.3): pinch-zoom is the very
+ * gesture this view exists for on a phone.
+ */
+@utility fullscreen-dialog {
+  max-inline-size: 100%;
+  max-block-size: 100%;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+
+  /* The panel covers the page completely; the UA's grey tint would only show,
+     un-faded, during the panel's own fade. */
+  &::backdrop {
+    background-color: transparent;
+  }
+
+  & > .fullscreen-dialog-panel {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    background-color: var(--color-surface);
+
+    /*
+     * ENTRY AND EXIT: a fade and nothing else. The panel covers the whole page,
+     * so any travel would move everything the customer is looking at. The fade
+     * stays under reduced motion, on the `modal-dialog` precedent — something
+     * appearing from nothing is harder to follow than something that arrives.
+     */
+    opacity: 0;
+    transition: opacity 180ms ease;
+  }
+
+  &[open] > .fullscreen-dialog-panel {
+    opacity: 1;
+  }
+
+  &[data-closing] > .fullscreen-dialog-panel {
+    opacity: 0;
+  }
+}
+
+/* The arriving state, unlayered for the reason given above `modal-dialog`'s. */
+@starting-style {
+  .fullscreen-dialog[open] > .fullscreen-dialog-panel {
+    opacity: 0;
+  }
+}
+
+/*
+ * §28.2's DESKTOP MAGNIFIER, on the product page's main frame.
+ *
+ * The photograph scales up IN PLACE about the point under the pointer.
+ * `--magnifier-x` and `--magnifier-y` are written by `GalleryFrame` as the
+ * pointer moves (STY-01a: a pointer position is a runtime value no class can
+ * enumerate). A scale is a transform, so nothing else on the page moves
+ * (PERF-08), and the frame's own clip keeps the enlargement inside its box.
+ *
+ * It is the SAME image the page already loaded, not a second download: on a
+ * device that can magnify, `GalleryFrame`'s `sizes` asks for twice the frame's
+ * drawn width, so a scale of 2 has the pixels to show. The factor here and that
+ * `sizes` have to agree.
+ *
+ * Only where the PRIMARY pointer hovers finely. A touchscreen has no hover to
+ * follow, and a tap opens the full-screen view instead; a touch laptop whose
+ * primary input is its trackpad still magnifies. A keyboard never produces
+ * `:hover`, so a keyboard user gets the full-screen view — the larger picture
+ * anyway — from the same button.
+ */
+@utility gallery-frame {
+  --magnifier-scale: 2;
+  --magnifier-x: 50%;
+  --magnifier-y: 50%;
+
+  & .gallery-frame-image {
+    transform-origin: var(--magnifier-x) var(--magnifier-y);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover .gallery-frame-image {
+      scale: var(--magnifier-scale);
+    }
+
+    /* The expand mark would sit over the enlarged cloth; it returns on leaving. */
+    &:hover .gallery-frame-hint {
+      opacity: 0;
+    }
+  }
+}
+
+/*
+ * The zoom eases in and out only for a reader who has not asked for less motion
+ * (A11Y-10). Granted inside `no-preference` rather than removed under `reduce`,
+ * so there is no override to lose a specificity contest. Following the pointer
+ * is never animated at all: the origin is not transitioned, so the enlargement
+ * tracks the hand directly rather than drifting after it.
+ */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .gallery-frame .gallery-frame-image {
+    transition: scale 200ms ease-out;
+  }
+
+  .gallery-frame .gallery-frame-hint {
+    transition: opacity 150ms ease;
+  }
+}
+
+/*
+ * The full-screen view's thumbnails, which step aside on a SHORT screen. A phone
+ * on its side is about 390px tall: after the bar, the position line and an 80px
+ * strip, the photograph would be left about 200px — smaller than it was on the
+ * page. The swipe, the arrows and the keys still reach every frame.
+ */
+@utility gallery-strip {
+  @media (max-height: 30rem) {
+    display: none;
   }
 }
 
@@ -2902,7 +3098,8 @@ ellipse.gf-mark--active {
       .mm-choices,
       .mm-card-note-controls,
       .mm-saved,
-      .mm-product
+      .mm-product,
+      .mm-load-failure
     ),
   .mm-scene[data-focused] form > :not(fieldset, .mm-stepper),
   .mm-scene[data-focused] .mm-scene-caption:not(:has(.mm-scene-readout)) {

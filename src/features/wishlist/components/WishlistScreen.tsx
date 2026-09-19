@@ -1,20 +1,11 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-
-import { ButtonLink } from '@/components/ui/button';
-import { ROUTES } from '@/config/routes';
-import { ProductGrid } from '@/features/catalogue/contract';
-import { useSession } from '@/features/auth';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
-import { queryKeys } from '@/lib/api/query-keys';
-import { unwrap } from '@/lib/result';
-import { formatPlural } from '@/lib/utils/format';
 
-import { fetchSavedProducts } from '../api/fetch-saved-products';
-import { useWishlist } from '../hooks/use-wishlist';
-import { useCarriedFromThisBrowser } from './SavedItemsProvider';
+import { useMoveToBag } from '../hooks/use-move-to-bag';
+import { WishlistContents } from './WishlistContents';
+import { WishlistMoveNotice } from './WishlistMoveNotice';
 
 export interface WishlistScreenProps {
   locale: Locale;
@@ -22,113 +13,27 @@ export interface WishlistScreenProps {
 }
 
 /**
- * §28.3's saved items — the account's.
+ * §28.3's saved items — "save, view, move to bag" — the account's.
  *
  * A CLIENT screen, because the list is read through the BFF the heart writes to,
  * and because the grid it renders is the catalogue's own client card. The list
- * itself belongs to the customer now and follows them between devices.
+ * itself belongs to the customer and follows them between devices.
  *
- * It is offered only to a SIGNED-IN customer, because the heart is. Showing a
- * guest an empty saved list they were never allowed to fill would be a page
- * apologising for a control it also hides.
+ * Adding a saved product to the bag here MOVES it (`useMoveToBag`). The quick add
+ * is the catalogue's own, one unified size for every piece as on any card; what
+ * differs is what happens once the bag has taken the product. Elsewhere the bag
+ * panel opens over the page. Here the product leaves this list, and the page says
+ * so itself, above the list — a modal would make the page behind it inert, and the
+ * announcement with it, and a customer moving several saved items would be
+ * dismissing a panel between each.
  */
 export function WishlistScreen({ locale, messages }: WishlistScreenProps) {
-  const t = messages.wishlist;
-  const { isSignedIn } = useSession();
-  const { ids, isReady, isUnreadable } = useWishlist();
-  const carriedFromThisBrowser = useCarriedFromThisBrowser();
-
-  const saved = useQuery({
-    queryKey: queryKeys.wishlist.products(ids, locale),
-    queryFn: ({ signal }) => unwrap(fetchSavedProducts(ids, locale, signal)),
-    /*
-     * Not until the ids have been read. `ids` is empty on the first render by
-     * design — it is read in an effect so the server and client renders agree —
-     * so firing now would ask for nothing and cache the answer.
-     */
-    enabled: isReady && isSignedIn && ids.length > 0,
-    staleTime: 30 * 1000,
-    retry: false,
-  });
-
-  if (!isSignedIn) {
-    return (
-      <div className="flex flex-col items-start gap-3 py-16">
-        <h2 className="text-fg text-lg font-medium">{t.signedOutHeading}</h2>
-        <p className="text-fg-muted">{t.signedOutBody}</p>
-        <ButtonLink href={ROUTES.signIn} variant="primary">
-          {messages.auth.signInCta}
-        </ButtonLink>
-      </div>
-    );
-  }
-
-  // `isReady` distinguishes an empty list from one that has not been read yet;
-  // without it the page would flash "nothing saved" on every load.
-  if (!isReady || (ids.length > 0 && saved.isPending)) {
-    return <p className="text-fg-muted py-16 text-sm">{messages.common.loading}</p>;
-  }
-
-  /*
-   * Two different reads, one sentence: the account's LIST could not be read, or
-   * the products on it could not be. Either way the customer is told we could
-   * not load their saved items — never that they have none, which is what an
-   * empty list here would say and would be false.
-   */
-  if (isUnreadable || saved.isError) {
-    return <p className="text-fg-muted py-16 text-sm">{t.unreachable}</p>;
-  }
-
-  const entries = saved.data ?? [];
-
-  if (entries.length === 0) {
-    return (
-      <div className="flex flex-col items-start gap-3 py-16">
-        <h2 className="text-fg text-lg font-medium">{t.emptyHeading}</h2>
-        <p className="text-fg-muted">{t.emptyBody}</p>
-        <ButtonLink href={ROUTES.catalogue.list} variant="secondary">
-          {messages.catalogue.browseAll}
-        </ButtonLink>
-      </div>
-    );
-  }
+  const move = useMoveToBag(messages);
 
   return (
-    <div className="flex flex-col gap-4">
-      {/*
-       * A list built before signing in has just been handed to the account.
-       * Said out loud, because the customer did not ask for it and would
-       * otherwise find items here they only ever saved on one browser.
-       */}
-      {carriedFromThisBrowser > 0 ? (
-        <p className="text-fg-muted text-sm">
-          <bdi>{formatPlural(t.carried, carriedFromThisBrowser, locale)}</bdi>
-        </p>
-      ) : null}
-
-      {/* I18N-07: the count goes through the locale's plural rules. */}
-      <p className="text-fg-muted text-sm">
-        <bdi>{formatPlural(t.savedCount, entries.length, locale)}</bdi>
-      </p>
-
-      {/*
-       * Fewer products came back than were asked for, which means one has been
-       * withdrawn from sale since it was saved. Said plainly rather than left
-       * as a list that quietly shrank — the customer chose those items and is
-       * owed an explanation for a missing one.
-       */}
-      {entries.length < ids.length ? (
-        <p className="text-fg-muted text-sm">
-          <bdi>{formatPlural(t.withdrawn, ids.length - entries.length, locale)}</bdi>
-        </p>
-      ) : null}
-
-      {/*
-       * The SAME grid and the same card as the catalogue, so the heart, the
-       * quick add and the frame carousel all work here for free (PD-01) —
-       * including un-hearting, which removes the item from this very page.
-       */}
-      <ProductGrid entries={entries} locale={locale} messages={messages} />
-    </div>
+    <>
+      <WishlistMoveNotice status={move.status} focusRef={move.focusRef} messages={messages} />
+      <WishlistContents locale={locale} messages={messages} onAddedToBag={move.moved} />
+    </>
   );
 }

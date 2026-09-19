@@ -1,116 +1,87 @@
 'use client';
 
-import { useRef, useState, type FormEvent } from 'react';
+import { useState } from 'react';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/config/routes';
+import { useLatchedSubmit } from '@/hooks/use-latched-submit';
 import type { Messages } from '@/i18n/messages/en';
+import { onDemandResolver } from '@/lib/utils/on-demand-resolver';
 
 import { signInWithPasswordAction } from '../actions';
-import { passwordSignInSchema, type PasswordSignInInput } from '../schemas/auth.schema';
+import { authRefusal } from '../lib/auth-failure';
+import type { PasswordSignInInput } from '../schemas/auth.schema';
+import { AuthRefusal } from './AuthRefusal';
+import { PasswordSignInFields } from './PasswordSignInFields';
+
+/*
+ * Deliberate code split (IMP-01a, PERF-10): the form's validation is fetched when
+ * it is first focused rather than with the page (`onDemandResolver` has the
+ * reasoning).
+ */
+const validation = onDemandResolver<PasswordSignInInput>(() =>
+  Promise.all([import('@hookform/resolvers/zod'), import('../schemas/auth.schema')]).then(
+    ([{ zodResolver }, { passwordSignInSchema }]) => zodResolver(passwordSignInSchema),
+  ),
+);
+
+export interface PasswordSignInFormProps {
+  messages: Messages;
+  /** Where to land once signed in — already allow-listed by the page (SEC-06). */
+  returnTo: string | null;
+}
 
 /**
  * §11 `authenticate(email, password)`.
  *
  * FORM-01/FORM-02: one Zod schema, React Hook Form, `zodResolver`.
  *
- * Every failure renders the SAME sentence, and that is the point rather than
+ * Every REFUSAL renders the same sentence, and that is the point rather than
  * laziness: §11 requires that "authentication responses never reveal whether an
  * account exists". A form that said "no account with that email" for one case
  * and "wrong password" for another would answer the question an attacker is
- * actually asking.
+ * actually asking. A store that could not be reached is not a refusal, though,
+ * and says so (`authRefusal`) rather than telling the customer their details
+ * were wrong.
  */
-export function PasswordSignInForm({ messages }: { messages: Messages }) {
+export function PasswordSignInForm({ messages, returnTo }: PasswordSignInFormProps) {
   const t = messages.auth;
   const router = useRouter();
   const [refusal, setRefusal] = useState<string | null>(null);
-  // FORM-06, synchronously: `isSubmitting` only flips after a re-render.
-  const inFlight = useRef(false);
 
   const form = useForm<PasswordSignInInput>({
-    resolver: zodResolver(passwordSignInSchema),
+    resolver: validation.resolver,
     defaultValues: { email: '', password: '' },
   });
 
-  async function onSubmit(input: PasswordSignInInput): Promise<void> {
+  // FORM-06: one submission at a time, released however validation went.
+  const handleSubmit = useLatchedSubmit(form, async (input) => {
     setRefusal(null);
     const result = await signInWithPasswordAction(input);
 
     if (!result.ok) {
-      // ERR-11: our copy, never the upstream text (SEC-07).
-      setRefusal(result.error.kind === 'RATE_LIMITED' ? t.tooManyAttempts : t.signInRefused);
+      setRefusal(authRefusal(result.error, t.signInRefused, messages));
       return;
     }
-
     // The session cookie is set; a refresh makes the server re-read it.
-    router.push(ROUTES.home);
+    router.push(returnTo ?? ROUTES.home);
     router.refresh();
-  }
-
-  /*
-   * FORM-06, and the `.finally` is load-bearing.
-   *
-   * An earlier version set the latch here and cleared it inside `onSubmit` —
-   * which never runs when validation fails, so one mismatched password left the
-   * form permanently stuck: the corrected submit was swallowed by a latch
-   * nothing would ever release. `handleSubmit(...)()` resolves on every path,
-   * valid or not, so clearing it there cannot be skipped.
-   */
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-    if (inFlight.current) {
-      event.preventDefault();
-      return;
-    }
-
-    inFlight.current = true;
-    void form
-      .handleSubmit(onSubmit)(event)
-      .finally(() => {
-        inFlight.current = false;
-      });
-  }
+  });
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-      <Field
-        id="email"
-        label={t.emailLabel}
-        error={form.formState.errors.email === undefined ? undefined : t.emailInvalid}
-      >
-        {(aria) => (
-          <Input {...aria} type="email" autoComplete="email" {...form.register('email')} />
-        )}
-      </Field>
+    <form
+      onSubmit={handleSubmit}
+      onFocus={validation.warmUp}
+      noValidate
+      className="flex flex-col gap-4"
+    >
+      <PasswordSignInFields form={form} messages={messages} />
 
-      <Field
-        id="password"
-        label={t.passwordLabel}
-        error={form.formState.errors.password === undefined ? undefined : t.passwordTooShort}
-      >
-        {/* SEC-01: `current-password` so a manager fills it; never echoed back. */}
-        {(aria) => (
-          <Input
-            {...aria}
-            type="password"
-            autoComplete="current-password"
-            {...form.register('password')}
-          />
-        )}
-      </Field>
-
-      {refusal === null ? null : (
-        // A11Y-05 / ERR-04: announced, not only shown.
-        <p role="alert" className="text-danger-500 text-sm">
-          {refusal}
-        </p>
-      )}
+      <AuthRefusal message={refusal} />
 
       <Button type="submit" size="lg" isLoading={form.formState.isSubmitting}>
         {t.signInCta}
@@ -120,7 +91,8 @@ export function PasswordSignInForm({ messages }: { messages: Messages }) {
         <Link href={ROUTES.forgotPassword} className="text-fg-muted hover:text-fg underline">
           {t.forgotPassword}
         </Link>
-        <Link href={ROUTES.signUp} className="text-fg-muted hover:text-fg underline">
+        {/* The way back travels on to sign-up, so creating an account returns too. */}
+        <Link href={ROUTES.signUpFrom(returnTo)} className="text-fg-muted hover:text-fg underline">
           {t.noAccount}
         </Link>
       </div>

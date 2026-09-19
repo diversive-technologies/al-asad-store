@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { FACET_KEYS, SORT_OPTIONS } from '../lib/search-options';
 import { productCardSchema } from './product-card.schema';
 
 /**
@@ -12,25 +13,18 @@ import { productCardSchema } from './product-card.schema';
  */
 
 /**
- * TS-10: an `as const` list, not an enum.
- *
- * `RELEVANCE` is deliberately in the list but is only meaningful with a search
- * term — ranking an unfiltered browse by relevance to nothing is not a sort.
- * `parseCatalogueQuery` demotes it to the default when no term is present, so
- * the invalid combination cannot reach the backend.
- *
- * "Best selling" is absent on purpose: there are no delivered orders at launch,
- * which is the same reason section 28.6 defers reviews.
+ * The query's vocabulary — sorts, page size, facet keys — is declared in
+ * `lib/search-options.ts`, which carries no Zod (its header says why), and is
+ * re-exported here so the contract is still read in one place.
  */
-export const SORT_OPTIONS = ['NEWEST', 'PRICE_ASC', 'PRICE_DESC', 'RELEVANCE'] as const;
-export type SortOption = (typeof SORT_OPTIONS)[number];
-
-export const DEFAULT_SORT: SortOption = 'NEWEST';
-export const DEFAULT_PAGE_SIZE = 24;
-
-/** The six filter groups of section 28.1 — no more, per ADR 15. */
-export const FACET_KEYS = ['fabric', 'colour', 'garmentType', 'pieceCount'] as const;
-export type FacetKey = (typeof FACET_KEYS)[number];
+export {
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_SORT,
+  FACET_KEYS,
+  SORT_OPTIONS,
+  type FacetKey,
+  type SortOption,
+} from '../lib/search-options';
 
 /**
  * A facet value with its count in the CURRENT filter context (section 15). The
@@ -75,10 +69,28 @@ export type SearchFacets = z.infer<typeof searchFacetsSchema>;
 export const resultPageSchema = z.object({
   products: z.array(productCardSchema),
   totalCount: z.number().int().nonnegative(),
+  /**
+   * The page the backend actually SERVED, which is not always the page asked
+   * for: a request past the last page is answered with the last one. Pagination
+   * is drawn from this, never from the address (see `servedQuery`).
+   */
   page: z.number().int().positive(),
   pageSize: z.number().int().positive(),
   totalPages: z.number().int().nonnegative(),
   facets: searchFacetsSchema.nullable(),
+  /**
+   * The collection the results are scoped to, named as the backend names it
+   * (§12 `listByCollection`), or `null` when they are not scoped — or when the
+   * collection asked for does not exist, in which case there are no results
+   * either. The name arrives localised; the frontend never derives it from the
+   * slug (I18N-09).
+   */
+  collection: z
+    .object({
+      slug: z.string().min(1),
+      name: z.string().min(1),
+    })
+    .nullable(),
 });
 
 export type ResultPage = z.infer<typeof resultPageSchema>;
@@ -102,6 +114,14 @@ export const catalogueQuerySchema = z.object({
   priceMinMinor: z.number().int().nonnegative().nullable(),
   priceMaxMinor: z.number().int().nonnegative().nullable(),
   inStockOnly: z.boolean(),
+  /**
+   * §12 `listByCollection(collection, paging)` — a Catalogue collection the
+   * listing is scoped to, by slug, or `null` for the whole catalogue. Not one of
+   * the six filters of §28.1: it is the scope they narrow, which is why a
+   * homepage rail's "View all" and the search panel's merchandising can hand a
+   * reader to exactly the products they were shown.
+   */
+  collection: z.string().min(1).nullable(),
   sort: z.enum(SORT_OPTIONS),
   page: z.number().int().positive(),
 });
@@ -141,6 +161,17 @@ export const suggestionsSchema = z.object({
    * does not render the section.
    */
   refinements: z.array(searchRefinementSchema),
+  /**
+   * The collection the products are drawn from when the backend MERCHANDISED
+   * them — the empty box's best sellers — rather than matched them against a
+   * term. It is what the panel's "View all" opens, so the listing a reader lands
+   * on holds the products they were just shown. `null` when the products are
+   * matches, and then "View all" carries the search instead.
+   *
+   * Which collection that is belongs to the operator (§21), so the interface
+   * names none of them (D5).
+   */
+  collection: z.string().min(1).nullable(),
 });
 
 export type Suggestions = z.infer<typeof suggestionsSchema>;

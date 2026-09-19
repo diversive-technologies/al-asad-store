@@ -2,15 +2,27 @@
 
 import { useState } from 'react';
 
+import { LoadingNotice } from '@/components/shared/LoadingNotice';
+import { OnDemand } from '@/components/shared/OnDemand';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { onDemandPart } from '@/hooks/use-on-demand';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 import type { ProductId } from '@/lib/domain/ids';
 import { Sparkles } from '@/lib/vendor/icons';
 
 import type { TryOnOffer } from '../schemas/try-on.schema';
-import { TryOnPanel } from './TryOnPanel';
+
+/*
+ * Deliberate code split (IMP-01a, PERF-06, PERF-10): the panel — guidance, the
+ * photo picker, the waiting state, the result, and the request with its schema
+ * (and so Zod) — was first-load JavaScript on every product page, for a dialog
+ * most visits never open. It is fetched when the customer reaches for the button
+ * and drawn when the dialog opens; the dialog itself opens at once, and a
+ * download that fails says so inside it with Try again (`useOnDemand`).
+ */
+const panel = onDemandPart(() => import('./TryOnPanel'));
 
 export interface TryOnLauncherProps {
   productId: ProductId;
@@ -52,6 +64,9 @@ export function TryOnLauncher({
         variant="secondary"
         size="lg"
         onClick={() => setIsOpen(true)}
+        onPointerEnter={panel.warm}
+        onFocus={panel.warm}
+        onTouchStart={panel.warm}
         className="w-full"
       >
         {/* A11Y-05: decorative beside a real label, so it is hidden rather than
@@ -71,13 +86,17 @@ export function TryOnLauncher({
          * shut.
          */}
         {isOpen ? (
-          <TryOnPanel
-            productId={productId}
-            productName={productName}
-            offer={offer}
-            locale={locale}
-            messages={messages}
-          />
+          <OnDemand part={panel} loading={<LoadingNotice />}>
+            {(loaded) => (
+              <loaded.TryOnPanel
+                productId={productId}
+                productName={productName}
+                offer={offer}
+                locale={locale}
+                messages={messages}
+              />
+            )}
+          </OnDemand>
         ) : null}
       </Dialog>
     </div>

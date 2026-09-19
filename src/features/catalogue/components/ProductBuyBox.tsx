@@ -1,24 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import type { ReactNode } from 'react';
 
 import { AddToBagButton } from '@/features/bag/contract';
-import type { PieceId, SizeId } from '@/lib/domain/ids';
+import { RememberSizeOffer, useSavedSizes } from '@/features/saved-sizes/contract';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 import { formatMoneyMinor } from '@/lib/utils/format';
 
-import {
-  applyUnifiedSize,
-  initialSelection,
-  isSelectionComplete,
-  setPieceSize,
-  sizeStatus,
-  unifiedSizeOf,
-} from '../lib/size-selection';
+import { useBuySelection } from '../hooks/use-buy-selection';
+import { chosenSizeOf } from '../lib/saved-size-prefill';
+import { bagSelectionsOf } from '../lib/size-selection';
 import type { ProductDetailAvailability } from '../schemas/piece-availability.schema';
 import type { ProductDetail } from '../schemas/product-detail.schema';
-import { SizeSelector } from './SizeSelector';
+import { ProductSizing } from './ProductSizing';
 
 export interface ProductBuyBoxProps {
   product: ProductDetail;
@@ -26,6 +21,8 @@ export interface ProductBuyBoxProps {
   availability: ProductDetailAvailability | null;
   locale: Locale;
   messages: Messages;
+  /** §28.2's size guide, drawn beside the size selectors — see `ProductSizing`. */
+  sizeGuide: ReactNode;
 }
 
 /**
@@ -33,46 +30,34 @@ export interface ProductBuyBoxProps {
  *
  * "A SIMPLE product shows one size selector and nothing else; a SET shows the
  * unified selector plus the per-piece override panel." That branch reads the
- * DECLARED `product.type` (DATA-13a) — never `pieces.length`. §6.1 is explicit
- * that a SIMPLE product still has one Piece row, so counting would give the
- * right answer today and the wrong one the moment a one-piece SET existed as a
- * draft or a data error.
+ * DECLARED `product.type` (DATA-13a) — never `pieces.length` (`ProductSizing`).
  *
- * All the selection arithmetic lives in `lib/size-selection.ts` (MOD-04). This
- * component owns the state and draws the controls; it decides nothing.
+ * All the selection arithmetic lives in `lib/` (MOD-04) and the choice itself in
+ * `useBuySelection`, which is also where §28.3's saved sizes pre-fill it. This
+ * component draws the controls; it decides nothing.
  *
- * STATE-01 rung 2: a half-made size choice is not shareable, not bookmarkable
- * and not back-button-relevant, so it stays local rather than going in the URL
- * the way filters do.
+ * MOD-01 — Add to bag is the bag's control, and "Remember this size" the saved
+ * sizes', each reached through its feature's client-safe barrel. The buy box owns
+ * the SELECTION; turning it into a reservation is §16's job and lives in
+ * `features/bag`. Its `request` is null until every piece that has sizes has one,
+ * which is §16's first invariant expressed as a type: there is no way to spell an
+ * add for a half-sized set. A piece with no size set is not named in it — the
+ * backend resolves its key (§7.1 step 1). A pre-filled size is a choice like any
+ * other: it adds nothing until the customer presses Add to bag.
  */
-export function ProductBuyBox({ product, availability, locale, messages }: ProductBuyBoxProps) {
-  const [selection, setSelection] = useState(() => initialSelection(product));
+export function ProductBuyBox({
+  product,
+  availability,
+  locale,
+  messages,
+  sizeGuide,
+}: ProductBuyBoxProps) {
   const t = messages.product;
-
-  /*
-   * A sold-out pair cannot be selected. When the overlay is unreadable every
-   * status is `null`, which is NOT sold out — the page degrades to letting the
-   * customer choose rather than refusing every size (§30.2).
-   */
-  const isSelectable = (pieceId: PieceId, sizeId: SizeId): boolean =>
-    sizeStatus(availability, pieceId, sizeId) !== 'SOLD_OUT';
-
-  // STATE-03: both derived during render rather than mirrored into state.
-  const unifiedSize = unifiedSizeOf(product, selection);
-  const isComplete = isSelectionComplete(product, selection, isSelectable);
+  const saved = useSavedSizes({ locale });
+  const buy = useBuySelection(product, availability, saved.sizeIds);
 
   // DATA-13: the backend's verdict for the product, not a scan of the pieces.
   const isSoldOut = availability?.status === 'SOLD_OUT';
-
-  const sizeableFirst = product.pieces.find((piece) => piece.sizes.length > 0);
-
-  function handleUnified(sizeId: SizeId): void {
-    setSelection((current) => applyUnifiedSize(product, current, sizeId, isSelectable));
-  }
-
-  function handlePiece(pieceId: PieceId, sizeId: SizeId): void {
-    setSelection((current) => setPieceSize(current, pieceId, sizeId));
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,92 +73,35 @@ export function ProductBuyBox({ product, availability, locale, messages }: Produ
         )}
       </div>
 
-      {product.type === 'SIMPLE' ? (
-        /*
-         * One selector and nothing else. The single piece is addressed directly
-         * rather than through the unified helper, because "unified" across one
-         * piece is just that piece.
-         */
-        sizeableFirst === undefined ? null : (
-          <SizeSelector
-            legend={t.selectSizeHeading}
-            groupId={sizeableFirst.id}
-            sizes={sizeableFirst.sizes}
-            selected={selection[sizeableFirst.id] ?? null}
-            onSelect={(sizeId) => {
-              handlePiece(sizeableFirst.id, sizeId);
-            }}
-            statusOf={(sizeId) => sizeStatus(availability, sizeableFirst.id, sizeId)}
-            messages={messages}
-          />
-        )
-      ) : (
-        <>
-          {sizeableFirst === undefined ? null : (
-            <SizeSelector
-              legend={t.unifiedSizeHeading}
-              groupId="unified"
-              sizes={sizeableFirst.sizes}
-              selected={unifiedSize}
-              onSelect={handleUnified}
-              statusOf={(sizeId) => sizeStatus(availability, sizeableFirst.id, sizeId)}
-              messages={messages}
-            />
-          )}
+      <ProductSizing
+        product={product}
+        availability={availability}
+        selection={buy.selection}
+        savedSizeIds={saved.sizeIds}
+        onUnified={buy.chooseUnified}
+        onPiece={buy.choosePiece}
+        sizeGuide={sizeGuide}
+      />
 
-          {/*
-           * The per-piece override panel. It lists every piece, including
-           * one-size ones — `SizeSelector` renders nothing for those, and the
-           * piece still needs naming under "what is included".
-           */}
-          <div className="border-border flex flex-col gap-4 border-t pt-4">
-            <h3 className="text-fg-muted text-sm font-medium">{t.perPieceHeading}</h3>
+      <RememberSizeOffer
+        size={chosenSizeOf(product, buy.selection)}
+        isPrefilled={buy.isPrefilled}
+        locale={locale}
+      />
 
-            {product.pieces.map((piece) => (
-              <SizeSelector
-                key={piece.id}
-                legend={piece.name}
-                groupId={piece.id}
-                sizes={piece.sizes}
-                selected={selection[piece.id] ?? null}
-                onSelect={(sizeId) => {
-                  handlePiece(piece.id, sizeId);
-                }}
-                statusOf={(sizeId) => sizeStatus(availability, piece.id, sizeId)}
-                messages={messages}
-              />
-            ))}
-          </div>
-        </>
-      )}
-
-      {/*
-       * MOD-01 — the bag's control, rendered as a slot rather than reached for.
-       * The buy box owns the SELECTION; turning that selection into a
-       * reservation is §16's job and lives in `features/bag`.
-       *
-       * `request` is null until every piece has a size, which is §16's first
-       * invariant expressed as a type: there is no way to spell an add for a
-       * half-sized set.
-       */}
       <AddToBagButton
         request={
-          isComplete
+          buy.isComplete
             ? {
                 productId: product.id,
-                selections: product.pieces.map((piece) => ({
-                  pieceId: piece.id,
-                  // `isComplete` guarantees this; the fallback keeps the type
-                  // honest rather than asserting with `!` (TS-05).
-                  sizeId: selection[piece.id] ?? piece.sizes[0]?.id ?? ('' as SizeId),
-                })),
+                selections: bagSelectionsOf(product, buy.selection),
                 quantity: 1,
               }
             : null
         }
         isSoldOut={isSoldOut}
         messages={messages}
-        disabledHint={isSoldOut ? t.productSoldOut : isComplete ? '' : t.chooseSizeFirst}
+        disabledHint={isSoldOut ? t.productSoldOut : buy.isComplete ? '' : t.chooseSizeFirst}
       />
     </div>
   );

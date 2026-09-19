@@ -1,7 +1,8 @@
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
 
-import { setInStockOnly, toQueryString } from '../lib/search-params';
+import { setInStockOnly } from '../lib/query-changes';
+import { toQueryString } from '../lib/search-params';
 import {
   FACET_KEYS,
   type CatalogueQuery,
@@ -45,11 +46,18 @@ function selectedValues(query: CatalogueQuery, facet: FacetKey): readonly string
  * zero. The groups vanish because there are no values to offer, and a notice
  * says so. Inventing a count would be a lie about the catalogue (DATA-13).
  *
- * On a small screen this rail is hidden and the SAME panel is rendered inside
- * `FilterDrawer` — a real `<dialog>`, because A11Y-08 requires a drawer to trap
- * focus, restore it on close and respond to Escape. That is why the drawer
- * waited for M4: the bag needed the identical primitive, and building it twice
- * would have been building the subtlest component in the project twice.
+ * It is rendered inside `FilterDrawer` — a real `<dialog>`, because A11Y-08
+ * requires a drawer to trap focus, restore it on close and respond to Escape.
+ * The drawer's dialog title already says "Filters", so there the heading is
+ * suppressed (`hideHeading`): two identical headings one above the other is
+ * noise on screen and a stutter to a screen reader, and the `aria-label` keeps
+ * the region named either way.
+ *
+ * The price form's two BOXES are keyed on the active range, so navigating to a
+ * different one — or removing the price chip — remounts them and they read their
+ * defaults again. That is what lets `PriceFilter` avoid mirroring URL state into
+ * `useState` and syncing it (STATE-04), and keying the boxes rather than the form
+ * keeps its Apply button, and the focus on it, through its own navigation.
  */
 export function FilterPanel({
   query,
@@ -63,12 +71,6 @@ export function FilterPanel({
 
   return (
     <aside aria-label={t.filtersHeading} className="flex flex-col">
-      {/*
-       * Suppressed inside the drawer, where the dialog's own title already says
-       * "Filters" — two identical headings one above the other is noise on
-       * screen and a stutter to a screen reader. The `aria-label` above keeps
-       * the region named either way.
-       */}
       {hideHeading ? null : (
         <h2 className="text-fg mb-1 text-sm font-semibold tracking-wide uppercase">
           {t.filtersHeading}
@@ -93,18 +95,7 @@ export function FilterPanel({
       )}
 
       <FilterDisclosure title={t.filterPrice}>
-        {/*
-         * The key is the active range, so navigating to a different one — or
-         * removing the price chip — remounts the form and its uncontrolled boxes
-         * read their defaults again. That is what lets `PriceFilter` avoid
-         * mirroring URL state into `useState` and syncing it (STATE-04).
-         */}
-        <PriceFilter
-          key={`${String(query.priceMinMinor)}-${String(query.priceMaxMinor)}`}
-          query={query}
-          basePath={basePath}
-          messages={messages}
-        />
+        <PriceFilter query={query} basePath={basePath} messages={messages} />
       </FilterDisclosure>
 
       <FilterDisclosure title={t.filterAvailability}>

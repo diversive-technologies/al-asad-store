@@ -1,7 +1,8 @@
-import { parseCatalogueQuery, suggest } from '@/features/catalogue';
+import { EMPTY_SUGGESTIONS, parseCatalogueQuery, suggest } from '@/features/catalogue';
 import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
+import { NO_STORE } from '@/lib/utils/route';
 
 /**
  * DATA-08 — a BFF, not a second backend.
@@ -53,10 +54,11 @@ export async function GET(request: Request): Promise<Response> {
      * Section 15: browsing must never depend on a secondary system being
      * healthy. An unreachable index costs the suggestions, not the search box —
      * the reader can still type and submit. So this is an empty result, not a
-     * 5xx, and certainly not the upstream error text (ERR-11, SEC-07).
+     * 5xx, and certainly not the upstream error text (ERR-11, SEC-07). It is the
+     * typed `EMPTY_SUGGESTIONS`, so it passes the schema the panel reads it with.
      */
-    return Response.json({ terms: [], products: [] }, { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json(EMPTY_SUGGESTIONS, { headers: NO_STORE });
   }
 
-  return Response.json(result.value, { headers: { 'Cache-Control': 'no-store' } });
+  return Response.json(result.value, { headers: NO_STORE });
 }

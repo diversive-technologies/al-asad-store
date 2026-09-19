@@ -1,10 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-
-import sharp from 'sharp';
-
 import { CATALOGUE, type CatalogueRecord } from './catalogue-db';
 import { toProductDetail } from './product-detail-db';
+import { correctWhiteBalance, garmentImage, toTryOnImage, type TryOnImage } from './try-on-images';
 import { imageModelProvider, type ImagePayload, type RenderFailure } from './try-on-provider';
 
 /**
@@ -54,15 +50,6 @@ const PROVIDER_TIMEOUT_MS = 30_000;
  */
 const MAX_PHOTO_BYTES = 8_000_000;
 const ACCEPTED_FORMATS = ['image/jpeg', 'image/png', 'image/webp'];
-
-/**
- * The longest edge sent to the provider.
- *
- * A modern phone photograph is 4000px on its long edge, which is several times
- * more than the model uses and pays for the difference in latency on a
- * connection this market is sensitive about (§30.1).
- */
-const MAX_EDGE_PX = 1024;
 
 /**
  * How long the SAMPLE result pretends to take, in milliseconds.
@@ -134,116 +121,18 @@ export function tryOnOffer(options: GenerateOptions): TryOnOfferPayload {
 }
 
 export type TryOnOutcome =
-  | { status: 'READY'; image: { dataUrl: string; widthPx: number; heightPx: number } }
+  | { status: 'READY'; image: TryOnImage }
+  /** The garment's own photograph standing in for a generation — and saying so. */
+  | { status: 'SAMPLE'; image: TryOnImage }
   | { status: 'UNAVAILABLE'; reason: RenderFailure }
-  /** Not a §24 outcome — a rejected upload is a 400, and the handler makes it one. */
+  /** Not a §24 outcome — a rejected upload is a 422, and the handler makes it one. */
   | { status: 'PHOTO_REJECTED' };
-
-/**
- * White balance, by the grey-world assumption: over a whole photograph the
- * channel means should be roughly equal, so the gains that equalise them undo
- * the cast of the light it was taken under.
- *
- * This is the step that makes the feature worth having in this market. Ethnic
- * apparel is bought on colour, most photographs are taken indoors under warm
- * tungsten or green-tinted fluorescent light, and an uncorrected photograph
- * would drag the garment's rendered colour toward the room's cast — turning a
- * bottle green waistcoat olive and making the try-on lie about the one
- * attribute the customer opened it to check.
- *
- * `rotate()` with no argument applies the EXIF orientation. Without it a
- * portrait taken on a phone arrives rotated, and every downstream judgement
- * about the person is made against a sideways image.
- */
-export async function correctWhiteBalance(photo: ImagePayload): Promise<ImagePayload | null> {
-  const input = Buffer.from(photo.bytes);
-
-  // ERR-05(1): sharp signals an unreadable or truncated image only by throwing.
-  // Converted to a value here; it does not propagate.
-  try {
-    const { channels } = await sharp(input).stats();
-    const [red, green, blue] = channels;
-
-    if (red === undefined || green === undefined || blue === undefined) return null;
-
-    const grey = (red.mean + green.mean + blue.mean) / 3;
-    // A fully black channel has no cast to correct and would divide by zero.
-    const gain = (mean: number): number => (mean <= 0 ? 1 : grey / mean);
-
-    const bytes = await sharp(input)
-      .rotate()
-      // `linear` takes one gain per channel, so alpha is flattened away first.
-      .flatten({ background: { r: 255, g: 255, b: 255 } })
-      .linear([gain(red.mean), gain(green.mean), gain(blue.mean)], [0, 0, 0])
-      .resize({ width: MAX_EDGE_PX, height: MAX_EDGE_PX, fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 90 })
-      .toBuffer();
-
-    return { bytes, mimeType: 'image/jpeg' };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * The garment's own photograph, converted out of AVIF.
- *
- * The conversion is required rather than tidy: the catalogue is stored as AVIF
- * and the provider does not accept it, so sending the file as it sits on disk
- * would fail every time. The path is composed from the catalogue's own record,
- * never from anything a caller supplied.
- */
-async function garmentImage(mediaUrl: string): Promise<ImagePayload | null> {
-  // ERR-05(1): `readFile` and sharp both signal only by throwing.
-  try {
-    const file = path.join(process.cwd(), 'public', mediaUrl);
-
-    const bytes = await sharp(await readFile(file))
-      .resize({ width: MAX_EDGE_PX, height: MAX_EDGE_PX, fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 90 })
-      .toBuffer();
-
-    return { bytes, mimeType: 'image/jpeg' };
-  } catch {
-    return null;
-  }
-}
-
-/** The provider returns bytes; the contract returns a data URL and its size. */
-async function toTryOnImage(image: ImagePayload): Promise<TryOnOutcome> {
-  // ERR-05(1): sharp throws on an image it cannot read.
-  try {
-    const { width, height } = await sharp(image.bytes).metadata();
-
-    if (width === undefined || height === undefined) {
-      return { status: 'UNAVAILABLE', reason: 'PROVIDER_FAILED' };
-    }
-
-    const base64 = Buffer.from(image.bytes).toString('base64');
-
-    return {
-      status: 'READY',
-      image: {
-        dataUrl: `data:${image.mimeType};base64,${base64}`,
-        widthPx: width,
-        heightPx: height,
-      },
-    };
-  } catch {
-    return { status: 'UNAVAILABLE', reason: 'PROVIDER_FAILED' };
-  }
-}
 
 export function findTryOnProduct(productId: string): CatalogueRecord | null {
   return CATALOGUE.find((record) => record.id === productId) ?? null;
 }
 
-/**
- * §24 `generate(product_id, colour_id, photo) -> Image | Unavailable`.
- *
- * The colour is resolved from the product rather than supplied, and no size is
- * accepted at all — see the contract for why both are deliberate.
- */
+/** The policy a generation is TOLD, standing in for Java configuration. */
 export interface GenerateOptions {
   /**
    * With no provider configured, answer with a SAMPLE image instead of
@@ -263,33 +152,98 @@ export interface GenerateOptions {
   readonly sampleWhenUnconfigured: boolean;
 }
 
+/**
+ * How many sessions have been opened, for their ids. A counter, not the map's
+ * size: generations overlap, and two opened before either closed took one id
+ * from the size, so the second record overwrote the first (D6).
+ */
+let opened = 0;
+
+/** Records how one generation ended — the only thing §24 lets the module keep. */
+function openSession(record: CatalogueRecord): (outcome: TryOnSession['outcome']) => void {
+  opened += 1;
+  const session = { id: `tryon-${String(opened)}`, startedAt: new Date().toISOString() };
+
+  return (outcome) => {
+    SESSIONS.set(session.id, { ...session, productId: record.id, outcome });
+  };
+}
+
+/**
+ * SEC-03 — the enforcement point is here, not in the browser.
+ *
+ * The interface checks the same two things before uploading, and that check is
+ * an affordance: it saves the customer a doomed 20MB upload over a mobile
+ * connection. It is not protection. This module is reachable by anything that
+ * can form a request, so it applies the limits again and does so on the values
+ * it OWNS — the same two the offer advertises, so the two can never disagree.
+ */
+function refusesPhoto(photo: ImagePayload): boolean {
+  const tooLarge = photo.bytes.byteLength > MAX_PHOTO_BYTES;
+  const wrongFormat = !ACCEPTED_FORMATS.includes(photo.mimeType.toLowerCase());
+  return tooLarge || wrongFormat;
+}
+
+/** A picture as the contract's outcome; one that cannot be read is the provider failing. */
+async function outcomeOf(image: ImagePayload): Promise<TryOnOutcome> {
+  const ready = await toTryOnImage(image);
+  return ready === null
+    ? { status: 'UNAVAILABLE', reason: 'PROVIDER_FAILED' }
+    : { status: 'READY', image: ready };
+}
+
+/** The SAMPLE: the garment's own photograph, paced so the waiting state is seen. */
+async function sampleOutcome(
+  garment: ImagePayload,
+  close: (outcome: TryOnSession['outcome']) => void,
+): Promise<TryOnOutcome> {
+  await new Promise((resolve) => setTimeout(resolve, SAMPLE_LATENCY_MS));
+
+  const sample = await outcomeOf(garment);
+  if (sample.status !== 'READY') {
+    close('PROVIDER_FAILED');
+    return sample;
+  }
+
+  // The wire says SAMPLE as the session does, so no screen can present it as a generation.
+  close('SAMPLE');
+  return { status: 'SAMPLE', image: sample.image };
+}
+
+/** A real generation, under the configured timeout. */
+async function providerOutcome(
+  request: Parameters<typeof imageModelProvider.render>[0],
+  close: (outcome: TryOnSession['outcome']) => void,
+): Promise<TryOnOutcome> {
+  const rendered = await imageModelProvider.render(
+    request,
+    AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+  );
+
+  if (!rendered.ok) {
+    close(rendered.error);
+    return { status: 'UNAVAILABLE', reason: rendered.error };
+  }
+
+  const outcome = await outcomeOf(rendered.value);
+  close(outcome.status === 'READY' ? 'READY' : 'PROVIDER_FAILED');
+  return outcome;
+}
+
+/**
+ * §24 `generate(product_id, colour_id, photo) -> Image | Unavailable`.
+ *
+ * The colour is resolved from the product rather than supplied, and no size is
+ * accepted at all — see the contract for why both are deliberate.
+ */
 export async function generateTryOn(
   record: CatalogueRecord,
   photo: ImagePayload,
   options: GenerateOptions,
 ): Promise<TryOnOutcome> {
-  const session: { id: string; startedAt: string } = {
-    id: `tryon-${String(SESSIONS.size + 1)}`,
-    startedAt: new Date().toISOString(),
-  };
+  const close = openSession(record);
 
-  const close = (outcome: TryOnSession['outcome']): void => {
-    SESSIONS.set(session.id, { ...session, productId: record.id, outcome });
-  };
-
-  /*
-   * SEC-03 — the enforcement point is here, not in the browser.
-   *
-   * The interface checks the same two things before uploading, and that check
-   * is an affordance: it saves the customer a doomed 20MB upload over a mobile
-   * connection. It is not protection. This module is reachable by anything that
-   * can form a request, so it applies the limits again and does so on the values
-   * it OWNS — the same two the offer advertises, so the two can never disagree.
-   */
-  const tooLarge = photo.bytes.byteLength > MAX_PHOTO_BYTES;
-  const wrongFormat = !ACCEPTED_FORMATS.includes(photo.mimeType.toLowerCase());
-
-  if (tooLarge || wrongFormat) {
+  if (refusesPhoto(photo)) {
     close('PHOTO_REJECTED');
     return { status: 'PHOTO_REJECTED' };
   }
@@ -322,38 +276,15 @@ export async function generateTryOn(
     return { status: 'UNAVAILABLE', reason: 'PROVIDER_FAILED' };
   }
 
-  if (!configured) {
-    // Paced so the waiting state is seen; see SAMPLE_LATENCY_MS.
-    await new Promise((resolve) => setTimeout(resolve, SAMPLE_LATENCY_MS));
-
-    const sample = await toTryOnImage(garment);
-    close(sample.status === 'READY' ? 'SAMPLE' : 'PROVIDER_FAILED');
-
-    return sample;
-  }
-
-  const rendered = await imageModelProvider.render(
-    {
-      correctedPhoto: corrected,
-      productImage: garment,
-      garmentDescription: detail.name,
-    },
-    AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
-  );
-
-  if (!rendered.ok) {
-    close(rendered.error);
-    return { status: 'UNAVAILABLE', reason: rendered.error };
-  }
-
-  const outcome = await toTryOnImage(rendered.value);
-
-  close(outcome.status === 'READY' ? 'READY' : 'PROVIDER_FAILED');
-
   /*
-   * The customer's photograph goes out of scope here, along with its corrected
-   * copy. Neither was ever written anywhere, so both are gone the moment this
-   * frame is popped — on this path and on every early return above it.
+   * The customer's photograph goes out of scope when this returns, along with
+   * its corrected copy. Neither was ever written anywhere, so both are gone the
+   * moment the frame is popped — on every path, early returns included.
    */
-  return outcome;
+  return configured
+    ? providerOutcome(
+        { correctedPhoto: corrected, productImage: garment, garmentDescription: detail.name },
+        close,
+      )
+    : sampleOutcome(garment, close);
 }

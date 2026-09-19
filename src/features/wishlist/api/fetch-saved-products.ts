@@ -1,29 +1,15 @@
-import { z } from 'zod';
-
-import {
-  productCardSchema,
-  productAvailabilitySchema,
-  type ProductCardWithAvailability,
-} from '@/features/catalogue/contract';
+import type { ProductCardWithAvailability } from '@/features/catalogue/contract';
 import { ROUTES } from '@/config/routes';
+import { fetchWithContract } from '@/lib/api/browser-fetch';
 import { err, ok, type Result } from '@/lib/result';
 
-/**
- * DATA-02 — our own BFF is a network boundary like any other, so its response
- * is parsed rather than cast.
- *
- * The shape mirrors what `mergeAvailability` produces on the server: a card
- * beside the availability that decorates it, with `null` meaning "not known"
- * rather than "sold out" (§30.2).
+/*
+ * Deliberate code split (IMP-01a, PERF-10): the response's schema — and with it
+ * Zod — was first-load JavaScript on the saved-items page. It lives in its own
+ * schema module (SSOT-09) and arrives beside the response instead
+ * (`fetchWithContract` has the reasoning).
  */
-const savedEntriesSchema = z.object({
-  entries: z.array(
-    z.object({
-      product: productCardSchema,
-      availability: productAvailabilitySchema.nullable(),
-    }),
-  ),
-});
+const loadSchema = () => import('../schemas/saved-products.schema');
 
 export interface SavedProductsError {
   kind: 'UNREACHABLE';
@@ -49,22 +35,20 @@ export async function fetchSavedProducts(
   url.searchParams.set('ids', ids.join(','));
   url.searchParams.set('locale', locale);
 
-  // ERR-05(1) / ERR-01: the rejection becomes a value; no try/catch for flow.
-  const response = await fetch(url, {
-    signal: signal ?? null,
-    headers: { Accept: 'application/json' },
-  }).then<Response | null, null>(
-    (result) => result,
-    () => null,
+  // ERR-05(1) / ERR-01: a rejection becomes a value; no try/catch for flow.
+  const [response, contract] = await fetchWithContract(
+    url,
+    { signal: signal ?? null, headers: { Accept: 'application/json' } },
+    loadSchema,
   );
 
-  if (response === null || !response.ok) return err({ kind: 'UNREACHABLE' });
+  if (response === null || !response.ok || contract === null) return err({ kind: 'UNREACHABLE' });
 
   const payload: unknown = await response.json().then<unknown, null>(
     (value: unknown) => value,
     () => null,
   );
 
-  const parsed = savedEntriesSchema.safeParse(payload);
+  const parsed = contract.savedEntriesSchema.safeParse(payload);
   return parsed.success ? ok(parsed.data.entries) : err({ kind: 'UNREACHABLE' });
 }

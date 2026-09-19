@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { CATALOGUE } from './catalogue-db';
+import { productAvailabilityFor } from './availability-db';
+import { resetCarts } from './bag-db';
+import { resetReservations } from './bag-reservations';
+import { CATALOGUE, productNameFor } from './catalogue-db';
 import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue-search';
+import { stockedProduct, takeEveryUnitOf } from './stock-test-support';
 
 /**
  * These assert the CONTRACT of section 15, not merely this fixture.
@@ -15,6 +19,22 @@ import { findRecordByCode, searchCatalogue, suggestCatalogue } from './catalogue
 function search(query: string) {
   return searchCatalogue(new URL(`http://mock/api/v1/catalogue/search${query}`));
 }
+
+function suggest(query: string) {
+  return suggestCatalogue(new URL(`http://mock/api/v1/catalogue/suggest${query}`));
+}
+
+/** The products the live overlay says can be bought — what the product page says too. */
+function buyableNow(): number {
+  return CATALOGUE.filter(
+    (record) => productAvailabilityFor(record.id, 'en')?.status !== 'SOLD_OUT',
+  ).length;
+}
+
+beforeEach(() => {
+  resetCarts();
+  resetReservations();
+});
 
 describe('paging', () => {
   it('returns the whole catalogue across pages', () => {
@@ -73,12 +93,68 @@ describe('filtering', () => {
     expect(result.totalPages).toBe(0);
   });
 
-  it('filters on the coarse stock flag, which is not the live overlay', () => {
-    const all = search('').totalCount;
-    const inStock = search('?inStock=true').totalCount;
+  /*
+   * §15: "Stock is never read from the index." This asserted the opposite — that
+   * the filter read a fixed flag on the record — and that was the defect: a SET
+   * with one piece gone read sold out on its page and in stock in the filter,
+   * its count and on its card, for ever.
+   */
+  it('filters on the live overlay, the same answer the product page gives', () => {
+    const inStock = search('?inStock=true');
 
-    expect(inStock).toBeLessThan(all);
-    expect(inStock).toBe(CATALOGUE.filter((record) => record.isInStock).length);
+    expect(inStock.totalCount).toBeLessThan(search('').totalCount);
+    expect(inStock.totalCount).toBe(buyableNow());
+    expect(search('').facets.inStockCount).toBe(buyableNow());
+  });
+
+  it('drops a product from In stock only, its count and the best sellers once every unit is held', () => {
+    const record = stockedProduct('SET');
+    const bestSellersBefore = suggest('?q=').products.map((product) => product.id);
+    const countBefore = search('').facets.inStockCount;
+
+    takeEveryUnitOf(record);
+
+    const inStockIds = search('?inStock=true').products.map((product) => product.id);
+    expect(inStockIds).not.toContain(record.id);
+    expect(search('').facets.inStockCount).toBe(countBefore - 1);
+    expect(bestSellersBefore).toContain(record.id);
+    expect(suggest('?q=').products.map((product) => product.id)).not.toContain(record.id);
+  });
+});
+
+/*
+ * BUG-02: the panel's own trending searches came back empty, because the term
+ * was matched against code, slug and attributes but never against a product's
+ * NAME or its garment — the slug says "waistcoat" and nothing said "suit".
+ */
+describe('searching for what the store names', () => {
+  it.each(['Waistcoat Suit', 'Kameez Shalwar', 'Boski', 'Karandi', 'Unstitched'])(
+    'finds the trending search %s',
+    (term) => {
+      expect(search(`?q=${encodeURIComponent(term)}`).totalCount).toBeGreaterThan(0);
+    },
+  );
+
+  it('offers only trending searches that find something', () => {
+    const empty = suggest('?q=').terms.filter(
+      (term) => search(`?q=${encodeURIComponent(term)}`).totalCount === 0,
+    );
+
+    expect(empty).toEqual([]);
+  });
+
+  it.each(['en', 'ur'] as const)('finds a product by its own name in %s', (locale) => {
+    const [first] = CATALOGUE;
+    if (first === undefined) throw new Error('The fixture catalogue is empty.');
+    const name = productNameFor(first, locale);
+
+    const found = search(`?q=${encodeURIComponent(name)}&locale=${locale}`);
+
+    expect(found.products.map((product) => product.id)).toContain(first.id);
+  });
+
+  it('finds the Urdu trending search in Urdu', () => {
+    expect(search(`?q=${encodeURIComponent('واسکٹ سوٹ')}&locale=ur`).totalCount).toBeGreaterThan(0);
   });
 });
 

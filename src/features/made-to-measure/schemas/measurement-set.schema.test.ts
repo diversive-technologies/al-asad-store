@@ -55,9 +55,9 @@ describe('the measurement list contract (A2-3)', () => {
 
   it('refuses a piece that resumes after another has begun', () => {
     // The tabs, the fieldsets and the stepper would disagree about the order.
-    expect(
-      accepts(list([point('a1', 'A'), point('b1', 'B'), point('a2', 'A')], TWO_PIECES)),
-    ).toBe(false);
+    expect(accepts(list([point('a1', 'A'), point('b1', 'B'), point('a2', 'A')], TWO_PIECES))).toBe(
+      false,
+    );
   });
 
   it('refuses a point on a piece the list does not declare', () => {
@@ -94,9 +94,9 @@ describe('the measurement list contract (A2-3)', () => {
   });
 
   it('refuses a drawing the storefront does not have', () => {
-    expect(
-      accepts(list([point('a1', 'A')], { pieces: [{ id: 'A', drawingId: 'DUPATTA' }] })),
-    ).toBe(false);
+    expect(accepts(list([point('a1', 'A')], { pieces: [{ id: 'A', drawingId: 'DUPATTA' }] }))).toBe(
+      false,
+    );
   });
 
   it('refuses an id that is not a plain code, since it becomes an address and a field name', () => {
@@ -112,8 +112,18 @@ describe('the measurement list contract (A2-3)', () => {
 describe('the finishing choices (A2-7)', () => {
   const CUFF = { id: 'CUFF', drawingVariant: null };
   const PLAIN = { id: 'PLAIN', drawingVariant: 'SLEEVE_PLAIN' };
-  const SLEEVE = { id: 'sleeve', pieceId: 'A', defaultValue: 'CUFF', appliesWhen: null, values: [CUFF, PLAIN] };
-  const CUFF_STYLE = { ...SLEEVE, id: 'cuffStyle', appliesWhen: { group: 'sleeve', values: ['CUFF'] } };
+  const SLEEVE = {
+    id: 'sleeve',
+    pieceId: 'A',
+    defaultValue: 'CUFF',
+    appliesWhen: null,
+    values: [CUFF, PLAIN],
+  };
+  const CUFF_STYLE = {
+    ...SLEEVE,
+    id: 'cuffStyle',
+    appliesWhen: { group: 'sleeve', values: ['CUFF'] },
+  };
   const withChoices = (options: unknown[], points: unknown[] = [point('a1', 'A')]) =>
     accepts(list(points, { options }));
 
@@ -144,5 +154,25 @@ describe('the finishing choices (A2-7)', () => {
 
   it('refuses a choice on a piece the list does not declare', () => {
     expect(withChoices([{ ...SLEEVE, pieceId: 'C' }])).toBe(false);
+  });
+
+  /* TEST-08 — accepted until now: with a plain sleeve such a list asks nothing on
+     the garment, so the customer met an empty form and the workshop a garment
+     with no figures. */
+  it('refuses choices that can leave a garment with nothing to measure', () => {
+    const onlyWithCuff = point('a1', 'A', { askedWhen: { group: 'sleeve', values: ['CUFF'] } });
+    const onlyPlain = point('a2', 'A', { askedWhen: { group: 'sleeve', values: ['PLAIN'] } });
+
+    expect(withChoices([SLEEVE], [onlyWithCuff])).toBe(false);
+    expect(withChoices([SLEEVE], [onlyWithCuff, onlyPlain])).toBe(true);
+  });
+
+  it('names the garment the choices can empty', () => {
+    const cuffOnB = point('b1', 'B', { askedWhen: { group: 'sleeve', values: ['CUFF'] } });
+    const parsed = measurementSetSchema.safeParse(
+      list([point('a1', 'A'), cuffOnB], { ...TWO_PIECES, options: [SLEEVE] }),
+    );
+
+    expect(parsed.error?.issues.map((issue) => issue.path)).toEqual([['pieces', 1]]);
   });
 });

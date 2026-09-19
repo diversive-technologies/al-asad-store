@@ -5,11 +5,15 @@ import { useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { SlideOver } from '@/components/ui/dialog';
+import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
+import { formatNumber } from '@/lib/utils/format';
 import { SlidersHorizontal } from '@/lib/vendor/icons';
 
 export interface FilterDrawerProps {
   messages: Messages;
+  /** The count on the trigger is a number in the reader's language (I18N-08). */
+  locale: Locale;
   /** How many filters are currently applied, for the trigger's badge. */
   activeCount: number;
   /**
@@ -42,7 +46,7 @@ export interface FilterDrawerProps {
  * It opens from `inline-start`: the filters belong to the reading-start edge in
  * both directions, which is where the rail used to be.
  */
-export function FilterDrawer({ messages, activeCount, children }: FilterDrawerProps) {
+export function FilterDrawer({ messages, locale, activeCount, children }: FilterDrawerProps) {
   const t = messages.catalogue;
   const [isOpen, setIsOpen] = useState(false);
 
@@ -82,8 +86,8 @@ export function FilterDrawer({ messages, activeCount, children }: FilterDrawerPr
         {t.filtersHeading}
         {activeCount === 0 ? null : (
           /* A11Y-06: the count is text, not a coloured dot. */
-          <span className="bg-brand-600 rounded-full px-1.5 py-0.5 text-xs text-white">
-            {activeCount}
+          <span className="bg-brand-600 text-on-brand rounded-full px-1.5 py-0.5 text-xs">
+            {formatNumber(activeCount, locale)}
           </span>
         )}
       </button>
