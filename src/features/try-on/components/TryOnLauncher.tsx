@@ -59,9 +59,11 @@ export function TryOnLauncher({
 
   return (
     <div className="flex flex-col gap-1">
+      {/* Tinted jade: it has colour, and it does not compete with the solid jade of
+          Add to bag or the gold of the made-to-measure button above it. */}
       <Button
         type="button"
-        variant="secondary"
+        variant="tinted"
         size="lg"
         onClick={() => setIsOpen(true)}
         onPointerEnter={panel.warm}

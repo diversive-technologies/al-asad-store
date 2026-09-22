@@ -28,7 +28,8 @@ export interface ProductShareProps {
  * with the message already written, and the customer picks who receives it. It is
  * server-rendered, so it works before the page hydrates. `noopener noreferrer`
  * (SEC-09) keeps the product page out of reach of whatever opens, and the link
- * says in words that it opens elsewhere.
+ * says in words that it opens elsewhere. It wears WhatsApp's own green, so it is
+ * recognised as WhatsApp before it is read.
  *
  * Copying needs the browser, so it is the single client leaf (MOD-06).
  */
@@ -49,7 +50,7 @@ export function ProductShare({ slug, productName, messages }: ProductShareProps)
         href={whatsAppShareUrl(message)}
         target="_blank"
         rel="noopener noreferrer"
-        className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+        className={buttonVariants({ variant: 'whatsapp', size: 'sm' })}
       >
         {/* A11Y-04: decorative beside a real label. I18N-05: a speech bubble does
             not point, so it does not mirror. */}

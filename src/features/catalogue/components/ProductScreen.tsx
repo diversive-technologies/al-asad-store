@@ -51,13 +51,14 @@ export interface ProductScreenProps {
  * (§30.5). "You may also like" streams in last, behind its own `<Suspense>`, so
  * nothing above it waits for it (`RelatedProducts`).
  *
- * `grid-cols-1` is load-bearing, not decoration. Left implicit, the single column
- * below 1024px is an AUTO track, which is sized to its contents and cannot
+ * `product-layout` (globals.css) holds the two columns. Its single column below
+ * 1024px is `minmax(0, 1fr)`, and that is load-bearing, not decoration. Left
+ * implicit, it is an AUTO track, which is sized to its contents and cannot
  * shrink under them — so the gallery's thumbnail strip (432px of max-content,
  * which its own `overflow-x-auto` could not absorb, because an auto track
  * measures a scroller's contents rather than the scroller) laid every phone's
- * page out 432px wide. `minmax(0, 1fr)` is a definite track that fills the shell
- * and is allowed to be narrower than its contents.
+ * page out 432px wide. From 1024px the photograph's column is sized so the whole
+ * photograph fits on one screen beside the buy box.
  */
 export function ProductScreen({
   product,
@@ -84,7 +85,7 @@ export function ProductScreen({
         canonicalPath={ROUTES.catalogue.detail(product.slug)}
       />
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-start">
+      <div className="product-layout">
         <ProductGallery
           media={product.media}
           productName={product.name}

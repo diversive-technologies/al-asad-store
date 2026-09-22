@@ -24,6 +24,18 @@
   --color-accent-400: oklch(0.82 0.11 75);
   --color-accent-500: oklch(0.74 0.13 75);
 
+  /*
+   * WhatsApp's own green (#25D366), for the one control that opens WhatsApp, so it
+   * is recognised before it is read. A third party's colour, not ours: it is not
+   * part of the brand ramp and is NOT redefined for dark mode, because it has to
+   * look like WhatsApp in either theme. White on it measures 1.98:1 (A11Y-07), so
+   * its ink is WhatsApp's own near-black (#111B21, 8.80:1), and the hover goes
+   * darker rather than lighter (#1EBE5A, 7.12:1 with the same ink).
+   */
+  --color-whatsapp: oklch(0.761 0.201 149.7);
+  --color-whatsapp-strong: oklch(0.703 0.188 149.6);
+  --color-on-whatsapp: oklch(0.215 0.019 235.1);
+
   /* Status. The danger red is TEXT in about twenty-five places (every field error,
      every refusal), so its lightness is solved for A11Y-07's 4.5:1 on the
      strongest surface it can sit on, not picked: at 0.58 it measured 3.86:1 on
@@ -2037,6 +2049,36 @@ input[type='search']::-webkit-search-decoration {
 }
 
 /*
+ * The product page's two columns: the photograph and the buy box.
+ *
+ * Below 64rem one column, `minmax(0, 1fr)` rather than an implicit auto track
+ * (see `ProductScreen`: an auto track is sized by the thumbnail strip and laid
+ * every phone out 432px wide).
+ *
+ * From 64rem the photograph's column is as wide as lets the WHOLE 4:5 photograph
+ * sit on one screen, and never wider than half the row. Two equal halves made it
+ * 652x815 at 1440x900 - taller than the screen, its lower edge at 963px - so the
+ * garment could not be seen whole beside the buttons that buy it. The height left
+ * for it is the screen less what sits above it (the bar, the page's top padding and
+ * the breadcrumbs: about 9.25rem) and a 1.5rem margin below; its width is four
+ * fifths of that. It never drops under 26rem, so a short window scrolls rather
+ * than shrinking the garment to a stamp. The buy box takes the rest of the row.
+ */
+@utility product-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2.5rem;
+
+  @media (width >= 64rem) {
+    grid-template-columns:
+      minmax(0, min(calc((100% - 3rem) / 2), max(26rem, calc((100svh - 10.75rem) * 4 / 5))))
+      minmax(0, 1fr);
+    column-gap: 3rem;
+    align-items: start;
+  }
+}
+
+/*
  * The zoom eases in and out only for a reader who has not asked for less motion
  * (A11Y-10). Granted inside `no-preference` rather than removed under `reduce`,
  * so there is no override to lose a specificity contest. Following the pointer
@@ -3250,6 +3292,76 @@ ellipse.gf-mark--active {
 @keyframes measure-march {
   to {
     background-position-x: var(--measure-march);
+  }
+}
+
+/*
+ * THE MEASURING BUTTON - the buy box's "Take my measurements", the store's USP, as
+ * a tailor's tape: gold, with the tape's graduations along its lower edge and a
+ * slow band of light crossing it so the eye finds it without being shouted at.
+ *
+ * The graduations are the tape's own rhythm - a tick every `--measure-period`, a
+ * longer one every fifth - in the button's ink at low strength, so they read as
+ * texture on the gold and never as a second border. Painted with gradients on the
+ * box itself, so the label is untouched.
+ *
+ * The band of light is a pseudo-element BEHIND the label: `isolation` makes the
+ * button its own stacking context, so `z-index: -1` sits above the gold and below
+ * the words, and the words never flicker. It travels toward the reading end, so
+ * the sign flips under RTL, on the `--measure-march` pattern.
+ */
+@utility measure-button {
+  --measure-tick: color-mix(in oklch, var(--color-on-accent) 28%, transparent);
+  --sheen-travel: 1;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background-image:
+    linear-gradient(to right, var(--measure-tick) 0 1px, transparent 1px),
+    linear-gradient(to right, var(--measure-tick) 0 1px, transparent 1px);
+  background-size:
+    var(--measure-period) 0.3rem,
+    calc(var(--measure-period) * 5) 0.55rem;
+  background-position: left bottom;
+  background-repeat: repeat-x;
+
+  &::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: 35%;
+    background-image: linear-gradient(
+      100deg,
+      transparent,
+      color-mix(in oklch, var(--color-on-brand) 55%, transparent),
+      transparent
+    );
+    translate: calc(-150% * var(--sheen-travel)) 0;
+    pointer-events: none;
+  }
+}
+
+/* I18N-12. */
+[dir='rtl'] .measure-button {
+  --sheen-travel: -1;
+}
+
+/* A11Y-10 by opt-in, as for the measure line above: no motion to override. */
+@media (prefers-reduced-motion: no-preference) {
+  .measure-button::after {
+    animation: measure-sheen 5s cubic-bezier(0.32, 0.72, 0, 1) 1.2s infinite;
+  }
+}
+
+@keyframes measure-sheen {
+  0% {
+    translate: calc(-150% * var(--sheen-travel)) 0;
+  }
+  35%,
+  100% {
+    translate: calc(320% * var(--sheen-travel)) 0;
   }
 }
 

@@ -10,7 +10,35 @@ none, because it is believed.
 **Layout (2026-09-17):** this repository is the storefront alone. The Java service
 is its own repository beside it (`../backend`), and the two deploy separately.
 
-Last updated: 2026-09-19, on `main`. The round below is ONE commit on top of
+Last updated: 2026-09-22, on `backend-integration`, whose tree is `main`'s
+(`d32e80d`, pushed) plus the product page restyle below; `main` fast-forwards to it.
+
+**22 September — the product page, restyled by the operator's request:**
+
+- **"Take my measurements" is a full-width GOLD button**, the height of Add to bag,
+  because made-to-measure is the store's USP and the old underlined link was read
+  past. It is drawn as a tailor's tape (`measure-button` in `globals.css`): the
+  tape's graduations along its lower edge, and a slow band of light crossing it
+  every five seconds, only under `prefers-reduced-motion: no-preference` and
+  mirrored under RTL. The whole block is still one link, named from its heading,
+  so the e2e journey's `stitchingForkOf` still finds it.
+- **Try it on is tinted jade** (`tinted` button variant: a jade edge over a 10% jade
+  tint, `fg` ink), so Add to bag (solid jade), the measurements (gold) and try-on
+  read as three different things.
+- **Share on WhatsApp wears WhatsApp's green** (`--color-whatsapp`, #25D366, not
+  redefined for dark) with WhatsApp's near-black ink, 8.80:1; white on that green is
+  1.98:1.
+- **The photograph fits the screen.** `product-layout` sizes the image column so the
+  whole 4:5 photograph sits on one screen beside the buy box, never wider than half
+  the row and never under 26rem. At 1440×900 the image went from 652×815 (bottom at
+  963px, past the fold) to 582×728 (bottom at 876px). The loading skeleton uses the
+  same layout. Phones are unchanged.
+- New tokens `--color-whatsapp`, `--color-whatsapp-strong`, `--color-on-whatsapp`;
+  new button variants `accent`, `tinted`, `whatsapp`.
+- Checked in the running store at 1440×900 and 375px (no sideways scroll), and in
+  Urdu (`dir="rtl"`, the chevron turned, the light travelling the other way).
+
+The round of 19 September below is ONE commit on top of
 `621e384` (17 September: all seven account plan phases and all six Made-to-Measure
 plan phases) — about 590 changed or new paths from four passes:
 
@@ -35,11 +63,10 @@ convention, the stitching charges, the contact details, the bank account and the
 legal pages are FIXTURE — see "Deliberate gaps".
 
 Branches: the 3D experiment is kept, unmerged, on `3d-model` at `62363d3`.
-`backend-integration` at `85aaf94` (18 September) is one commit on `621e384` that
-lets the homepage, the card availability overlay and the newsletter pass through MSW
-to a real Java service; it adds `catalogue-handlers.ts` and `content-handlers.ts`,
-which `main`'s uncommitted split also adds with different contents, so a merge will
-conflict on both. Nothing is pushed: `main` is ahead of `origin/main`.
+`main` is pushed at `d32e80d`. `backend-integration` merged it in (`4223611`), so
+the two trees were identical until the 22 September restyle, which is committed on
+`backend-integration` only; `main` fast-forwards to it. Against the Java service the
+storefront needs no code change, only `API_MOCKING=disabled` and `JAVA_API_BASE_URL`.
 
 The by-hand test log is `TESTING-USE-CASES.md`; its pass over the features of this
 round is its last section ("By-hand pass, 2026-09-19"). This file carries state and
@@ -353,7 +380,8 @@ what is worth not learning twice.
   already imports catalogue's). Mounted on first open, kept after. One guide for
   every product — the content model has no per-piece sections.
 - **Sharing** — a server-rendered WhatsApp link (`wa.me/?text=`, one parameterised
-  message, `%20` not `+`) and a Copy link button. The address is
+  message, `%20` not `+`), in WhatsApp's own green since 22 September, and a Copy
+  link button. The address is
   `absoluteUrl(ROUTES.catalogue.detail(slug))` from `NEXT_PUBLIC_APP_URL` — the same
   canonical `generateMetadata` declares — so the backend must keep a published
   slug stable or redirect it. `lib/utils/clipboard.ts` `copyText` is the one place
@@ -1378,9 +1406,10 @@ now, each checked in the running store:
   product carries a backend-declared `stitching` offer (`null`, or since plan
   Phase 2 `{ garmentStyle, leadTimeDays }` — the studio's own style offer), so the
   interface never decides which garments the workshop will cut (DATA-13), and the
-  fork opens the studio on that style's list. It is NO LONGER A
-  CARD — border, radius, padding and filled disc are gone, because the buy box
-  around it has no containers and the box read as a sticker on the page.
+  fork opens the studio on that style's list. It is still NOT A CARD — no border,
+  radius or padding around the block — but since 22 September its call to action
+  is a full-width gold `measure-button` rather than an underlined line, by the
+  operator's call: the USP has to be seen at once.
 - **A bag nudge**, now `StitchingNudge` — extracted because `BagContents` was past
   MOD-03's soft ceiling. Same shape as the fork. A standing invitation,
   deliberately NOT a claim about any line, since a bag line carries no stitching
@@ -1388,7 +1417,8 @@ now, each checked in the running store:
   placeholder. Stacked, the question gets the full width and fits one line at
   390px, where it used to wrap to three.
 
-**The measure line** is what the fork and the nudge carry instead of a border: a
+**The measure line** is what the nudge carries instead of a border (the fork carried
+it too until its gold button replaced it on 22 September): a
 1px gold rule dashed 4 on, 3.5 off — the studio ring's own dash, unrolled
 straight. A repeating gradient rather than a dashed border, because a border's
 dash phase cannot be moved; on hover or keyboard focus the tape advances two dash
@@ -1408,7 +1438,7 @@ Verified in the running store:
 | Stage contrast, light | heading 9.0, body 7.62, gold numerals 5.23, button 9.0 |
 | Stage body, dark | 7.57 |
 | Header call to action | 10.27 |
-| Fork call to action | 16.94 light, 16.45 dark — was 2.82 |
+| Fork call to action | 16.94 light, 16.45 dark — was 2.82. Since 22 September the gold button: `on-accent` on `accent-400`, 10.26 in both themes |
 | Fork body | 5.35 light |
 | Header, 1440 and 390 | four controls, all 36×36, one top |
 | Stage, 1440 | three flats at 300px each; the waistcoat 0.77× the kameez's height, as its viewBox says; strokes 1.25px and not scaling |

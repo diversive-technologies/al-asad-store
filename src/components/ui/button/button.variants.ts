@@ -20,6 +20,16 @@ export const buttonVariants = cva(
            as a dark grey box on the jade band in dark mode. Existing tokens
            only; neither side of this pair is redefined for dark. */
         onBrand: 'bg-on-brand text-brand-700 hover:bg-brand-50',
+        /* The made-to-measure gold — the studio's own mark, and the header's
+           "Stitched to size" colours. Neither side is redefined for dark, so it
+           reads the same in both themes (10.27:1). */
+        accent: 'bg-accent-400 text-on-accent hover:bg-accent-500',
+        /* Jade, but not the jade that takes money: a tint and a jade edge, so it
+           has colour without competing with Add to bag. The ink is `fg`, which
+           follows the theme while the tint shows through either surface. */
+        tinted: 'border border-brand-500 bg-brand-500/10 text-fg hover:bg-brand-500/20',
+        /* Only for a link that opens WhatsApp — see `--color-whatsapp`. */
+        whatsapp: 'bg-whatsapp text-on-whatsapp hover:bg-whatsapp-strong',
       },
       size: {
         sm: 'h-8 px-3 text-sm',
