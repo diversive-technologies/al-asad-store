@@ -113,7 +113,7 @@ const TILE_HREFS = [
  * return is worse than no image, because it sets an expectation the listing
  * then breaks.
  */
-const TILE_IMAGES = ['kurta-rust', 'kameez-slate', 'kameez-taupe', 'waistcoat-maroon'] as const;
+const TILE_IMAGES = ['kurta-olive', 'kameez-slate', 'kameez-taupe', 'waistcoat-walnut'] as const;
 
 const RAIL_LENGTH = 8;
 

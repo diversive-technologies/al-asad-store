@@ -59,6 +59,37 @@ that reads it were never the same process.
   The stock ledger is per-visitor rather than shared, which is right for a
   demonstration and wrong for a shop — D1 ends when Java replaces this layer.
 
+**23 September — four photographs withdrawn, and what they were holding up.**
+
+The operator asked for the blue-backdrop and child photographs to go. Four rows
+left `catalogue-photography.ts`: the two boys' kurtas, and the maroon and
+emerald waistcoats, which were the only two shot on a saturated blue studio
+backdrop among otherwise warm interiors. Twenty AVIF files deleted with them
+(`public/products` 5.4MB → 3.5MB). The catalogue is 18 products, not 22.
+
+`boys-kurta` went as a garment KIND too rather than being left with no
+products: its `GarmentKey`, EN/UR labels, piece count, content and stitching
+row. Two things it had been holding up only showed when it was gone:
+
+- **It was the only product that was SIMPLE *and* sold by size** — one piece
+  with sizes — which 36 tests reach for through `stockedProduct('SIMPLE')`.
+  Kurtas were hardcoded as unstitched cloth, so nothing else could be it. The
+  photograph now DECLARES how a garment is sold (`sold`), and the rust kurta is
+  sold finished. The taupe kameez is declared an unstitched two-piece length in
+  the other direction, so an unstitched page still has something to relate to.
+  Both are how cloth is actually sold here, and the "Unstitched" homepage tile
+  was repointed off the rust kurta, which it would now misrepresent.
+- **It was the only garment the workshop would not cut.** Every garment the
+  store sells is now made to measure, so the mark is true on every card and
+  distinguishes none of them. Two guards that rested on it were rewritten
+  rather than relaxed: the offers test now asserts every product is marked, and
+  `catalogue-related` asserts the rule `closenessOf` actually states — same
+  garment OR same garment type — which the old assertion only met by accident.
+  One test is GONE with its precondition: a bag line refusing a garment that is
+  not cut at all. The refusal is still implemented and still right, simply
+  unreachable from this catalogue; `stitched-line.test.ts` says so where it
+  stood.
+
 **22 September — the product page, restyled by the operator's request:**
 
 - **"Take my measurements" is a full-width GOLD button**, the height of Add to bag,

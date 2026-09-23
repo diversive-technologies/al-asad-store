@@ -83,13 +83,6 @@ function productCutAs(garmentStyle: string): string {
   return record.id;
 }
 
-/** A product the backend declares is NOT cut at all — the boy's kurta. */
-function uncuttableProductId(): string {
-  const record = CATALOGUE.find((entry) => toProductDetail(entry, 'en').stitching === null);
-  if (record === undefined) throw new Error('Every product in the fixture is cuttable.');
-  return record.id;
-}
-
 const KAMEEZ_PRODUCT = (): string => productCutAs('KAMEEZ_SHALWAR');
 
 /* A SECOND product cut as the same style — the fixture offers every garment in
@@ -214,12 +207,18 @@ describe('a made-to-measure bag line', () => {
     );
   });
 
-  it('refuses a garment the backend does not offer stitching for', () => {
-    const cartId = createCart();
-    // A boy's kurta maps to null deliberately: every served bound is an adult's.
-    const result = addItem(cartId, uncuttableProductId(), [], 1, 'en', savedProfileId(), OWNER);
-    expect(result.kind).toBe('MEASUREMENTS_REFUSED');
-  });
+  /*
+   * A test for "a garment the backend does not cut at all" stood here. It
+   * needed a product whose offer is null, and the boy's kurta was the only
+   * one; both boys' products were withdrawn with their photograph on
+   * 2026-09-23, so the fixture can no longer produce the precondition.
+   *
+   * The refusal itself is still implemented in `addStitched` and still right —
+   * it is simply unreachable from this catalogue. The other MEASUREMENTS_REFUSED
+   * cases below (a profile that is not the customer's, one the store does not
+   * hold, one cut as a different garment) are unaffected. Restore this test
+   * with the fixture the day a garment the workshop will not cut is sold again.
+   */
 
   it('refuses a profile the store does not hold', () => {
     const cartId = createCart();

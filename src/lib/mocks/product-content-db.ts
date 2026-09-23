@@ -55,13 +55,11 @@ export const PIECE_NAMES: Record<Locale, Record<string, readonly string[]>> = {
     waistcoat: ['Waistcoat', 'Kameez', 'Shalwar'],
     kameez: ['Kameez', 'Shalwar'],
     kurta: ['Kurta'],
-    'boys-kurta': ['Kurta'],
   },
   ur: {
     waistcoat: ['واسکٹ', 'قمیض', 'شلوار'],
     kameez: ['قمیض', 'شلوار'],
     kurta: ['کرتا'],
-    'boys-kurta': ['کرتا'],
   },
 };
 

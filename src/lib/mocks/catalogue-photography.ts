@@ -33,15 +33,30 @@ export interface Photograph {
    * Which frame (1-based) the product RESTS on — the card's still and the
    * gallery's first picture. The rest follow in order and wrap.
    *
-   * It exists because some garments were shot as colourways of one setup: the
-   * maroon and emerald waistcoats on the same model in the same pose, the two
-   * boys' kurtas likewise. Leading both on frame 1 put two near-identical tiles
-   * in the grid; leading one on a different view keeps every tile distinct
-   * without inventing a picture.
+   * It exists because some garments were shot as colourways of one setup —
+   * the same model in the same pose — and leading both on frame 1 put two
+   * near-identical tiles in the grid. Leading one on a different view keeps
+   * every tile distinct without inventing a picture.
    */
   readonly lead?: number;
   /** The work on the cloth, where the photograph shows it plainly. */
   readonly work?: WorkKey;
+  /**
+   * Whether this garment is sold as CLOTH or as a finished piece, when that is
+   * not what its kind would imply.
+   *
+   * A kurta is otherwise taken to be an unstitched length, which is how the
+   * client sells most of them. It is declared here rather than derived because
+   * the two are different products — a length has metreage and no sizes, a
+   * finished kurta has sizes and no metreage — and a table of photographs is
+   * the honest place to say which one the picture shows.
+   *
+   * It is also load-bearing for the fixture: a one-piece garment sold BY SIZE
+   * is the SIMPLE-with-sizes case, which several suites need and which nothing
+   * else in the catalogue provides. It used to be supplied by the boys' kurtas
+   * alone, and went with them when they were withdrawn.
+   */
+  readonly sold?: 'unstitched' | 'stitched';
 }
 
 /**
@@ -64,18 +79,31 @@ const VIEWS = 4;
  * shoot — the same model in the same room — sit apart, so no two neighbouring
  * tiles read as one picture twice.
  *
- * Two positions carry fixture rules and are not free to move: the two adult
- * kurtas (the unstitched line) sit at 1 and 5 so their metreage lands on 2.5m
- * and 4.5m, and positions 3, 10 and 17 are the products never received.
+ * The unstitched line is the olive kurta (a one-piece length) and the taupe
+ * kameez (a two-piece suit length) — the two ways cloth is actually sold here.
+ * The rust kurta is `sold: 'stitched'` instead: finished, and by size. It is
+ * the only SIMPLE-with-sizes product in the catalogue and several suites need
+ * one, and the unstitched pair keeps "You may also like" able to answer on an
+ * unstitched page, which one length alone could not.
+ *
+ * EVERY attribute a product is not photographed with is derived from its INDEX
+ * here (`catalogue-db.ts`): its id, code, slug, cloth, price, discount,
+ * metreage, launch date and whether it is in stock. Removing or reordering a
+ * row therefore renumbers everything after it, which is why the list is edited
+ * rarely and never casually.
+ *
+ * Four rows were withdrawn on 2026-09-23 at the operator's request: the two
+ * boys' kurtas, because the storefront is not to show a child model, and the
+ * maroon and emerald waistcoats, which were the only two shot on a saturated
+ * blue studio backdrop among otherwise warm interiors. The boys' garment KIND
+ * went with them rather than being left with no products.
  */
 export const PHOTOGRAPHY: readonly Photograph[] = [
   { file: 'waistcoat-camel', colour: 'camel', garment: 'waistcoat', frames: VIEWS, work: 'plain' },
   { file: 'kurta-olive', colour: 'olive', garment: 'kurta', work: 'embroidered' },
-  { file: 'waistcoat-maroon', colour: 'maroon', garment: 'waistcoat', frames: FRAMES },
   { file: 'kameez-slate', colour: 'slate', garment: 'kameez', frames: FRAMES },
   { file: 'waistcoat-black', colour: 'black', garment: 'waistcoat', frames: VIEWS, work: 'plain' },
-  { file: 'kurta-rust', colour: 'rust', garment: 'kurta', frames: FRAMES },
-  { file: 'boys-kurta-navy', colour: 'navy', garment: 'boys-kurta', frames: FRAMES, lead: 2 },
+  { file: 'kurta-rust', colour: 'rust', garment: 'kurta', frames: FRAMES, sold: 'stitched' },
   { file: 'waistcoat-bottle', colour: 'bottle', garment: 'waistcoat', frames: FRAMES, lead: 3 },
   {
     file: 'kameez-ash',
@@ -92,7 +120,7 @@ export const PHOTOGRAPHY: readonly Photograph[] = [
     frames: VIEWS,
     work: 'plain',
   },
-  { file: 'kameez-taupe', colour: 'taupe', garment: 'kameez', frames: FRAMES },
+  { file: 'kameez-taupe', colour: 'taupe', garment: 'kameez', frames: FRAMES, sold: 'unstitched' },
   { file: 'waistcoat-gold', colour: 'gold', garment: 'waistcoat', work: 'embroidered' },
   { file: 'kameez-charcoal', colour: 'charcoal', garment: 'kameez', frames: FRAMES },
   { file: 'waistcoat-walnut', colour: 'walnut', garment: 'waistcoat', frames: FRAMES, lead: 2 },
@@ -101,9 +129,7 @@ export const PHOTOGRAPHY: readonly Photograph[] = [
   { file: 'waistcoat-olive', colour: 'olive', garment: 'waistcoat', frames: FRAMES },
   { file: 'waistcoat-stone', colour: 'stone', garment: 'waistcoat', frames: FRAMES },
   { file: 'waistcoat-navy', colour: 'navy', garment: 'waistcoat', frames: VIEWS, work: 'plain' },
-  { file: 'boys-kurta-charcoal', colour: 'charcoal', garment: 'boys-kurta', frames: FRAMES },
   { file: 'waistcoat-charcoal', colour: 'charcoal', garment: 'waistcoat', work: 'contrast-trim' },
-  { file: 'waistcoat-emerald', colour: 'emerald', garment: 'waistcoat', frames: FRAMES, lead: 2 },
   { file: 'waistcoat-graphite', colour: 'graphite', garment: 'waistcoat', frames: FRAMES },
   { file: 'waistcoat-ivory', colour: 'ivory', garment: 'waistcoat', frames: FRAMES },
 ];

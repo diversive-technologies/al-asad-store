@@ -19,14 +19,30 @@ describe('which garments the workshop cuts', () => {
     }
   });
 
-  it('offers some garments and not others, so the mark carries information', () => {
+  /*
+   * This used to assert that SOME products are unmarked, "so the mark carries
+   * information". It cannot any more, and the change is worth stating rather
+   * than quietly relaxing: a boy's kurta was the only garment the workshop did
+   * not cut, and both boys' products were withdrawn with their photograph on
+   * 2026-09-23. Every garment the store now sells is cut to measure, so the
+   * mark is true on every card and distinguishes none of them.
+   *
+   * The guard is therefore inverted rather than deleted. It still fails the
+   * moment the table and the catalogue disagree — which is what it was really
+   * protecting — and it will fail again, correctly, if a kind that is NOT cut
+   * is added without the card being taught about it.
+   */
+  it('marks every product, because every garment the store now sells is cut', () => {
     const marked = CATALOGUE.filter((record) => toProductCard(record, 'en').isMadeToMeasure);
-    expect(marked.length).toBeGreaterThan(0);
-    expect(marked.length).toBeLessThan(CATALOGUE.length);
+
+    expect(CATALOGUE.length).toBeGreaterThan(0);
+    expect(marked).toHaveLength(CATALOGUE.length);
   });
 
-  it("does not offer a boy's kurta, whose every served bound is an adult's", () => {
-    expect(stitchingOfferForGarment('boys-kurta')).toBeNull();
-    expect(isMadeToMeasureGarment('boys-kurta')).toBe(false);
+  it('answers null for a kind the workshop does not cut', () => {
+    for (const garment of ['waistcoat', 'kameez', 'kurta'] as const) {
+      expect(stitchingOfferForGarment(garment), garment).not.toBeNull();
+      expect(isMadeToMeasureGarment(garment), garment).toBe(true);
+    }
   });
 });

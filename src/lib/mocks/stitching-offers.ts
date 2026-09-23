@@ -24,7 +24,6 @@ const STITCHING_STYLE: Readonly<Record<GarmentKey, string | null>> = {
   waistcoat: 'WAISTCOAT_SUIT',
   kameez: 'KAMEEZ_SHALWAR',
   kurta: 'KURTA',
-  'boys-kurta': null,
 };
 
 /**

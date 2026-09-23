@@ -97,10 +97,4 @@ describe('the product page and the studio agree', () => {
       );
     }
   });
-
-  it("offers no stitching on a boy's kurta, because every served bound is an adult's", () => {
-    const boys = CATALOGUE.filter((record) => record.garment === 'boys-kurta');
-    expect(boys.length).toBeGreaterThan(0);
-    for (const record of boys) expect(toProductDetail(record, 'en').stitching).toBeNull();
-  });
 });

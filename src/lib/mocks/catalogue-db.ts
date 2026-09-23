@@ -33,7 +33,6 @@ const PIECES: Record<GarmentKey, number> = {
   waistcoat: 3,
   kameez: 2,
   kurta: 1,
-  'boys-kurta': 1,
 };
 
 export interface CatalogueRecord {
@@ -100,7 +99,8 @@ export const CATALOGUE: readonly CatalogueRecord[] = PHOTOGRAPHY.map(
      * whichever photograph happened to land on an even index, and the two that
      * did were the boys' kurtas.
      */
-    const garmentType = photo.garment === 'kurta' ? 'unstitched' : 'stitched';
+    // The photograph declares it where the kind would imply the wrong one.
+    const garmentType = photo.sold ?? (photo.garment === 'kurta' ? 'unstitched' : 'stitched');
     const currentMinor = 349_900 + ((index * 187_000) % 1_750_000);
     const isDiscounted = index % 4 === 1;
 

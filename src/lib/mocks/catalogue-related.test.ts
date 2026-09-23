@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 
 describe('which products relate', () => {
-  it.each<GarmentKey>(['waistcoat', 'kameez', 'kurta', 'boys-kurta'])(
+  it.each<GarmentKey>(['waistcoat', 'kameez', 'kurta'])(
     'never suggests a %s to itself',
     (garment) => {
       const product = firstOf(garment);
@@ -68,14 +68,27 @@ describe('which products relate', () => {
     expect(idsOf(relatedRecords(product, EVERYTHING, RELATED_LIMIT_MAX))).not.toContain(twin.id);
   });
 
-  it.each<GarmentKey>(['waistcoat', 'kameez', 'kurta', 'boys-kurta'])(
-    'keeps a %s among products of its own garment type',
+  /*
+   * `closenessOf` states the rule: "0 and 1 are the same garment, 2 the same
+   * garment type". This used to be asserted as garment TYPE alone, which was
+   * only ever true incidentally — every kind was sold one way, so the kind
+   * decided the type. Since 2026-09-23 a kurta is sold both as a length and
+   * ready-made, and a kameez both ways too, so the two clauses have come apart
+   * and the assertion now names the rule rather than a coincidence.
+   */
+  it.each<GarmentKey>(['waistcoat', 'kameez', 'kurta'])(
+    'keeps a %s to its own garment or its own garment type, never further',
     (garment) => {
       const product = firstOf(garment);
       const related = relatedRecords(product, EVERYTHING, RELATED_LIMIT_MAX);
 
       expect(related.length).toBeGreaterThan(0);
-      expect(related.every((record) => record.garmentType === product.garmentType)).toBe(true);
+      expect(
+        related.every(
+          (record) =>
+            record.garment === product.garment || record.garmentType === product.garmentType,
+        ),
+      ).toBe(true);
     },
   );
 });
@@ -124,7 +137,7 @@ describe('the order they are shown in', () => {
   });
 
   it('answers the same list in the same order every time', () => {
-    const product = firstOf('boys-kurta');
+    const product = firstOf('kurta');
 
     expect(idsOf(relatedRecords(product, EVERYTHING, 12))).toEqual(
       idsOf(relatedRecords(product, EVERYTHING, 12)),

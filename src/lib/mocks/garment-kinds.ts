@@ -10,4 +10,4 @@
  * are keyed by plain strings and still fall back quietly; a new kind needs them
  * too, and nothing here makes the compiler say so.
  */
-export type GarmentKey = 'waistcoat' | 'kameez' | 'kurta' | 'boys-kurta';
+export type GarmentKey = 'waistcoat' | 'kameez' | 'kurta';
