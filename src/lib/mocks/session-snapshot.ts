@@ -1,10 +1,15 @@
 import { z } from 'zod';
 
+import { addressDetailSchema } from '@/lib/domain/address';
+
 import { adoptCart, adoptCartCodeEvents, cartCodeEvents, cartRecord } from './cart-store';
 import { type OrderPayload, findOrder, recordOrder } from './orders-db';
+import { adoptAddressRows, addressRowsOf, defaultEventsOf } from './addresses-db';
 import { adoptDeviceToken } from './profile-owners';
 import { adoptProfiles, profilesOfOwner } from './profiles-db';
 import { RESERVATIONS, type Reservation } from './reservation-ledger';
+import { adoptSizeEvents, sizeEventsOf } from './saved-sizes-db';
+import { adoptSavedRows, savedRowsOf } from './wishlist-db';
 
 /**
  * D1 — carrying one visitor's mock state between serverless invocations.
@@ -122,6 +127,39 @@ const profileSchema = z.object({
   supersededBy: z.string().nullable(),
 });
 
+/** §28.3 — what a signed-in customer keeps against their account. D6: removals are rows. */
+const savedRowSchema = z.object({
+  accountKey: z.string().min(1),
+  productId: z.string().min(1),
+  savedAt: z.string(),
+  removedAt: z.string().nullable(),
+});
+
+const addressRowSchema = z.object({
+  accountKey: z.string().min(1),
+  addressId: z.string().min(1),
+  version: z.number().int(),
+  // SSOT: the four field rules live in the domain layer and are reused, not restated.
+  detail: addressDetailSchema,
+  savedAt: z.string(),
+  supersededBy: z.number().int().nullable(),
+  removedAt: z.string().nullable(),
+});
+
+const defaultEventSchema = z.object({
+  accountKey: z.string().min(1),
+  addressId: z.string().min(1),
+  at: z.string(),
+});
+
+const sizeEventSchema = z.object({
+  accountKey: z.string().min(1),
+  sizeSetId: z.string().min(1),
+  sizeId: z.string().min(1),
+  kind: z.union([z.literal('SAVED'), z.literal('FORGOTTEN')]),
+  at: z.string(),
+});
+
 const reservationSchema = z.object({
   cartId: z.string().min(1),
   lineId: z.string().min(1),
@@ -208,6 +246,11 @@ export const mockSessionSchema = z.object({
   /** §34 — the guest's device token, so the next instance does not 401 them. */
   device: z.string().min(1).nullable(),
   profiles: z.array(profileSchema),
+  /** §28.3 — the signed-in customer's own rows, or empty for a guest. */
+  saved: z.array(savedRowSchema),
+  addresses: z.array(addressRowSchema),
+  addressDefaults: z.array(defaultEventSchema),
+  sizes: z.array(sizeEventSchema),
 });
 
 export type MockSession = z.infer<typeof mockSessionSchema>;
@@ -220,12 +263,21 @@ export const EMPTY_SESSION: MockSession = {
   orders: [],
   device: null,
   profiles: [],
+  saved: [],
+  addresses: [],
+  addressDefaults: [],
+  sizes: [],
 };
 
 /** True when there is nothing worth writing a cookie for. */
 export function isEmptySession(session: MockSession): boolean {
   return (
-    session.cart === null && session.orders.length === 0 && session.profiles.length === 0
+    session.cart === null &&
+    session.orders.length === 0 &&
+    session.profiles.length === 0 &&
+    session.saved.length === 0 &&
+    session.addresses.length === 0 &&
+    session.sizes.length === 0
   );
 }
 
@@ -261,11 +313,34 @@ export function carryOrders(previous: MockSession, next: MockSession): MockSessi
   const heldProfiles = new Set(next.profiles.map((row) => row.id));
   const profiles = [...previous.profiles.filter((row) => !heldProfiles.has(row.id)), ...next.profiles];
 
+  /*
+   * §28.3's rows are carried only while the new snapshot has none of its own.
+   * A signed-in request captures the account's rows in full, so taking those
+   * verbatim is what lets a REMOVAL stick; a guest request captures nothing,
+   * and overwriting the cookie with that would sign the customer's belongings
+   * away because their bag happened to change.
+   */
+  const belongings =
+    next.saved.length > 0 || next.addresses.length > 0 || next.sizes.length > 0
+      ? {
+          saved: next.saved,
+          addresses: next.addresses,
+          addressDefaults: next.addressDefaults,
+          sizes: next.sizes,
+        }
+      : {
+          saved: previous.saved,
+          addresses: previous.addresses,
+          addressDefaults: previous.addressDefaults,
+          sizes: previous.sizes,
+        };
+
   return {
     ...next,
     orders: [...kept, ...next.orders].slice(-CARRIED_ORDERS),
     device: next.device ?? previous.device,
     profiles,
+    ...belongings,
   };
 }
 
@@ -276,7 +351,11 @@ export function carryOrders(previous: MockSession, next: MockSession): MockSessi
  * never carry another visitor's rows, and every row here is reachable only
  * from this visitor's own cookie.
  */
-export function captureMockSession(cartId: string | null, device: string | null): MockSession {
+export function captureMockSession(
+  cartId: string | null,
+  device: string | null,
+  account: string | null = null,
+): MockSession {
   /*
    * §34 — the measurements are captured whether or not there is a bag: taking
    * them is a journey of its own, and a visitor who has measured a kameez but
@@ -285,8 +364,26 @@ export function captureMockSession(cartId: string | null, device: string | null)
   const profiles = device === null ? [] : profilesOfOwner(`DEVICE:${device}`);
   const measurements = { device, profiles: profiles.map(copyProfile) };
 
+  /*
+   * §28.3 — saved items, addresses and saved sizes belong to an ACCOUNT, so a
+   * guest carries none of them and a signed-in customer carries only their own.
+   * Reachable on a serverless host because the test account is seeded at module
+   * load, so a password sign-in succeeds on whichever instance answers.
+   */
+  const belongings =
+    account === null
+      ? { saved: [], addresses: [], addressDefaults: [], sizes: [] }
+      : {
+          saved: [...savedRowsOf(account)],
+          addresses: addressRowsOf(account).map((row) => ({ ...row, detail: { ...row.detail } })),
+          addressDefaults: [...defaultEventsOf(account)],
+          sizes: [...sizeEventsOf(account)],
+        };
+
   const cart = cartId === null ? null : cartRecord(cartId);
-  if (cartId === null || cart === null) return { ...EMPTY_SESSION, ...measurements };
+  if (cartId === null || cart === null) {
+    return { ...EMPTY_SESSION, ...measurements, ...belongings };
+  }
 
   const orderNumber = cart.orderNumber;
   const order = orderNumber === null ? null : findOrder(orderNumber);
@@ -304,6 +401,7 @@ export function captureMockSession(cartId: string | null, device: string | null)
     reservations: RESERVATIONS.filter((row) => row.cartId === cartId),
     orders: order === null ? [] : [order],
     ...measurements,
+    ...belongings,
   };
 }
 
@@ -345,6 +443,12 @@ export function restoreMockSession(session: MockSession): void {
    */
   if (session.device !== null) adoptDeviceToken(session.device);
   if (session.profiles.length > 0) adoptProfiles(session.profiles.map(copyProfile));
+
+  if (session.saved.length > 0) adoptSavedRows(session.saved);
+  if (session.addresses.length > 0 || session.addressDefaults.length > 0) {
+    adoptAddressRows(session.addresses, session.addressDefaults);
+  }
+  if (session.sizes.length > 0) adoptSizeEvents(session.sizes);
 }
 
 /** A profile with its nested arrays copied, so a snapshot never aliases a live row. */

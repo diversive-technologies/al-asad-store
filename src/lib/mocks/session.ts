@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { accountKeyOf, readSession } from '@/features/auth';
+
 import {
   cartIdFromResponse,
   deviceTokenFromResponse,
@@ -41,9 +43,17 @@ import { captureMockSession, carryOrders } from './session-snapshot';
 async function sessionCookiesFor(response: Response): Promise<string[]> {
   const cartId = cartIdFromResponse(response) ?? (await readCartIdForSession());
   const device = deviceTokenFromResponse(response) ?? (await readDeviceTokenForSession());
+  /*
+   * §28.3 — read through `features/auth` rather than by parsing the session
+   * cookie here. The alternative is a second copy of its name and its schema,
+   * which PD-01 makes a defect; this module is D1 glue and goes when the Java
+   * service replaces the mock layer, taking the dependency with it.
+   */
+  const session = await readSession();
+  const account = session === null ? null : accountKeyOf(session);
   const previous = await readMockSession();
 
-  return mockSessionCookies(carryOrders(previous, captureMockSession(cartId, device)));
+  return mockSessionCookies(carryOrders(previous, captureMockSession(cartId, device, account)));
 }
 
 /**

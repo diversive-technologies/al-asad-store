@@ -6,6 +6,14 @@ import { resetReservations } from './bag-reservations';
 import { CATALOGUE, type CatalogueRecord } from './catalogue-db';
 import { resetOrders } from './checkout-db';
 import {
+  removeItem,
+  resetSavedItems,
+  saveItem,
+  savedItemsFor,
+} from './wishlist-db';
+import { resetAddresses } from './addresses-db';
+import { resetSavedSizes } from './saved-sizes-db';
+import {
   adoptDeviceToken,
   isKnownOwner,
   profileById,
@@ -84,6 +92,9 @@ function coldInstance(): void {
   resetOrders();
   resetProfiles();
   resetDeviceTokens();
+  resetSavedItems();
+  resetAddresses();
+  resetSavedSizes();
 }
 
 beforeEach(() => {
@@ -198,6 +209,62 @@ describe('a mock session carried between instances', () => {
     expect(captureMockSession(null, null)).toEqual(EMPTY_SESSION);
     expect(captureMockSession('no-such-cart', null)).toEqual(EMPTY_SESSION);
     expect(isEmptySession(EMPTY_SESSION)).toBe(true);
+  });
+});
+
+describe("a signed-in customer's belongings carried between instances", () => {
+  const ACCOUNT = 'customer@example.com';
+
+  it('brings saved items back, removals included', () => {
+    saveItem(ACCOUNT, inStockLength().id);
+    expect(savedItemsFor(ACCOUNT)).toHaveLength(1);
+
+    const session = captureMockSession(null, null, ACCOUNT);
+    expect(session.saved).toHaveLength(1);
+    // Worth a cookie on its own: a heart pressed is not nothing.
+    expect(isEmptySession(session)).toBe(false);
+
+    resetSavedItems();
+    expect(savedItemsFor(ACCOUNT)).toHaveLength(0);
+
+    restoreMockSession(session);
+    expect(savedItemsFor(ACCOUNT)).toHaveLength(1);
+  });
+
+  it('carries nothing for a guest, and never another account', () => {
+    saveItem(ACCOUNT, inStockLength().id);
+
+    expect(captureMockSession(null, null, null).saved).toHaveLength(0);
+    expect(captureMockSession(null, null, 'somebody@else.com').saved).toHaveLength(0);
+  });
+
+  it('lets a removal stick rather than restoring what was just taken out', () => {
+    const productId = inStockLength().id;
+    saveItem(ACCOUNT, productId);
+    const withItem = captureMockSession(null, null, ACCOUNT);
+
+    removeItem(ACCOUNT, productId);
+    const afterRemoval = captureMockSession(null, null, ACCOUNT);
+
+    /*
+     * Both snapshots carry rows, so the newer one wins outright. Merging them
+     * would resurrect the heart the customer just pressed off — D6 keeps the
+     * removal AS a row, so "has rows" is not the same as "has it saved".
+     */
+    const carried = carryOrders(withItem, afterRemoval);
+
+    resetSavedItems();
+    restoreMockSession(carried);
+    expect(savedItemsFor(ACCOUNT)).toHaveLength(0);
+  });
+
+  it('keeps belongings when a later request captured none of its own', () => {
+    saveItem(ACCOUNT, inStockLength().id);
+    const signedIn = captureMockSession(null, null, ACCOUNT);
+    // A request that touched only the bag knows nothing of the account.
+    const bagOnly = captureMockSession(null, null, null);
+
+    expect(carryOrders(signedIn, bagOnly).saved).toHaveLength(1);
   });
 });
 

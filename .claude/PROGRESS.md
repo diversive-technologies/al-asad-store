@@ -60,13 +60,19 @@ that reads it were never the same process.
   looked for the figures. The token rides in the session cookie and is
   re-registered on restore. Measurements are captured whether or not there is a
   bag, because taking them is a journey of its own.
-- **Not carried yet:** saved items, addresses and saved sizes. All three are for
-  a SIGNED-IN customer only — a guest's saved items already live in their own
-  browser — and they are REACHABLE on a serverless host, because `ACCOUNTS` is
-  seeded with the test account at module load, so password sign-in works on any
-  instance. Only the one-time CODE path does not: `CODES` is module-scoped, so
-  a code asked for on one instance cannot be verified on another. Carrying the
-  three is the same mechanism again and is the next thing to do.
+- **The account's belongings travel too** — saved items, addresses with their
+  default EVENTS, and saved sizes. All three are for a signed-in customer (a
+  guest's saved items already live in their own browser) and all three are
+  reachable on a serverless host, because `ACCOUNTS` is seeded with the test
+  account at module load, so a password sign-in succeeds on whichever instance
+  answers. The one that needed thought is `carryOrders`: a signed-in request
+  captures the account's rows IN FULL, so the newer snapshot is taken whole
+  rather than merged — merging would resurrect a heart the customer had just
+  pressed off, because D6 keeps a removal AS a row and "has rows" is not "has
+  it saved". A guest request captures none, and then the previous rows stand.
+- **Still not carried: sign-in by one-time CODE.** `CODES` is module-scoped, so
+  a code asked for on one instance cannot be verified on another. Password
+  sign-in with the seeded test account is the way in on a serverless host.
 - The stock ledger is per-visitor rather than shared, which is right for a
   demonstration and wrong for a shop — D1 ends when Java replaces this layer.
 

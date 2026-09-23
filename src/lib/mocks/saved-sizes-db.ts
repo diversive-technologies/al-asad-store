@@ -33,6 +33,30 @@ interface SizeEvent {
 
 const EVENTS: SizeEvent[] = [];
 
+/** D1 serverless — an account's size events, in order. D6: the history is the answer. */
+export function sizeEventsOf(accountKey: string): readonly SizeEvent[] {
+  return EVENTS.filter((row) => row.accountKey === accountKey);
+}
+
+/** D1 serverless — put them back, skipping any already held. */
+export function adoptSizeEvents(rows: readonly SizeEvent[]): void {
+  for (const row of rows) {
+    const held = EVENTS.some(
+      (other) =>
+        other.accountKey === row.accountKey &&
+        other.sizeSetId === row.sizeSetId &&
+        other.at === row.at &&
+        other.kind === row.kind,
+    );
+    if (!held) EVENTS.push({ ...row });
+  }
+}
+
+/** Test seam — a cold instance has saved no sizes. */
+export function resetSavedSizes(): void {
+  EVENTS.length = 0;
+}
+
 /** A saved size as the account read answers it, in one language. */
 export interface SavedSizePayload {
   readonly sizeSet: { readonly id: string; readonly name: string };

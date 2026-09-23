@@ -2,6 +2,7 @@ import { currentAccountKey } from '@/features/auth/server';
 import { fetchSavedSizes, rememberSize, savedSizeChoiceSchema } from '@/features/saved-sizes';
 import { getLocale } from '@/i18n';
 import { ensureMockServer } from '@/lib/mocks/ensure';
+import { withMockSession } from '@/lib/mocks/session';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -42,7 +43,7 @@ export async function GET(request: Request): Promise<Response> {
   return Response.json(sizes.value, { headers: NO_STORE });
 }
 
-export async function POST(request: Request): Promise<Response> {
+async function postHandler(request: Request): Promise<Response> {
   // SEC-08 — this one writes, so a foreign origin is refused before anything else.
   if (!isSameOrigin(request)) return new Response(null, { status: 403 });
   await ensureMockServer();
@@ -64,3 +65,9 @@ export async function POST(request: Request): Promise<Response> {
 
   return Response.json(sizes.value, { headers: NO_STORE });
 }
+
+/*
+ * D1 serverless — §28.3's rows belong to the account and are recorded in
+ * the visitor's own cookie, so the next instance can still answer with them.
+ */
+export const POST = withMockSession(postHandler);

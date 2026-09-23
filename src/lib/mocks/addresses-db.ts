@@ -50,6 +50,53 @@ interface DefaultEvent {
 const ADDRESSES: AddressRow[] = [];
 const DEFAULTS: DefaultEvent[] = [];
 
+/** D1 serverless — an account's address versions and its default events. */
+export function addressRowsOf(accountKey: string): readonly AddressRow[] {
+  return ADDRESSES.filter((row) => row.accountKey === accountKey);
+}
+
+export function defaultEventsOf(accountKey: string): readonly DefaultEvent[] {
+  return DEFAULTS.filter((row) => row.accountKey === accountKey);
+}
+
+/**
+ * D1 serverless — put both back.
+ *
+ * The address id and its VERSION are the identity: a correction is the next
+ * version of the same id, so matching on the pair is what keeps an edit from
+ * being restored as a second address.
+ */
+export function adoptAddressRows(
+  rows: readonly AddressRow[],
+  defaults: readonly DefaultEvent[],
+): void {
+  for (const row of rows) {
+    const held = ADDRESSES.some(
+      (other) =>
+        other.accountKey === row.accountKey &&
+        other.addressId === row.addressId &&
+        other.version === row.version,
+    );
+    if (!held) ADDRESSES.push({ ...row, detail: { ...row.detail } });
+  }
+
+  for (const event of defaults) {
+    const held = DEFAULTS.some(
+      (other) =>
+        other.accountKey === event.accountKey &&
+        other.addressId === event.addressId &&
+        other.at === event.at,
+    );
+    if (!held) DEFAULTS.push({ ...event });
+  }
+}
+
+/** Test seam — a cold instance holds no addresses. */
+export function resetAddresses(): void {
+  ADDRESSES.length = 0;
+  DEFAULTS.length = 0;
+}
+
 /**
  * SEC-02 — a book has a ceiling, because the count is untrusted input. Twenty
  * is past what anyone has and short of what would make the picker unusable.

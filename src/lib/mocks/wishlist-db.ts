@@ -22,6 +22,29 @@ interface SavedRow {
 
 const SAVED: SavedRow[] = [];
 
+/** D1 serverless — every row this account holds, removals included (D6). */
+export function savedRowsOf(accountKey: string): readonly SavedRow[] {
+  return SAVED.filter((row) => row.accountKey === accountKey);
+}
+
+/** D1 serverless — put an account's rows back, skipping any already held. */
+export function adoptSavedRows(rows: readonly SavedRow[]): void {
+  for (const row of rows) {
+    const held = SAVED.some(
+      (other) =>
+        other.accountKey === row.accountKey &&
+        other.productId === row.productId &&
+        other.savedAt === row.savedAt,
+    );
+    if (!held) SAVED.push({ ...row });
+  }
+}
+
+/** Test seam — a cold instance has saved nothing. */
+export function resetSavedItems(): void {
+  SAVED.length = 0;
+}
+
 const activeRows = (accountKey: string): SavedRow[] =>
   SAVED.filter((row) => row.accountKey === accountKey && row.removedAt === null);
 
