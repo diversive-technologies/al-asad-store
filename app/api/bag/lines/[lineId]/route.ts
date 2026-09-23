@@ -3,6 +3,7 @@ import { updateQuantityRequestSchema } from '@/features/bag/contract';
 import { getLocale } from '@/i18n';
 import { cartLineIdSchema } from '@/lib/domain/ids';
 import { ensureMockServer } from '@/lib/mocks/ensure';
+import { withMockSession } from '@/lib/mocks/session';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -24,7 +25,7 @@ interface RouteContext {
   params: Promise<{ lineId: string }>;
 }
 
-export async function PATCH(request: Request, context: RouteContext): Promise<Response> {
+async function patchHandler(request: Request, context: RouteContext): Promise<Response> {
   await ensureMockServer();
 
   // SEC-08 — a write, so another origin is refused.
@@ -52,3 +53,9 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
   // can still come back `UNAVAILABLE` and the panel says which piece ran out.
   return Response.json(result.value, { headers: NO_STORE });
 }
+
+/*
+ * D1 serverless — the cookie is written after the handler has answered, so
+ * the rows it carries are the ones this request left behind.
+ */
+export const PATCH = withMockSession(patchHandler);

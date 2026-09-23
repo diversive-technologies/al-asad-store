@@ -2,11 +2,10 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 
-import { clientKey } from '@/config/client';
 import type { ApiError } from '@/lib/api/errors';
 import { ok, type Result } from '@/lib/result';
 import { cartIdSchema, type CartId } from '@/lib/domain/ids';
-import { capabilityCookieOptions } from '@/lib/utils/cookies';
+import { CART_COOKIE_NAME, capabilityCookieOptions } from '@/lib/utils/cookies';
 
 import { createCart } from './bag-server';
 
@@ -25,8 +24,10 @@ import { createCart } from './bag-server';
  * cookie is the ONLY thing tying an anonymous customer to their reservations.
  *
  * D5: the name carries the client's key prefix rather than a brand written here.
+ * SSOT-00 keeps the name itself in `lib/utils/cookies`, because the mock
+ * layer's session cookie reads it too.
  */
-const COOKIE_NAME = clientKey('cart');
+const COOKIE_NAME = CART_COOKIE_NAME;
 
 /** Long enough to survive a browsing session and a night's sleep. The holds
  *  inside it expire on their own schedule (§7.1), which is the real limit. */

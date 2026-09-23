@@ -3,6 +3,7 @@ import { addToBagRequestSchema } from '@/features/bag/contract';
 import { readProfileOwner } from '@/features/made-to-measure';
 import { getLocale } from '@/i18n';
 import { ensureMockServer } from '@/lib/mocks/ensure';
+import { withMockSession } from '@/lib/mocks/session';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -63,7 +64,7 @@ export async function GET(): Promise<Response> {
 }
 
 /** §16 `addItem` — the write that creates the cart if there is not one yet. */
-export async function POST(request: Request): Promise<Response> {
+async function postHandler(request: Request): Promise<Response> {
   await ensureMockServer();
 
   // SEC-08 — a write that can create a cart and replace the cookie naming one.
@@ -100,3 +101,9 @@ export async function POST(request: Request): Promise<Response> {
    */
   return Response.json(result.value, { headers: NO_STORE });
 }
+
+/*
+ * D1 serverless — the cookie is written after the handler has answered, so
+ * the rows it carries are the ones this request left behind.
+ */
+export const POST = withMockSession(postHandler);

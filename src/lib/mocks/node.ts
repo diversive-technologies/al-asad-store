@@ -3,6 +3,7 @@ import 'server-only';
 import { setupServer } from 'msw/node';
 
 import { handlers } from './handlers';
+import { restoreMockSession, type MockSession } from './session-snapshot';
 
 /**
  * D1 — the interceptor for the Next.js server process.
@@ -67,6 +68,18 @@ interface ArmedServer {
   readonly fetch: unknown;
   /** Arms the handlers of the evaluation that armed this server, or `null` if unknown. */
   readonly armAgain: (() => void) | null;
+  /**
+   * Restores a session into the stores THESE handlers read, or `null` if unknown.
+   *
+   * The same reasoning as `armAgain`, and it is load-bearing for the same
+   * reason. Each module context has its own copy of every store, so a restore
+   * performed against the context that happens to be handling the request can
+   * land in a `CARTS` map that nothing is serving from. That is not
+   * hypothetical: hydrating through a plain import put the bag back where the
+   * Route Handler could see it and the page could not, so `/api/bag` answered
+   * with the line while `/bag` rendered "Your bag is empty".
+   */
+  readonly restore: ((session: MockSession) => void) | null;
 }
 
 /** Per evaluation: false in every fresh module context, which is when it takes over. */
@@ -77,6 +90,17 @@ function methodOf(value: unknown, name: 'close' | 'armAgain'): (() => void) | nu
   if (typeof value !== 'object' || value === null || !(name in value)) return null;
   const method: unknown = Reflect.get(value, name);
   return typeof method === 'function' ? () => method.call(value) : null;
+}
+
+/** The slot's `restore`, bound to it, when it has one. TS-03: narrowed, not cast. */
+function restoreOf(value: unknown): ((session: MockSession) => void) | null {
+  if (typeof value !== 'object' || value === null || !('restore' in value)) return null;
+  const method: unknown = Reflect.get(value, 'restore');
+  return typeof method === 'function'
+    ? (session: MockSession) => {
+        method.call(value, session);
+      }
+    : null;
 }
 
 /*
@@ -97,6 +121,7 @@ function armedServer(): ArmedServer | null {
     close,
     fetch: 'fetch' in slot ? slot.fetch : null,
     armAgain: methodOf(slot, 'armAgain'),
+    restore: restoreOf(slot),
   };
 }
 
@@ -121,6 +146,8 @@ function armHere(): void {
     fetch: globalThis.fetch,
     close: () => server.close(),
     armAgain: armHere,
+    // Bound to THIS context's stores, which are the ones these handlers read.
+    restore: restoreMockSession,
   });
 }
 
@@ -140,6 +167,17 @@ export function startMockServer(): void {
   // Next put its boot-time fetch back: arm the handlers that were serving again.
   if (armed !== null) retire(armed);
   (armed?.armAgain ?? armHere)();
+}
+
+/**
+ * The restore belonging to the handlers currently serving, if any.
+ *
+ * `hydrateMockSession` uses this in preference to its own import, so a session
+ * is put back into the stores that will actually answer the request rather
+ * than into whichever context happened to read the cookie.
+ */
+export function activeRestore(): ((session: MockSession) => void) | null {
+  return armedServer()?.restore ?? null;
 }
 
 /** Test seam: stops intercepting and forgets the server. */

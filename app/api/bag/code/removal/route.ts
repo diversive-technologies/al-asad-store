@@ -1,6 +1,7 @@
 import { readCartId, removeCode } from '@/features/bag';
 import { getLocale } from '@/i18n';
 import { ensureMockServer } from '@/lib/mocks/ensure';
+import { withMockSession } from '@/lib/mocks/session';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE } from '@/lib/utils/route';
@@ -17,7 +18,7 @@ import { NO_STORE } from '@/lib/utils/route';
  */
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request): Promise<Response> {
+async function postHandler(request: Request): Promise<Response> {
   // D1 — a Route Handler never renders the root layout, so it arms its own
   // module context or the first request after a hot reload hits a real socket.
   await ensureMockServer();
@@ -37,3 +38,9 @@ export async function POST(request: Request): Promise<Response> {
 
   return Response.json(result.value, { headers: NO_STORE });
 }
+
+/*
+ * D1 serverless — the cookie is written after the handler has answered, so
+ * the rows it carries are the ones this request left behind.
+ */
+export const POST = withMockSession(postHandler);

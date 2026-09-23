@@ -10,8 +10,54 @@ none, because it is believed.
 **Layout (2026-09-17):** this repository is the storefront alone. The Java service
 is its own repository beside it (`../backend`), and the two deploy separately.
 
-Last updated: 2026-09-22, on `backend-integration`, whose tree is `main`'s
-(`d32e80d`, pushed) plus the product page restyle below; `main` fast-forwards to it.
+Last updated: 2026-09-23, on `main`, which was fast-forwarded to
+`backend-integration` (`e4854e8`) and now carries the serverless session work
+below. `main` is AHEAD of `origin/main` and unpushed — publishing is the
+operator's, per `.claude/GIT.md`.
+
+**23 September — the deployed store lost every bag on the way to checkout.**
+
+The mock layer is eighteen module-scoped `Map`s and arrays, and the comment on
+`RESERVATIONS` states the assumption they all rest on: "module-scoped so it
+survives across requests within a dev server process". On Vercel that is false
+twice — a cold start begins empty, and the RSC render and the Route Handlers are
+different functions with different memory. So "add to bag" and the `/checkout`
+that reads it were never the same process.
+
+- **One visitor's rows now ride in their own cookie.** `session-snapshot.ts`
+  captures the cart, its code history, its reservation rows and the order it
+  became; `session-cookie.ts` gzips that, base64url-encodes it and splits it
+  across numbered `aa_session.N` cookies (a one-line bag is 394 bytes). Restored
+  on every request from `ensureMockServer`, recorded after every mutation by
+  `withMockSession`, which wraps seven cart and checkout routes.
+- **The reservation rows had to travel.** `isLapsed` reads a line with no ACTIVE
+  hold as expired, so a cart restored without its holds is still an EMPTY bag.
+  A snapshot of the records alone would have passed a records-level test while
+  the customer still saw nothing.
+- **Ids are carried, not regenerated.** `mockId` counts from one shared counter,
+  so replaying the adds would renumber the lines the rendered page is already
+  referring to and every remove would 404.
+- **Two faults found by running it rather than reasoning about it.** Next drops
+  a cookie set after the handler has returned its `Response`, so the header is
+  appended to the response itself; and a restore through a plain import lands in
+  whichever module context read the cookie, which is not always the one serving
+  — `/api/bag` answered with the line while `/bag` rendered "Your bag is empty".
+  The restore is now taken from the armed server in `node.ts`, beside `armAgain`,
+  for exactly the reason that already existed.
+- **Try-on would have failed on Vercel whatever the key.** `garmentImage` reads
+  the photograph off the filesystem, and `public/` is not traced into a
+  serverless function, so `readFile` throws and every try-on answers
+  `UNAVAILABLE`. `outputFileTracingIncludes` now ships `public/products/**` with
+  `/api/try-on`. This is not only the sample path: the garment is read BEFORE
+  the provider branch, so a configured Gemini key fails identically.
+- **Gemini needs no code.** `imageModelProvider` already posts both images to
+  `generativelanguage.googleapis.com`; setting `TRY_ON_PROVIDER_API_KEY` is the
+  whole of it. `.env.example` said the opposite and has been corrected.
+- **Not carried, and deliberately:** saved items, measurement profiles,
+  addresses and saved sizes. They are per-visitor too and would fit the same
+  mechanism; the cart and the order were what the demonstration needed first.
+  The stock ledger is per-visitor rather than shared, which is right for a
+  demonstration and wrong for a shop — D1 ends when Java replaces this layer.
 
 **22 September — the product page, restyled by the operator's request:**
 

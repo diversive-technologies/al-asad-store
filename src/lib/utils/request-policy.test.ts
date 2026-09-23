@@ -26,15 +26,49 @@ function routeFiles(): string[] {
     .map((path) => join(API_ROOT, path));
 }
 
+/**
+ * Where a method's body begins, however the file chooses to export it.
+ *
+ * Two shapes are in the tree. Most routes declare the handler AS the export.
+ * The bag and checkout writes are wrapped so they record the mock session
+ * (D1 serverless, `lib/mocks/session.ts`), which names the function separately
+ * and exports the wrapped value:
+ *
+ *     async function postHandler(request: Request) { … }
+ *     export const POST = withMockSession(postHandler);
+ *
+ * Finding only the first shape is how this guard quietly stopped covering
+ * seven write handlers the moment they were wrapped — which is the exact
+ * failure it exists to prevent, so it reads both.
+ */
+function handlerStart(source: string, method: string): number {
+  const declared = source.indexOf(`export async function ${method}(`);
+  if (declared !== -1) return declared;
+
+  const wrapped = new RegExp(String.raw`export const ${method} = \w+\((\w+)\)`).exec(source);
+  const name = wrapped?.[1];
+  if (name === undefined) return -1;
+
+  return source.indexOf(`async function ${name}(`);
+}
+
+/** The first boundary after `start` that ends a handler body. */
+function handlerEnd(source: string, start: number): number {
+  const ends = ['\nexport ', '\nasync function ', '\nfunction ']
+    .map((marker) => source.indexOf(marker, start + 1))
+    .filter((index) => index !== -1);
+
+  return ends.length === 0 ? source.length : Math.min(...ends);
+}
+
 /** Every write handler in the tree, with the source of its body. */
 function writeHandlers(): [string, string][] {
   return routeFiles().flatMap((file) => {
     const source = readFileSync(file, 'utf8');
     return WRITE_METHODS.flatMap((method): [string, string][] => {
-      const start = source.indexOf(`export async function ${method}(`);
+      const start = handlerStart(source, method);
       if (start === -1) return [];
-      const next = source.indexOf('\nexport ', start + 1);
-      const body = source.slice(start, next === -1 ? undefined : next);
+      const body = source.slice(start, handlerEnd(source, start));
       return [[`${method} ${relative(API_ROOT, file).replaceAll('\\', '/')}`, body]];
     });
   });

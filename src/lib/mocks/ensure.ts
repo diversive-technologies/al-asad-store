@@ -24,4 +24,13 @@ export async function ensureMockServer(): Promise<void> {
 
   const { startMockServer } = await import('./node');
   startMockServer();
+
+  /*
+   * D1 serverless — a cold instance starts with empty stores, so the visitor's
+   * own rows are restored from their cookie before anything reads them. On a
+   * single long-lived server this finds the cart already in memory and does
+   * nothing. `session-snapshot.ts` has the reasoning.
+   */
+  const { hydrateMockSession } = await import('./session-hydrate');
+  await hydrateMockSession();
 }

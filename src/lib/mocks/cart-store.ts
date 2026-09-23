@@ -70,7 +70,7 @@ export interface CartRecord {
 }
 
 /** D6 — every code ever applied, in order. The last un-lifted one is in force. */
-interface CodeEvent {
+export interface CodeEvent {
   code: string;
   appliedAt: number;
   liftedAt: number | null;
@@ -213,6 +213,46 @@ export function cartHistory(cartId: string): {
     })),
     codes: (CART_CODES.get(cartId) ?? []).map(({ code, liftedAt }) => ({ code, liftedAt })),
   };
+}
+
+/**
+ * D1 serverless support — the cart as it stands, whatever its status.
+ *
+ * `activeCart` deliberately answers null for a CONVERTED cart, which is right
+ * for every request path. A snapshot is not a request path: it has to carry the
+ * cart that became an order too, or the customer who just placed one loses the
+ * bag history behind it the moment the next request lands on another instance.
+ */
+export function cartRecord(cartId: string): CartRecord | null {
+  return CARTS.get(cartId) ?? null;
+}
+
+/**
+ * D1 serverless support — put a cart back under the id its cookie already names.
+ *
+ * `createCart` mints an id from the shared `nextId` counter, so it cannot be
+ * used to restore one: the id has to be the one the browser is already holding,
+ * and the LINE ids have to be the ones the rendered page is already referring
+ * to. Both come back from the snapshot unchanged.
+ */
+export function adoptCart(cartId: string, record: CartRecord): void {
+  CARTS.set(cartId, record);
+}
+
+/** D1 serverless support — the code events on a cart, for the snapshot. */
+export function cartCodeEvents(cartId: string): readonly CodeEvent[] {
+  return CART_CODES.get(cartId) ?? [];
+}
+
+/**
+ * D1 serverless support — put a cart's code history back.
+ *
+ * D6 makes the history the answer, not a single "current code" field: the code
+ * in force is the last un-lifted event. So the events travel, and `activeCode`
+ * reaches the same conclusion on the new instance as it did on the old one.
+ */
+export function adoptCartCodeEvents(cartId: string, events: readonly CodeEvent[]): void {
+  CART_CODES.set(cartId, [...events]);
 }
 
 /** Test seam. */

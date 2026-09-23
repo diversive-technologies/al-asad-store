@@ -54,6 +54,27 @@ const nextConfig: NextConfig = {
    * output format has to be stated here or it falls back to WebP only.
    */
   images: { formats: ['image/avif', 'image/webp'] },
+  /**
+   * §24 Try-On reads the garment's photograph off the FILESYSTEM —
+   * `garmentImage` in `src/lib/mocks/try-on-images.ts` joins
+   * `process.cwd()/public/<mediaUrl>` and hands the bytes to sharp.
+   *
+   * On a serverless host `public/` is uploaded to the CDN and is NOT traced
+   * into the function bundle, because nothing the tracer can see imports it —
+   * the path is composed at runtime from a catalogue record. So `readFile`
+   * throws, `garmentImage` returns null, and every try-on answers
+   * `UNAVAILABLE / PROVIDER_FAILED`. It works locally and fails deployed,
+   * which is the worst shape a fault can take.
+   *
+   * This is NOT only the sample path: the garment photograph is read BEFORE
+   * the provider branch, so a configured Gemini key fails the same way — the
+   * model is sent the customer's photo and the garment's, and there is no
+   * second source for the garment.
+   *
+   * Declared against the Route Handler that needs it. 5.4 MB of AVIF, far
+   * inside the function size ceiling.
+   */
+  outputFileTracingIncludes: { '/api/try-on': ['./public/products/**'] },
   // Omitted entirely when unset, so the default (block everything) still holds.
   ...(devAllowedOrigins.length > 0 ? { allowedDevOrigins: devAllowedOrigins } : {}),
   serverExternalPackages: ['msw', '@mswjs/interceptors'],

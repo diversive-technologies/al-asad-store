@@ -4,6 +4,7 @@ import { placeForCustomer } from '@/features/checkout';
 import { placeOrderRequestSchema } from '@/features/checkout/contract';
 import { getLocale } from '@/i18n';
 import { ensureMockServer } from '@/lib/mocks/ensure';
+import { withMockSession } from '@/lib/mocks/session';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -18,7 +19,7 @@ import { NO_STORE, readJsonBody } from '@/lib/utils/route';
  */
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request): Promise<Response> {
+async function postHandler(request: Request): Promise<Response> {
   await ensureMockServer();
 
   // SEC-08 — the write that places an order, so another origin is refused.
@@ -64,3 +65,9 @@ export async function POST(request: Request): Promise<Response> {
    */
   return Response.json(result.value, { headers: NO_STORE });
 }
+
+/*
+ * D1 serverless — the cookie is written after the handler has answered, so
+ * the rows it carries are the ones this request left behind.
+ */
+export const POST = withMockSession(postHandler);
