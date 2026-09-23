@@ -6,6 +6,14 @@ import { resetReservations } from './bag-reservations';
 import { CATALOGUE, type CatalogueRecord } from './catalogue-db';
 import { resetOrders } from './checkout-db';
 import {
+  adoptDeviceToken,
+  isKnownOwner,
+  profileById,
+  resetDeviceTokens,
+  resetProfiles,
+  saveProfile,
+} from './profiles-db';
+import {
   EMPTY_SESSION,
   captureMockSession,
   carryOrders,
@@ -74,6 +82,8 @@ function coldInstance(): void {
   resetCarts();
   resetReservations();
   resetOrders();
+  resetProfiles();
+  resetDeviceTokens();
 }
 
 beforeEach(() => {
@@ -88,7 +98,7 @@ describe('a mock session carried between instances', () => {
     const before = summaryFor(cartId, 'en');
     expect(before?.lines).toHaveLength(1);
 
-    const session = captureMockSession(cartId);
+    const session = captureMockSession(cartId, null);
     coldInstance();
 
     // The symptom the operator reported, reproduced: the bag is simply gone.
@@ -105,7 +115,7 @@ describe('a mock session carried between instances', () => {
     const cartId = createCart();
     addItem(cartId, inStockLength().id, [], 1, 'en');
 
-    const session = captureMockSession(cartId);
+    const session = captureMockSession(cartId, null);
     expect(session.reservations.length).toBeGreaterThan(0);
 
     coldInstance();
@@ -130,7 +140,7 @@ describe('a mock session carried between instances', () => {
     const lineId = summaryFor(cartId, 'en')?.lines[0]?.id;
     expect(lineId).toBeDefined();
 
-    const session = captureMockSession(cartId);
+    const session = captureMockSession(cartId, null);
     coldInstance();
     createCart();
     restoreMockSession(session);
@@ -142,7 +152,7 @@ describe('a mock session carried between instances', () => {
     const cartId = createCart();
     addItem(cartId, inStockLength().id, [], 1, 'en');
 
-    const stale = captureMockSession(cartId);
+    const stale = captureMockSession(cartId, null);
     addItem(cartId, inStockLength().id, [], 1, 'en');
     const fresh = summaryFor(cartId, 'en')?.lines.length ?? 0;
 
@@ -156,7 +166,7 @@ describe('a mock session carried between instances', () => {
     addItem(cartId, inStockLength().id, [], 1, 'en');
 
     const parsed = mockSessionSchema.safeParse(
-      JSON.parse(JSON.stringify(captureMockSession(cartId))),
+      JSON.parse(JSON.stringify(captureMockSession(cartId, null))),
     );
 
     expect(parsed.success).toBe(true);
@@ -185,8 +195,81 @@ describe('a mock session carried between instances', () => {
   });
 
   it('is empty for a browser that has never added anything', () => {
-    expect(captureMockSession(null)).toEqual(EMPTY_SESSION);
-    expect(captureMockSession('no-such-cart')).toEqual(EMPTY_SESSION);
+    expect(captureMockSession(null, null)).toEqual(EMPTY_SESSION);
+    expect(captureMockSession('no-such-cart', null)).toEqual(EMPTY_SESSION);
     expect(isEmptySession(EMPTY_SESSION)).toBe(true);
+  });
+});
+
+describe("a guest's measurements carried between instances", () => {
+  const DEVICE = 'device-token-for-the-session-test';
+  const OWNER = { keptWith: 'DEVICE', key: DEVICE } as const;
+
+  /* The same figures the profile store's own tests use, for the same reason. */
+  const ENTRIES = [
+    { pointId: 'kameezLength', raw: '40', unit: 'IN' as const },
+    { pointId: 'kameezSleeve', raw: '24', unit: 'IN' as const },
+    { pointId: 'kameezShoulder', raw: '18', unit: 'IN' as const },
+    { pointId: 'kameezNeck', raw: '15.5', unit: 'IN' as const },
+    { pointId: 'kameezChest', raw: '21', unit: 'IN' as const },
+    { pointId: 'kameezBottom', raw: '22', unit: 'IN' as const },
+    { pointId: 'shalwarLength', raw: '40', unit: 'IN' as const },
+    { pointId: 'shalwarPaincha', raw: '7.5', unit: 'IN' as const },
+  ];
+
+  function saveOne(): string {
+    adoptDeviceToken(DEVICE);
+    const outcome = saveProfile(OWNER, {
+      garmentStyle: 'KAMEEZ_SHALWAR',
+      source: 'GARMENT_COPY',
+      version: 1,
+      entries: ENTRIES,
+      preferences: [],
+      acknowledgedFindings: [],
+    });
+    if (outcome.kind !== 'SAVED') throw new Error('Expected the fixture profile to save.');
+    return outcome.profile.id;
+  }
+
+  it('brings the figures back, and the token that makes them readable', () => {
+    const profileId = saveOne();
+    const session = captureMockSession(null, DEVICE);
+
+    expect(session.profiles).toHaveLength(1);
+    expect(session.device).toBe(DEVICE);
+    // Worth carrying on its own: a bag with nothing in it is still a visit.
+    expect(isEmptySession(session)).toBe(false);
+
+    resetProfiles();
+    resetDeviceTokens();
+    expect(profileById(profileId, OWNER)).toBeNull();
+    // The 401 the next instance would answer with, before any profile is sought.
+    expect(isKnownOwner(OWNER)).toBe(false);
+
+    restoreMockSession(session);
+
+    expect(isKnownOwner(OWNER)).toBe(true);
+    expect(profileById(profileId, OWNER)?.id).toBe(profileId);
+  });
+
+  it('survives the round trip through its own schema', () => {
+    saveOne();
+    const parsed = mockSessionSchema.safeParse(
+      JSON.parse(JSON.stringify(captureMockSession(null, DEVICE))),
+    );
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it('carries figures a bag-only request did not capture', () => {
+    saveOne();
+    const withProfiles = captureMockSession(null, DEVICE);
+    // A request that touched the bag alone knows nothing of the device.
+    const bagOnly = captureMockSession(null, null);
+
+    const carried = carryOrders(withProfiles, bagOnly);
+
+    expect(carried.profiles).toHaveLength(1);
+    expect(carried.device).toBe(DEVICE);
   });
 });

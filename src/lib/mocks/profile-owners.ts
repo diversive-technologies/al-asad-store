@@ -30,6 +30,18 @@ export function issueDeviceToken(): string {
   return token;
 }
 
+/**
+ * D1 serverless — count a token this instance did not issue.
+ *
+ * `DEVICE_TOKENS` is module-scoped, so a guest who took their measurements on
+ * one instance is a stranger to the next: `isKnownOwner` answers false and the
+ * handler refuses with 401 before the profiles are even looked for. The token
+ * travels in the visitor's own session cookie and is re-registered here.
+ */
+export function adoptDeviceToken(token: string): void {
+  DEVICE_TOKENS.add(token);
+}
+
 /** A device owner counts only with a token this module issued. */
 export function isKnownOwner(owner: ProfileOwnerRow): boolean {
   return owner.keptWith === 'ACCOUNT' || DEVICE_TOKENS.has(owner.key);
@@ -44,4 +56,9 @@ export function profileOwnerOf(header: string | null): ProfileOwnerRow | null {
   const key = header.slice(at + 1);
   if (key.length === 0) return null;
   return kind === 'ACCOUNT' || kind === 'DEVICE' ? { keptWith: kind, key } : null;
+}
+
+/** Test seam — a cold instance knows no device token. */
+export function resetDeviceTokens(): void {
+  DEVICE_TOKENS.clear();
 }

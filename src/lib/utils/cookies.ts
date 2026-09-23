@@ -20,6 +20,9 @@ export const CART_COOKIE_NAME = clientKey('cart');
  */
 export const MOCK_SESSION_COOKIE_NAME = clientKey('session');
 
+/** §34 — the guest's measurement device token. Its profiles are keyed on it. */
+export const DEVICE_COOKIE_NAME = clientKey('measurements');
+
 /**
  * SEC-01 — the options every CAPABILITY cookie carries: the cart id, a
  * measurements device token — anything whose holder holds what it names.

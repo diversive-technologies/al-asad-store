@@ -3,11 +3,10 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
-import { clientKey } from '@/config/client';
 import { accountKeyOf, readSession } from '@/features/auth';
 import type { ApiError } from '@/lib/api/errors';
 import { ok, type Result } from '@/lib/result';
-import { capabilityCookieOptions } from '@/lib/utils/cookies';
+import { DEVICE_COOKIE_NAME, capabilityCookieOptions } from '@/lib/utils/cookies';
 
 import { requestDeviceToken } from './profile-server';
 
@@ -29,7 +28,8 @@ export interface ResolvedOwner {
  * backend refuses a well-shaped token it never issued. D5: named through the
  * client's key prefix.
  */
-const DEVICE_COOKIE = clientKey('measurements');
+// SSOT-00: the name lives in `lib/utils/cookies`, where the mock session reads it too.
+const DEVICE_COOKIE = DEVICE_COOKIE_NAME;
 const DEVICE_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 const deviceTokenShape = z.uuid();
 

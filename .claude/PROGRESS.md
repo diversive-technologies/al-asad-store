@@ -53,10 +53,21 @@ that reads it were never the same process.
 - **Gemini needs no code.** `imageModelProvider` already posts both images to
   `generativelanguage.googleapis.com`; setting `TRY_ON_PROVIDER_API_KEY` is the
   whole of it. `.env.example` said the opposite and has been corrected.
-- **Not carried, and deliberately:** saved items, measurement profiles,
-  addresses and saved sizes. They are per-visitor too and would fit the same
-  mechanism; the cart and the order were what the demonstration needed first.
-  The stock ledger is per-visitor rather than shared, which is right for a
+- **The measurements travel too**, added the same day. §34 is the store's USP
+  and a guest's profiles are held on the SERVER against a device token, so they
+  were lost exactly as the bag was — and worse: `isKnownOwner` checks a
+  module-scoped token set, so the next instance answered **401** before it even
+  looked for the figures. The token rides in the session cookie and is
+  re-registered on restore. Measurements are captured whether or not there is a
+  bag, because taking them is a journey of its own.
+- **Not carried yet:** saved items, addresses and saved sizes. All three are for
+  a SIGNED-IN customer only — a guest's saved items already live in their own
+  browser — and they are REACHABLE on a serverless host, because `ACCOUNTS` is
+  seeded with the test account at module load, so password sign-in works on any
+  instance. Only the one-time CODE path does not: `CODES` is module-scoped, so
+  a code asked for on one instance cannot be verified on another. Carrying the
+  three is the same mechanism again and is the next thing to do.
+- The stock ledger is per-visitor rather than shared, which is right for a
   demonstration and wrong for a shop — D1 ends when Java replaces this layer.
 
 **23 September — four photographs withdrawn, and what they were holding up.**

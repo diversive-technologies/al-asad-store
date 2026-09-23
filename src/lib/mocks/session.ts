@@ -2,8 +2,10 @@ import 'server-only';
 
 import {
   cartIdFromResponse,
+  deviceTokenFromResponse,
   mockSessionCookies,
   readCartIdForSession,
+  readDeviceTokenForSession,
   readMockSession,
 } from './session-cookie';
 import { captureMockSession, carryOrders } from './session-snapshot';
@@ -38,9 +40,10 @@ import { captureMockSession, carryOrders } from './session-snapshot';
  */
 async function sessionCookiesFor(response: Response): Promise<string[]> {
   const cartId = cartIdFromResponse(response) ?? (await readCartIdForSession());
+  const device = deviceTokenFromResponse(response) ?? (await readDeviceTokenForSession());
   const previous = await readMockSession();
 
-  return mockSessionCookies(carryOrders(previous, captureMockSession(cartId)));
+  return mockSessionCookies(carryOrders(previous, captureMockSession(cartId, device)));
 }
 
 /**

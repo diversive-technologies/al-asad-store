@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 
 import {
   CART_COOKIE_NAME,
+  DEVICE_COOKIE_NAME,
   MOCK_SESSION_COOKIE_NAME,
   capabilityCookieOptions,
 } from '@/lib/utils/cookies';
@@ -185,6 +186,12 @@ export async function readCartIdForSession(): Promise<string | null> {
   return store?.get(CART_COOKIE_NAME)?.value ?? null;
 }
 
+/** §34 — the device token this browser holds, which scopes its measurements. */
+export async function readDeviceTokenForSession(): Promise<string | null> {
+  const store = await cookieStore();
+  return store?.get(DEVICE_COOKIE_NAME)?.value ?? null;
+}
+
 /**
  * The cart id a handler has just minted, read back off its own response.
  *
@@ -193,9 +200,18 @@ export async function readCartIdForSession(): Promise<string | null> {
  * on the response, because that is how it reaches the browser.
  */
 export function cartIdFromResponse(response: Response): string | null {
-  const header = response.headers.getSetCookie();
-  const match = header
-    .map((value) => new RegExp(`^${CART_COOKIE_NAME}=([^;]+)`).exec(value))
+  return cookieFromResponse(response, CART_COOKIE_NAME);
+}
+
+/** The device token a handler has just remembered, for the same reason. */
+export function deviceTokenFromResponse(response: Response): string | null {
+  return cookieFromResponse(response, DEVICE_COOKIE_NAME);
+}
+
+function cookieFromResponse(response: Response, name: string): string | null {
+  const match = response.headers
+    .getSetCookie()
+    .map((value) => new RegExp(`^${name}=([^;]+)`).exec(value))
     .find((found) => found !== null);
 
   return match?.[1] ?? null;

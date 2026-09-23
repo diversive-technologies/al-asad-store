@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { adoptCart, adoptCartCodeEvents, cartCodeEvents, cartRecord } from './cart-store';
 import { type OrderPayload, findOrder, recordOrder } from './orders-db';
+import { adoptDeviceToken } from './profile-owners';
+import { adoptProfiles, profilesOfOwner } from './profiles-db';
 import { RESERVATIONS, type Reservation } from './reservation-ledger';
 
 /**
@@ -87,6 +89,39 @@ const codeEventSchema = z.object({
   liftedAt: z.number().int().nullable(),
 });
 
+/** §34 — one saved measurement version, exactly as the store holds it. */
+const profileSchema = z.object({
+  id: z.string().min(1),
+  ownerKey: z.string().min(1),
+  keptWith: z.union([z.literal('ACCOUNT'), z.literal('DEVICE')]),
+  garmentStyle: z.string().min(1),
+  setVersion: z.number().int(),
+  ruleSetVersion: z.number().int(),
+  version: z.number().int(),
+  source: z.union([z.literal('GARMENT_COPY'), z.literal('TAILOR_CARD')]),
+  preferences: z.array(z.object({ group: z.string(), value: z.string() })),
+  values: z.array(
+    z.object({
+      pointId: z.string(),
+      enteredValue: z.string(),
+      unitEntered: z.union([z.literal('IN'), z.literal('CM')]),
+      enteredAs: z.union([z.literal('HALF'), z.literal('FULL')]),
+      basis: z.union([z.literal('GARMENT'), z.literal('BODY')]),
+      origin: z.union([z.literal('TYPED'), z.literal('TRANSCRIBED')]),
+      valueMm: z.number(),
+    }),
+  ),
+  acknowledgedFindings: z.array(
+    z.object({
+      ruleId: z.string(),
+      pointId: z.string(),
+      direction: z.union([z.literal('ABOVE'), z.literal('BELOW')]).nullable(),
+    }),
+  ),
+  createdAt: z.string(),
+  supersededBy: z.string().nullable(),
+});
+
 const reservationSchema = z.object({
   cartId: z.string().min(1),
   lineId: z.string().min(1),
@@ -170,6 +205,9 @@ export const mockSessionSchema = z.object({
   codes: z.array(codeEventSchema),
   reservations: z.array(reservationSchema),
   orders: z.array(orderSchema),
+  /** §34 — the guest's device token, so the next instance does not 401 them. */
+  device: z.string().min(1).nullable(),
+  profiles: z.array(profileSchema),
 });
 
 export type MockSession = z.infer<typeof mockSessionSchema>;
@@ -180,11 +218,15 @@ export const EMPTY_SESSION: MockSession = {
   codes: [],
   reservations: [],
   orders: [],
+  device: null,
+  profiles: [],
 };
 
 /** True when there is nothing worth writing a cookie for. */
 export function isEmptySession(session: MockSession): boolean {
-  return session.cart === null && session.orders.length === 0;
+  return (
+    session.cart === null && session.orders.length === 0 && session.profiles.length === 0
+  );
 }
 
 /**
@@ -211,7 +253,20 @@ export function carryOrders(previous: MockSession, next: MockSession): MockSessi
   const known = new Set(next.orders.map((order) => order.orderNumber));
   const kept = previous.orders.filter((order) => !known.has(order.orderNumber));
 
-  return { ...next, orders: [...kept, ...next.orders].slice(-CARRIED_ORDERS) };
+  /*
+   * The measurements are carried the same way and for the same reason: a
+   * request that touched only the bag captures no profiles, and writing that
+   * snapshot as it stands would drop figures the visitor already confirmed.
+   */
+  const heldProfiles = new Set(next.profiles.map((row) => row.id));
+  const profiles = [...previous.profiles.filter((row) => !heldProfiles.has(row.id)), ...next.profiles];
+
+  return {
+    ...next,
+    orders: [...kept, ...next.orders].slice(-CARRIED_ORDERS),
+    device: next.device ?? previous.device,
+    profiles,
+  };
 }
 
 /**
@@ -221,11 +276,17 @@ export function carryOrders(previous: MockSession, next: MockSession): MockSessi
  * never carry another visitor's rows, and every row here is reachable only
  * from this visitor's own cookie.
  */
-export function captureMockSession(cartId: string | null): MockSession {
-  if (cartId === null) return EMPTY_SESSION;
+export function captureMockSession(cartId: string | null, device: string | null): MockSession {
+  /*
+   * §34 — the measurements are captured whether or not there is a bag: taking
+   * them is a journey of its own, and a visitor who has measured a kameez but
+   * bagged nothing must not lose the figures.
+   */
+  const profiles = device === null ? [] : profilesOfOwner(`DEVICE:${device}`);
+  const measurements = { device, profiles: profiles.map(copyProfile) };
 
-  const cart = cartRecord(cartId);
-  if (cart === null) return EMPTY_SESSION;
+  const cart = cartId === null ? null : cartRecord(cartId);
+  if (cartId === null || cart === null) return { ...EMPTY_SESSION, ...measurements };
 
   const orderNumber = cart.orderNumber;
   const order = orderNumber === null ? null : findOrder(orderNumber);
@@ -242,6 +303,7 @@ export function captureMockSession(cartId: string | null): MockSession {
     codes: [...cartCodeEvents(cartId)],
     reservations: RESERVATIONS.filter((row) => row.cartId === cartId),
     orders: order === null ? [] : [order],
+    ...measurements,
   };
 }
 
@@ -275,6 +337,24 @@ export function restoreMockSession(session: MockSession): void {
   for (const order of session.orders) {
     if (findOrder(order.orderNumber) === null) recordOrder(toOrder(order));
   }
+
+  /*
+   * The token first: without it `isKnownOwner` refuses this visitor with a 401
+   * before any profile is looked for, because the token was minted on an
+   * instance that no longer exists.
+   */
+  if (session.device !== null) adoptDeviceToken(session.device);
+  if (session.profiles.length > 0) adoptProfiles(session.profiles.map(copyProfile));
+}
+
+/** A profile with its nested arrays copied, so a snapshot never aliases a live row. */
+function copyProfile(row: MockSession['profiles'][number]): MockSession['profiles'][number] {
+  return {
+    ...row,
+    preferences: row.preferences.map((entry) => ({ ...entry })),
+    values: row.values.map((entry) => ({ ...entry })),
+    acknowledgedFindings: row.acknowledgedFindings.map((entry) => ({ ...entry })),
+  };
 }
 
 /** The parsed row as the ledger's own type, with its readonly arrays copied. */

@@ -32,7 +32,13 @@ import { ownerKeyOf, type ProfileOwnerRow } from './profile-owners';
    `profile-owners.ts` is who may write to it. Re-exported so a reader of the
    store still finds the type it is keyed by. */
 export type { ProfileOwnerRow };
-export { isKnownOwner, issueDeviceToken, profileOwnerOf } from './profile-owners';
+export {
+  adoptDeviceToken,
+  isKnownOwner,
+  issueDeviceToken,
+  profileOwnerOf,
+  resetDeviceTokens,
+} from './profile-owners';
 
 export type { AcknowledgementRow, TypedEntryRow };
 
@@ -86,6 +92,24 @@ export type SaveOutcomeRow =
 export type SetsFor = (garmentStyle: string, source: SourceRow) => readonly SetRow[];
 
 const PROFILES: ProfileRecord[] = [];
+
+/** D1 serverless — every version this owner holds, for the session snapshot. */
+export function profilesOfOwner(ownerKey: string): readonly ProfileRecord[] {
+  return PROFILES.filter((row) => row.ownerKey === ownerKey);
+}
+
+/**
+ * D1 serverless — put an owner's versions back, ids and supersession intact.
+ *
+ * Appended rather than merged, and only for versions this instance does not
+ * already hold: a bag line names the VERSION it was cut against, so an id that
+ * came back different would be a line asking for figures nobody confirmed.
+ */
+export function adoptProfiles(rows: readonly ProfileRecord[]): void {
+  for (const row of rows) {
+    if (!PROFILES.some((held) => held.id === row.id)) PROFILES.push(row);
+  }
+}
 
 /**
  * ONE profile version, by id, and only for the owner it belongs to.
@@ -293,3 +317,8 @@ export function profilesFor(owner: ProfileOwnerRow, garmentStyle: string): Profi
 
 /* Reading the body the stand-in was sent is `profile-submission.ts`: this file is
    the store, and the two have no business in one module (MOD-03). */
+
+/** Test seam — a cold instance holds no profiles. */
+export function resetProfiles(): void {
+  PROFILES.length = 0;
+}
