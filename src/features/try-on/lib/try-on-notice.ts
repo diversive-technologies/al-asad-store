@@ -45,10 +45,11 @@ function rejectionMessage(
 }
 
 /**
- * Three sentences rather than one, because they ask for different things. A
+ * Four sentences rather than one, because they ask for different things. A
  * feature that is switched off cannot succeed however many times it is asked,
  * so telling that customer to "try again" would be sending them to do something
- * pointless.
+ * pointless — and a customer the store's own budget has refused is in the
+ * opposite position, where trying again later is precisely the answer.
  */
 function unavailableMessage(reason: TryOnUnavailableReason, t: TryOnCopy): string {
   switch (reason) {
@@ -58,6 +59,8 @@ function unavailableMessage(reason: TryOnUnavailableReason, t: TryOnCopy): strin
       return t.unavailableFailed;
     case 'TIMEOUT':
       return t.unavailableTimeout;
+    case 'RATE_LIMITED':
+      return t.unavailableRateLimited;
     default:
       return assertNever(reason);
   }

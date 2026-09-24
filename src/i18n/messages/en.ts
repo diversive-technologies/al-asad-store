@@ -824,6 +824,10 @@ export const en = {
       'Try-on is not switched on yet. Everything else on this page works as usual.',
     unavailableFailed: 'We could not create the image this time. Please try again.',
     unavailableTimeout: 'That took longer than expected. Please try again.',
+    /* The store's own budget, not the provider's. It WILL work again, so the
+       sentence says when rather than suggesting the customer did wrong. */
+    unavailableRateLimited:
+      'You have tried on quite a few pieces just now. Please give it a little while and try again.',
     photoTooLarge: 'That photo is too large. Please choose one under {limit} MB.',
     photoWrongFormat: 'That file is not a photo we can use. Please choose a JPEG, PNG or WebP.',
     photoEmpty: 'Please choose a photo first.',

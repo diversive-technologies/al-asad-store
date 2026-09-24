@@ -11,6 +11,7 @@
  * The catalogue barrel already exports Server Components, server callers and a
  * Route Handler's dependency together, and this follows it.
  */
+export { claimTryOnGeneration } from './api/claim-try-on-generation';
 export { fetchTryOnOffer } from './api/fetch-try-on-offer';
 export { generateTryOn } from './api/generate-try-on';
 export { ProductTryOn } from './components/ProductTryOn';

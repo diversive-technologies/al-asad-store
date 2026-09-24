@@ -51,6 +51,19 @@ export async function requestTryOn(
    * different file — rather than only try again.
    */
   if (response.status === 400) return err('PHOTO_REJECTED');
+
+  /*
+   * 429 is the store's own budget, and it is an ANSWER rather than a failure:
+   * the module was reached and declined to spend another metered generation on
+   * this caller. It is turned into the contract's own `UNAVAILABLE` so the
+   * panel says the one sentence that is true — wait a little — instead of the
+   * generic "could not create the image", which would send the customer to
+   * press the button again immediately and be refused again.
+   */
+  if (response.status === 429) {
+    return ok({ status: 'UNAVAILABLE', reason: 'RATE_LIMITED' });
+  }
+
   if (!response.ok) return err('FAILED');
 
   const payload: unknown = await response.json().then<unknown, null>(

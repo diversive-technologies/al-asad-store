@@ -1,4 +1,4 @@
-import { fetchTryOnOffer, generateTryOn } from '@/features/try-on';
+import { claimTryOnGeneration, fetchTryOnOffer, generateTryOn } from '@/features/try-on';
 import { getLocale } from '@/i18n';
 import { productIdSchema } from '@/lib/domain/ids';
 import { ensureMockServer } from '@/lib/mocks/ensure';
@@ -75,6 +75,18 @@ export async function POST(request: Request): Promise<Response> {
 
   const oversized = await refusedBySize(request);
   if (oversized !== null) return oversized;
+
+  /*
+   * §24 — the budget, claimed BEFORE the body is read and before a generation
+   * is spent. A generation costs metered money, so the cheapest possible
+   * refusal is the right one: nothing is buffered, nothing is decoded, and the
+   * provider is never reached.
+   *
+   * `Retry-After` is sent because this refusal is temporary and the caller —
+   * including a well-behaved script — can act on knowing when.
+   */
+  const claim = claimTryOnGeneration(request);
+  if (claim !== null) return claim;
 
   // ERR-04 — a body that is not multipart, or arrives cut short, is a 400, never a 500.
   const form = await readFormBody(request);

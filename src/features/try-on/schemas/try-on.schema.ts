@@ -50,16 +50,25 @@ export type TryOnOffer = z.infer<typeof tryOnOfferSchema>;
 /**
  * Why `Unavailable` carries a reason.
  *
- * §24 names one failure outcome, but the customer needs three different
+ * §24 names one failure outcome, but the customer needs four different
  * sentences: a feature that is switched off is not the same as one that tried
- * and failed, and neither is the same as one that ran out of time. Collapsing
- * them would make "please try again" the answer to a feature that cannot
- * succeed no matter how many times it is asked.
+ * and failed, neither is the same as one that ran out of time, and none of them
+ * is the same as one that WILL work again shortly. Collapsing them would make
+ * "please try again" the answer to a feature that cannot succeed no matter how
+ * many times it is asked — and would hide, from the one customer it is true
+ * for, that trying again later is exactly the right thing to do.
+ *
+ * `RATE_LIMITED` is the store's own budget refusing to spend another metered
+ * generation on this caller (`lib/try-on-budget.ts`). It is deliberately not
+ * split into "you have had your share" and "the store has had its share": the
+ * second is not the customer's fault and is not described to them as though it
+ * were (ERR-11), so both arrive as one sentence about waiting.
  */
 export const tryOnUnavailableReasonSchema = z.enum([
   'PROVIDER_DISABLED',
   'PROVIDER_FAILED',
   'TIMEOUT',
+  'RATE_LIMITED',
 ]);
 
 export type TryOnUnavailableReason = z.infer<typeof tryOnUnavailableReasonSchema>;

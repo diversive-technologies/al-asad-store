@@ -109,6 +109,23 @@ The operator asked for a module rather than a mock, and it is one now.
   no key still demonstrates the whole flow. It is a separate `status` in the
   contract precisely so the interface cannot show it as a picture of the
   customer.
+- **A BUDGET, because a generation costs money.** Same-origin checking stops
+  another SITE spending it and does nothing about a held button or a script
+  driving our own page. `lib/try-on-budget.ts` caps a visitor at 12 an hour and
+  the whole process at 240; the claim is taken BEFORE the body is read and
+  before the provider is reached, so a refusal is the cheapest thing the route
+  can do — and a FAILING request still spends its claim, or a bad photograph
+  could be retried without limit. A refused caller gets 429 with `Retry-After`
+  and a new `RATE_LIMITED` reason in the contract, so the panel says "wait a
+  little" instead of the generic "could not create the image", which would send
+  them to press the button again and be refused again. It is a **brake, not a
+  gate**: the counters are in process memory, so N serverless instances allow
+  N times the ceiling and a cold start forgets. Stopping a determined attacker
+  needs a counter shared across instances, which this repository does not have.
+- Verified against the real provider on 2026-09-24 with the operator's key:
+  `status: READY`, 896×1152, 13.5s. Also learned, and written down: given a
+  photograph with no person in it, the model INVENTS one — the prompt's "keep
+  the person recognisably themselves" has nothing to hold on to.
 
 **23 September — four photographs withdrawn, and what they were holding up.**
 
