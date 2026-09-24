@@ -104,22 +104,17 @@ export const ENDPOINTS = {
   fabricCalculator: {
     evaluate: '/api/v1/fabric-calculator/evaluate',
   },
-  /**
-   * Section 24 Try-On.
+  /*
+   * Section 24 Try-On had two entries here — `offer` and `generations` — and
+   * has none now. SSOT-04 lists what this storefront asks the JAVA SERVICE for,
+   * and since 2026-09-24 it asks it for nothing about try-on: §24 runs in this
+   * process against an image model, so the only backend read the feature makes
+   * is the ordinary catalogue projection for the garment, which is listed
+   * above. `features/try-on/api/generate-try-on.ts` states why.
    *
-   * Two operations, and the split is the point. `offer` is `isAvailable()` and
-   * costs nothing — it asks the module whether a provider is configured and
-   * never touches the provider itself. `generate` is the one that leaves the
-   * building, and it is the only call in this registry budgeted in tens of
-   * seconds rather than hundreds of milliseconds.
-   *
-   * Neither is on the purchase path (ADR 12): the product page renders and Add
-   * to Bag works with both of these failing.
+   * If module 14 is ever built in Java, the two paths come back here and the
+   * provider adapter becomes an `apiRequest` — nothing above it changes.
    */
-  tryOn: {
-    offer: '/api/v1/try-on/offer',
-    generate: '/api/v1/try-on/generations',
-  },
   /**
    * Section 16 `CartService`. The cart is addressed by an id the backend issues
    * and the BFF keeps in an httpOnly cookie — never a path the browser composes.

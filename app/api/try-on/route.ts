@@ -1,4 +1,5 @@
 import { fetchTryOnOffer, generateTryOn } from '@/features/try-on';
+import { getLocale } from '@/i18n';
 import { productIdSchema } from '@/lib/domain/ids';
 import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
@@ -8,11 +9,16 @@ import { declaredLength, NO_STORE, readFormBody } from '@/lib/utils/route';
 /**
  * DATA-08 — the seventh BFF, and architecture §24's only footprint in `app/`.
  *
- * It exists for the reason the others do: `apiRequest` is `server-only`, and a
- * photograph is chosen in a file picker in the browser. It proxies and nothing
- * else. The white-balance correction, the provider call, the timeout and the
- * deletion guarantee are all §24's, behind `apiRequest`, in the module that
- * owns them.
+ * It exists for the reason the others do: the module is `server-only`, and a
+ * photograph is chosen in a file picker in the browser. It composes and nothing
+ * else. The white-balance correction, the prompt, the provider call, the
+ * timeout and the deletion guarantee all belong to `features/try-on`.
+ *
+ * Unlike the other six, what it composes is not a Java contract. §24 runs in
+ * this process against an image model, so there is no round trip here to
+ * proxy — see `generate-try-on.ts` for why that is deliberate. The mock layer
+ * is still armed because the module reads the CATALOGUE for the garment, and
+ * that read is Java's.
  *
  * ## What this route must not do, and does not
  *
@@ -87,16 +93,16 @@ export async function POST(request: Request): Promise<Response> {
   const parsedId = productIdSchema.safeParse(form.get('productId'));
   if (!parsedId.success) return new Response(null, { status: 400, headers: NO_STORE });
 
-  const result = await generateTryOn(parsedId.data, photo);
+  const result = await generateTryOn(parsedId.data, photo, await getLocale());
 
   if (!result.ok) {
     logApiError('api:try-on', result.error); // ERR-10
 
     /*
-     * A refused photograph is the customer's to fix: the module answers the
-     * contract's 422, `apiRequest` reads it as VALIDATION, and it is passed on
-     * as a 400. Everything else is ours and is not described to them (ERR-11,
-     * SEC-07). The interface has its own copy for both.
+     * A refused photograph is the customer's to fix: the module answers
+     * VALIDATION and it is passed on as a 400. Everything else is ours and is
+     * not described to them (ERR-11, SEC-07). The interface has its own copy
+     * for both.
      */
     const status = result.error.kind === 'VALIDATION' ? 400 : 502;
     return new Response(null, { status, headers: NO_STORE });

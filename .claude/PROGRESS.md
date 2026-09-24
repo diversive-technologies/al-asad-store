@@ -76,6 +76,40 @@ that reads it were never the same process.
 - The stock ledger is per-visitor rather than shared, which is right for a
   demonstration and wrong for a shop — D1 ends when Java replaces this layer.
 
+**24 September — Try-On stopped pretending to be a backend call.**
+
+§24 was written as "Java module 14" and lived in `src/lib/mocks/`: the BFF made
+an HTTP request to `JAVA_API_BASE_URL`, MSW intercepted it IN THE SAME PROCESS,
+and the mock called Google. The generation was real; the round trip was not.
+The operator asked for a module rather than a mock, and it is one now.
+
+- **It lives in `features/try-on/`** — `lib/try-on-prompt.ts` (the instruction,
+  its own file because changing how try-on behaves is editing it),
+  `lib/try-on-limits.ts`, `schemas/provider.schema.ts` (the model's reply,
+  parsed not trusted — DATA-02 applies to a vendor exactly as to our backend),
+  `api/try-on-images.ts`, `api/gemini-provider.ts` (the ONLY file that speaks
+  the vendor's dialect), `api/generate-try-on.ts` (the order of the work).
+- **No `apiRequest`, and `ENDPOINTS.tryOn` is gone.** SSOT-04 lists what this
+  storefront asks JAVA for, and it now asks nothing about try-on. Five mock
+  files were deleted with it. If module 14 is ever built, the paths come back
+  and the adapter becomes an `apiRequest` — nothing above it changes.
+- **It still reads the CATALOGUE from the backend** for the garment's name and
+  photograph, so the try-on cannot disagree with the product page about what is
+  being tried on. That read works against mocks or Java either way.
+- **The offer is answered from configuration**, not fetched. It was a cached
+  round trip to learn a value this process already holds; that is a request off
+  the product page's 200ms budget entirely rather than cached for a minute.
+- **The prompt's requirements are pinned by tests** — same person, no
+  reshaping, faithful colour, and no implied fit — because each is something
+  the feature would do WRONG if the line went missing, and prose is the easiest
+  thing to edit carelessly. `.claude/working-docs/try-on-module.md` is the
+  operator-facing document: how to key it, what each failure means, and why
+  `outputFileTracingIncludes` is load-bearing on a serverless host.
+- The labelled SAMPLE is kept as the no-credential fallback, so a checkout with
+  no key still demonstrates the whole flow. It is a separate `status` in the
+  contract precisely so the interface cannot show it as a picture of the
+  customer.
+
 **23 September — four photographs withdrawn, and what they were holding up.**
 
 The operator asked for the blue-backdrop and child photographs to go. Four rows

@@ -6,7 +6,6 @@ import { catalogueHandlers } from './catalogue-handlers';
 import { checkoutHandlers } from './checkout-handlers';
 import { contentHandlers } from './content-handlers';
 import { madeToMeasureHandlers } from './made-to-measure-handlers';
-import { tryOnHandlers } from './try-on-handlers';
 
 /**
  * D1 / TEST-04 — network is mocked at the HTTP layer, never by stubbing the
@@ -30,9 +29,6 @@ export const handlers = [
 
   // §28.2's Notify Me — the request §28.7's back-in-stock email answers.
   ...backInStockHandlers,
-
-  // §24 Try-On, module 14.
-  ...tryOnHandlers,
 
   // §34 module 18.
   ...madeToMeasureHandlers,

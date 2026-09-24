@@ -1,28 +1,25 @@
+import 'server-only';
+
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import sharp from 'sharp';
 
-import type { ImagePayload } from './try-on-provider';
+import type { ImagePayload } from '../schemas/provider.schema';
+import { MAX_EDGE_PX } from '../lib/try-on-limits';
 
 /**
- * D1 — module 14's IMAGE work, split out of `try-on-db.ts` (MOD-03): the
- * white-balance correction §24 requires, the garment photograph converted out of
- * AVIF, and the provider's bytes turned into what the contract carries.
+ * §24 — the module's IMAGE work: the white-balance correction the feature is
+ * worth having for, the garment photograph converted out of AVIF, and the
+ * model's bytes turned into what the contract carries.
  *
  * Every function here takes bytes and returns bytes or a value. None of them
- * writes anything anywhere, which is what lets `try-on-db.ts` promise that the
- * customer's photograph is gone the moment one call returns (§24, §30.4).
- */
-
-/**
- * The longest edge sent to the provider.
+ * writes anything anywhere, which is what lets the module promise the
+ * customer's photograph is gone the moment a request returns (§24, §30.4).
  *
- * A modern phone photograph is 4000px on its long edge, which is several times
- * more than the model uses and pays for the difference in latency on a
- * connection this market is sensitive about (§30.1).
+ * `server-only`: sharp is a native module and must never be traced into a
+ * browser bundle.
  */
-const MAX_EDGE_PX = 1024;
 
 /**
  * White balance, by the grey-world assumption: over a whole photograph the
@@ -74,15 +71,27 @@ export async function correctWhiteBalance(photo: ImagePayload): Promise<ImagePay
  * The garment's own photograph, converted out of AVIF.
  *
  * The conversion is required rather than tidy: the catalogue is stored as AVIF
- * and the provider does not accept it, so sending the file as it sits on disk
- * would fail every time. The path is composed from the catalogue's own record,
- * never from anything a caller supplied.
+ * and the model does not accept it, so sending the file as it sits on disk
+ * would fail every time.
+ *
+ * The path is composed from the catalogue PROJECTION, never from anything a
+ * browser sent, and it is confined to `public/` — a media url is data from the
+ * store's own records, but it reaches a filesystem read, so it is treated as
+ * untrusted anyway (SEC-02). A path that escapes is refused rather than read.
+ *
+ * On a serverless host `public/` is only on the function's disk because
+ * `outputFileTracingIncludes` in `next.config.ts` puts it there: nothing the
+ * tracer can see imports these files, since the path is built at runtime.
  */
 export async function garmentImage(mediaUrl: string): Promise<ImagePayload | null> {
+  const root = path.join(process.cwd(), 'public');
+  const file = path.resolve(root, `.${mediaUrl.startsWith('/') ? mediaUrl : `/${mediaUrl}`}`);
+
+  // SEC-02: refuse anything that resolved outside `public/` rather than read it.
+  if (!file.startsWith(root)) return null;
+
   // ERR-05(1): `readFile` and sharp both signal only by throwing.
   try {
-    const file = path.join(process.cwd(), 'public', mediaUrl);
-
     const bytes = await sharp(await readFile(file))
       .resize({ width: MAX_EDGE_PX, height: MAX_EDGE_PX, fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 90 })
@@ -102,9 +111,9 @@ export interface TryOnImage {
 }
 
 /**
- * The provider returns bytes; the contract returns a data URL and its size.
+ * The model returns bytes; the contract returns a data URL and its size.
  * `null` is a picture that cannot be read, which the module reports as the
- * provider having failed.
+ * render having failed.
  */
 export async function toTryOnImage(image: ImagePayload): Promise<TryOnImage | null> {
   // ERR-05(1): sharp throws on an image it cannot read.
