@@ -31,6 +31,16 @@ import { declaredLength, NO_STORE, readFormBody } from '@/lib/utils/route';
 export const dynamic = 'force-dynamic';
 
 /**
+ * A generation takes 10–30 seconds, and a host is free to stop a function long
+ * before that: a serverless default can be as short as ten. The module gives up
+ * on the model at `PROVIDER_TIMEOUT_MS` (30s) and the browser at 35s, so the
+ * function is allowed comfortably more than both — otherwise the host kills it
+ * first and the customer sees a bare gateway error instead of the module's own
+ * TIMEOUT. A literal because segment config must be statically analysable.
+ */
+export const maxDuration = 60;
+
+/**
  * What a multipart body carries beyond the photograph itself: the boundary lines,
  * each part's headers, the file name and the product id. A transport allowance,
  * not a rule — the module still enforces the photograph's own ceiling.

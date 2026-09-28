@@ -3,12 +3,17 @@ import 'server-only';
 import { serverEnv } from '@/config/env.server';
 import { err, ok, type Result } from '@/lib/result';
 
-import { tryOnPromptFor } from '../lib/try-on-prompt';
+import { aspectRatioFor } from '../lib/try-on-aspect-ratio';
+import { tryOnPromptFor, type TryOnGarment } from '../lib/try-on-prompt';
 import {
   firstImagePart,
+  missingImageDetail,
+  providerErrorSchema,
   providerResponseSchema,
   type ImagePayload,
+  type ProviderFailure,
   type RenderFailure,
+  type SizedImagePayload,
 } from '../schemas/provider.schema';
 
 /**
@@ -33,9 +38,9 @@ const PROVIDER_ORIGIN = 'https://generativelanguage.googleapis.com';
 
 /** What a render needs: the person, the garment, and what the garment is. */
 export interface RenderRequest {
-  readonly correctedPhoto: ImagePayload;
+  readonly correctedPhoto: SizedImagePayload;
   readonly productImage: ImagePayload;
-  readonly garmentDescription: string;
+  readonly garment: TryOnGarment;
 }
 
 /**
@@ -46,28 +51,57 @@ export interface RenderRequest {
  */
 export interface TryOnProvider {
   isConfigured: () => boolean;
-  render: (request: RenderRequest, signal: AbortSignal) => Promise<Result<ImagePayload, RenderFailure>>;
+  render: (
+    request: RenderRequest,
+    signal: AbortSignal,
+  ) => Promise<Result<ImagePayload, ProviderFailure>>;
 }
 
-/** The vendor's request dialect: the instruction, then the customer, then the garment. */
+function failure(reason: RenderFailure, detail: string): Result<never, ProviderFailure> {
+  return err({ reason, detail });
+}
+
+/**
+ * The vendor's request dialect: the instruction, then the customer, then the
+ * garment — in the order the instruction names them.
+ *
+ * `aspectRatio` asks for the customer's photograph's own shape. Unset, the
+ * model chooses between two inputs and pads whatever it chose.
+ */
 function requestBodyFor(request: RenderRequest): unknown {
   const inline = (image: ImagePayload) => ({
     inlineData: { mimeType: image.mimeType, data: Buffer.from(image.bytes).toString('base64') },
   });
+  const { widthPx, heightPx } = request.correctedPhoto;
 
   return {
     contents: [
       {
         role: 'user',
         parts: [
-          { text: tryOnPromptFor(request.garmentDescription) },
+          { text: tryOnPromptFor(request.garment) },
           inline(request.correctedPhoto),
           inline(request.productImage),
         ],
       },
     ],
-    generationConfig: { responseModalities: ['IMAGE'] },
+    generationConfig: {
+      responseModalities: ['IMAGE'],
+      imageConfig: { aspectRatio: aspectRatioFor(widthPx, heightPx) },
+    },
   };
+}
+
+/** A refused request, named by its HTTP status and the provider's status enum. */
+async function refusalDetail(response: Response): Promise<string> {
+  const body: unknown = await response.json().then<unknown, null>(
+    (value: unknown) => value,
+    () => null,
+  );
+  const parsed = providerErrorSchema.safeParse(body);
+  return parsed.success
+    ? `HTTP ${String(response.status)} ${parsed.data.error.status}`
+    : `HTTP ${String(response.status)}`;
 }
 
 export const imageModelProvider: TryOnProvider = {
@@ -75,7 +109,7 @@ export const imageModelProvider: TryOnProvider = {
 
   async render(request, signal) {
     const apiKey = serverEnv.TRY_ON_PROVIDER_API_KEY;
-    if (apiKey === undefined) return err('PROVIDER_DISABLED');
+    if (apiKey === undefined) return failure('PROVIDER_DISABLED', 'no key configured');
 
     const url = `${PROVIDER_ORIGIN}/v1beta/models/${serverEnv.TRY_ON_PROVIDER_MODEL}:generateContent`;
 
@@ -98,8 +132,12 @@ export const imageModelProvider: TryOnProvider = {
       () => null,
     );
 
-    if (response === null) return err(signal.aborted ? 'TIMEOUT' : 'PROVIDER_FAILED');
-    if (!response.ok) return err('PROVIDER_FAILED');
+    if (response === null) {
+      return signal.aborted
+        ? failure('TIMEOUT', 'no answer within the provider timeout')
+        : failure('PROVIDER_FAILED', 'the request did not reach the provider');
+    }
+    if (!response.ok) return failure('PROVIDER_FAILED', await refusalDetail(response));
 
     const payload: unknown = await response.json().then<unknown, null>(
       (value: unknown) => value,
@@ -107,12 +145,12 @@ export const imageModelProvider: TryOnProvider = {
     );
 
     const parsed = providerResponseSchema.safeParse(payload);
-    if (!parsed.success) return err('PROVIDER_FAILED');
+    if (!parsed.success) return failure('PROVIDER_FAILED', 'the response did not match its schema');
 
     const image = firstImagePart(parsed.data);
 
     // A well-formed response with no picture is a refusal: this request failed,
     // the contract did not. It must not masquerade as the latter.
-    return image === null ? err('PROVIDER_FAILED') : ok(image);
+    return image === null ? failure('PROVIDER_FAILED', missingImageDetail(parsed.data)) : ok(image);
   },
 };

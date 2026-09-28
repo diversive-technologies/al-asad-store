@@ -5,9 +5,11 @@ import type { Locale } from '@/i18n/locales';
 import type { ApiError } from '@/lib/api/errors';
 import type { ProductId } from '@/lib/domain/ids';
 import { ok, type Result } from '@/lib/result';
+import { logProviderFailure } from '@/lib/utils/log';
 
 import { PROVIDER_TIMEOUT_MS, SAMPLE_LATENCY_MS, refusesPhoto } from '../lib/try-on-limits';
-import type { ImagePayload } from '../schemas/provider.schema';
+import type { TryOnGarment } from '../lib/try-on-prompt';
+import type { ImagePayload, SizedImagePayload } from '../schemas/provider.schema';
 import type { TryOnResult } from '../schemas/try-on.schema';
 import { isTryOnAvailable } from './fetch-try-on-offer';
 import { imageModelProvider } from './gemini-provider';
@@ -94,7 +96,7 @@ export async function generateTryOn(
   if (corrected === null) return { ok: false, error: REFUSED };
 
   if (imageModelProvider.isConfigured()) {
-    return ok(await render(corrected, garment, product.name));
+    return ok(await render(corrected, garment, product));
   }
 
   /*
@@ -108,9 +110,9 @@ export async function generateTryOn(
 
 /** The real path: the model, under the module's own timeout. */
 async function render(
-  correctedPhoto: ImagePayload,
+  correctedPhoto: SizedImagePayload,
   productImage: ImagePayload,
-  garmentDescription: string,
+  garment: TryOnGarment,
 ): Promise<TryOnResult> {
   /*
    * `AbortSignal.timeout` is what turns a hung provider into the module's own
@@ -118,11 +120,15 @@ async function render(
    * adapter reads `signal.aborted` to tell the two apart.
    */
   const outcome = await imageModelProvider.render(
-    { correctedPhoto, productImage, garmentDescription },
+    { correctedPhoto, productImage, garment },
     AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
   );
 
-  if (!outcome.ok) return unavailable(outcome.error);
+  if (!outcome.ok) {
+    // ERR-10: this is the boundary that turns the failure into an answer, so it logs it.
+    logProviderFailure('try-on:provider', `${outcome.error.reason}: ${outcome.error.detail}`);
+    return unavailable(outcome.error.reason);
+  }
 
   const image = await toTryOnImage(outcome.value);
   return image === null ? unavailable('PROVIDER_FAILED') : { status: 'READY', image };

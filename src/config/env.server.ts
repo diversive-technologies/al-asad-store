@@ -25,7 +25,11 @@ const serverSchema = z.object({
    * rather than simulated, and the app boots and sells with no key present.
    */
   TRY_ON_PROVIDER_API_KEY: z.string().min(1).optional(),
-  TRY_ON_PROVIDER_MODEL: z.string().min(1).default('gemini-2.5-flash-image'),
+  /*
+   * gemini-2.5-flash-image, the previous default, is shut down by Google on
+   * 2026-10-02. 3.1 Flash Image is its GA successor and takes the same request.
+   */
+  TRY_ON_PROVIDER_MODEL: z.string().min(1).default('gemini-3.1-flash-image'),
   /*
    * DEMO PLACEHOLDER, and it only applies while NO provider is configured.
    *

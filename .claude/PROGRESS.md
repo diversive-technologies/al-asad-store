@@ -1331,17 +1331,51 @@ failure; Generate is latched so a double press cannot spend two generations; and
 the mock's session ids come from a counter, so overlapping generations keep a record
 each (D6). The panel downloads on first open.
 
+**Superseded at `70d14bc`:** the seam described above is gone. Try-On is a
+module in `features/try-on` that calls the provider from the BFF directly; the
+operator doc is `.claude/working-docs/try-on-module.md`.
+
+### The prompt, tuned against real output (2026-09-28, uncommitted)
+
+Real generations showed the prompt handing the model two people — every
+catalogue photograph is the garment WORN by a store model — and the model
+keeping the wrong one: a chest-up customer came back as the catalogue shot, the
+store model's face, full-length pose, room and blurred side margins included.
+Fixed and verified live, four generations on `gemini-3.1-flash-image`:
+
+- **The prompt** (`lib/try-on-prompt.ts`) is an EDIT of the customer's photograph:
+  take only the garment from the second image, never the store model's face,
+  body, pose, room or framing; keep the crop and background; invent nothing
+  below the frame. "Plain background" is gone — it made the model rebuild the
+  scene. The garment is named with colour and fabric, and the declared
+  `SIMPLE`/`SET` says how much it replaces: a SET every piece the store model
+  wears, a SIMPLE piece whatever sits where it goes, outer layers included (the
+  first attempt slid a kurta under the customer's own waistcoat).
+- **The shape** (`lib/try-on-aspect-ratio.ts`): the output is requested in the
+  customer photograph's nearest supported aspect ratio.
+- **White balance is bounded** (`lib/try-on-white-balance.ts`) to ×1.15 per
+  channel: grey-world cannot tell a warm light from a warm scene, and on the
+  rust kurta photograph it asked for red ×0.70 and blue ×1.64.
+- **The reply keeps its reasons** (`schemas/provider.schema.ts`): HTTP status and
+  Google's status enum, `finishReason`, `promptFeedback.blockReason`; a thinking
+  model's `thought` drafts are skipped. Every provider failure logs one
+  `[try-on:provider]` line — before, a revoked key and a refused photograph were
+  identical and silent.
+- **The default model is `gemini-3.1-flash-image`.** Google shuts
+  `gemini-2.5-flash-image` down on 2026-10-02.
+- **`maxDuration = 60`** on `/api/try-on`, so a host's short default cannot kill a
+  12–15s generation before the module's own 30s timeout.
+
+Measured: 12–15s per generation, 928×1152 for a 4:5 photograph, identity,
+background and framing kept, garment details (pintucks, tabs, pocket) carried.
+
 ### What is left
 
-**A real generation.** Everything was exercised live with a placeholder key —
-guidance, picker, client rejection of AVIF, preview, white-balance correction on
-a real 268KB photo, the garment conversion, a genuine HTTPS call to the provider,
-its refusal, and the failure copy — but a successful image needs a real
-`TRY_ON_PROVIDER_API_KEY` in `.env.local`. Adding one is the whole switch-on:
-no code change, no release. Generations are metered and billed.
-
-The prompt itself is unproven against real output and should be expected to need
-tuning once someone can see results.
+**The live site is not running this code.** On 2026-09-28
+`al-asad-store.vercel.app` served a build from before 19 September although every
+GitHub Actions deploy of `main` was green; its `/api/try-on` answers 502 from the
+old mock-backed path. It needs the operator in the Vercel dashboard, then a
+redeploy so the rotated key is built in.
 
 ## D6 append-only — what changed in the tree
 

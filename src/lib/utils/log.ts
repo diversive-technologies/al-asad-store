@@ -39,3 +39,14 @@ export function logApiError(context: string, error: ApiError): void {
 export function logContentIssue(context: string, detail: string): void {
   console.error(`[${context}] ${detail}`);
 }
+
+/**
+ * ERR-10 — an external provider failed, and the customer was told so in general
+ * terms (ERR-11) by an outcome that is not an `ApiError`, so nothing else would
+ * record it. Without this a revoked key, an exhausted quota and a refused
+ * photograph all looked alike on a deployment, and none of them left a line.
+ * `detail` is status codes and enum values only (SEC-10).
+ */
+export function logProviderFailure(context: string, detail: string): void {
+  console.error(`[${context}] ${detail}`);
+}

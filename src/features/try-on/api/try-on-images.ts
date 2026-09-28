@@ -5,8 +5,9 @@ import path from 'node:path';
 
 import sharp from 'sharp';
 
-import type { ImagePayload } from '../schemas/provider.schema';
+import type { ImagePayload, SizedImagePayload } from '../schemas/provider.schema';
 import { MAX_EDGE_PX } from '../lib/try-on-limits';
+import { whiteBalanceGains } from '../lib/try-on-white-balance';
 
 /**
  * §24 — the module's IMAGE work: the white-balance correction the feature is
@@ -33,11 +34,17 @@ import { MAX_EDGE_PX } from '../lib/try-on-limits';
  * bottle green waistcoat olive and making the try-on lie about the one
  * attribute the customer opened it to check.
  *
+ * The gains are bounded (`try-on-white-balance.ts`): grey-world cannot tell a
+ * warm light from a warm scene, and unbounded it repaints a face.
+ *
  * `rotate()` with no argument applies the EXIF orientation. Without it a
  * portrait taken on a phone arrives rotated, and every downstream judgement
  * about the person is made against a sideways image.
+ *
+ * The size it was prepared at comes back with it, because the output is asked
+ * for in the same shape — see `aspectRatioFor`.
  */
-export async function correctWhiteBalance(photo: ImagePayload): Promise<ImagePayload | null> {
+export async function correctWhiteBalance(photo: ImagePayload): Promise<SizedImagePayload | null> {
   const input = Buffer.from(photo.bytes);
 
   // ERR-05(1): sharp signals an unreadable or truncated image only by throwing.
@@ -48,20 +55,18 @@ export async function correctWhiteBalance(photo: ImagePayload): Promise<ImagePay
 
     if (red === undefined || green === undefined || blue === undefined) return null;
 
-    const grey = (red.mean + green.mean + blue.mean) / 3;
-    // A fully black channel has no cast to correct and would divide by zero.
-    const gain = (mean: number): number => (mean <= 0 ? 1 : grey / mean);
+    const gains = whiteBalanceGains({ red: red.mean, green: green.mean, blue: blue.mean });
 
-    const bytes = await sharp(input)
+    const { data, info } = await sharp(input)
       .rotate()
       // `linear` takes one gain per channel, so alpha is flattened away first.
       .flatten({ background: { r: 255, g: 255, b: 255 } })
-      .linear([gain(red.mean), gain(green.mean), gain(blue.mean)], [0, 0, 0])
+      .linear([...gains], [0, 0, 0])
       .resize({ width: MAX_EDGE_PX, height: MAX_EDGE_PX, fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 90 })
-      .toBuffer();
+      .toBuffer({ resolveWithObject: true });
 
-    return { bytes, mimeType: 'image/jpeg' };
+    return { bytes: data, mimeType: 'image/jpeg', widthPx: info.width, heightPx: info.height };
   } catch {
     return null;
   }
