@@ -8,7 +8,7 @@ export const API_HEADERS = {
    * attached by the BFF and never taken from the request body: `ACCOUNT:<id>` or
    * `DEVICE:<id>`.
    *
-   * D3: the account id is the mock session's email until §11 issues a real
+   * D3: the account id is the session's email until §11 issues a real
    * session; the BFF then forwards that session instead, and Java resolves the
    * customer from it.
    */

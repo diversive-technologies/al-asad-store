@@ -21,10 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
  * returned to. It is NOT the key: who may read the order is decided on the far
  * side of the BFF, and anyone else is asked for the order's mobile number.
  *
- * STRUCT-02: the route composes and does not decide. The read itself moved into
- * `OrderScreen`, which runs in the browser — under D1 the order lives in mock
- * state written by a Route Handler, and on a serverless deployment a server
- * render is a different process that has never seen it.
+ * STRUCT-02: the route composes and does not decide. The read itself is in
+ * `OrderScreen`, which runs in the browser and reads through the BFF.
  */
 export default async function OrderPage({ params }: OrderPageProps) {
   // PERF-02: independent reads run in parallel, never as a waterfall.

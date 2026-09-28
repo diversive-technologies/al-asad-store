@@ -1,5 +1,4 @@
 import { checkMeasurements, measurementSubmissionSchema } from '@/features/made-to-measure';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -14,9 +13,6 @@ import { NO_STORE, readJsonBody } from '@/lib/utils/route';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request): Promise<Response> {
-  // D1 — a Route Handler never renders the root layout, so it arms its own mocks.
-  await ensureMockServer();
-
   // SEC-08 — like every write this studio makes, refused from another origin.
   if (!isSameOrigin(request)) return new Response(null, { status: 403, headers: NO_STORE });
 

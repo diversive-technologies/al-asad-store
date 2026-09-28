@@ -10,7 +10,7 @@ import type { TryOnResult } from '../schemas/try-on.schema';
  */
 
 /** The two outcomes that carry an image. */
-export type TryOnPicture = Extract<TryOnResult, { status: 'READY' | 'SAMPLE' }>;
+export type TryOnPicture = Extract<TryOnResult, { status: 'READY' }>;
 
 /** Pick, wait, look — with what each face needs to be drawn. */
 export type TryOnFace =

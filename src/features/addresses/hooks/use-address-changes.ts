@@ -66,7 +66,7 @@ export function useAddressChanges(key: readonly unknown[]): AddressChanges {
 
   /*
    * FORM-06, synchronously. `isPending` only becomes true after a re-render, so
-   * two taps on "Remove" in one tick both pass — and because the mock mints a
+   * two taps on "Remove" in one tick both pass — and because the backend mints a
    * fresh id per save, a double-tapped save writes the SAME address twice.
    * Latching here rather than in each caller is what makes every one of them
    * safe, including the one-button offer on the confirmation page.

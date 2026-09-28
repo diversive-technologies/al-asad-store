@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { optionGroupIdSchema, optionValueIdSchema } from '@/lib/domain/ids';
-import { styleOffersSchema } from '@/lib/domain/style-offer';
-import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
 
-import { measurementCopySchema } from '../schemas/measurement-copy.schema';
 import { buildMeasurementSchema } from '../schemas/measurement.schema';
 import { emptyEntry } from './entries';
 import { optionConditionSchema } from '../schemas/measurement-set.schema';
@@ -19,19 +16,11 @@ import {
   preferencesOf,
   type Picks,
 } from './options';
-import { joinCopy, type StudioSet } from './studio-set';
-import { pointId, pointOf, servedSet } from './test-support';
+import type { StudioSet } from './studio-set';
+import { pointId, pointOf, studioFor } from './test-support';
 import { NOTHING_HELD, typedEntriesOf } from './unit-switch';
 
-const joined = joinCopy(
-  servedSet('KAMEEZ_SHALWAR'),
-  styleOffersSchema.parse([
-    { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
-  ]),
-  measurementCopySchema.parse(measurementCopyFor('en')),
-);
-if (!joined.ok) throw new Error(`missing: ${joined.error.join(', ')}`);
-const STUDIO = joined.value.studio;
+const STUDIO = studioFor('KAMEEZ_SHALWAR');
 const KAMEEZ = STUDIO.pieces[0].id;
 
 const picksOf = (picks: Readonly<Record<string, string>>): Picks =>

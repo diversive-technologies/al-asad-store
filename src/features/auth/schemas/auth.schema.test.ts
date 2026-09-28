@@ -2,14 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 
 import {
-  authenticateBody,
-  codeSignInBody,
-  issueCodeBody,
-  registerBody,
-  resetBody,
-} from '@/lib/mocks/request-bodies';
-
-import {
   codeIssuedSchema,
   codeRequestSchema,
   codeSignInSchema,
@@ -19,40 +11,33 @@ import {
 } from './auth.schema';
 
 /**
- * The mock that stands in for §11 states each request's wire shape for itself
- * (MOD-01), so this holds the two together: what a sign-in form sends must be a
- * body the mock accepts.
+ * Each §11 form passes its own contract before it is sent: a well-formed sign-in,
+ * code request, code sign-in, reset or registration is never refused on the
+ * storefront's side.
  */
-describe('the §11 requests and the bodies the mock backend reads', () => {
-  it.each<[string, z.ZodType, z.ZodType, unknown]>([
+describe('the §11 requests', () => {
+  it.each<[string, z.ZodType, unknown]>([
     [
       'a password sign-in',
       passwordSignInSchema,
-      authenticateBody,
       { email: 'customer@example.com', password: 'a long passphrase' },
     ],
-    ['a code request', codeRequestSchema, issueCodeBody, { mobile: '03001234567' }],
-    ['a code sign-in', codeSignInSchema, codeSignInBody, { mobile: '03001234567', code: '123456' }],
-    ['a password reset', passwordResetSchema, resetBody, { email: 'customer@example.com' }],
-  ])('%s passes both', (_label, contract, mock, input) => {
-    const sent = contract.safeParse(input);
-
-    expect(sent.success).toBe(true);
-    expect(mock.safeParse(sent.data).success).toBe(true);
-  });
-
-  it('a registration, without its confirmation, passes both', () => {
-    // `signUpAction` sends the parsed form minus its confirmation, and so does this.
-    const { confirmPassword: _confirmation, ...account } = signUpSchema.parse({
-      fullName: 'Test Customer',
-      email: 'customer@example.com',
-      mobile: '03001234567',
-      password: 'a long passphrase',
-      confirmPassword: 'a long passphrase',
-    });
-    void _confirmation;
-
-    expect(registerBody.safeParse(account).success).toBe(true);
+    ['a code request', codeRequestSchema, { mobile: '03001234567' }],
+    ['a code sign-in', codeSignInSchema, { mobile: '03001234567', code: '123456' }],
+    ['a password reset', passwordResetSchema, { email: 'customer@example.com' }],
+    [
+      'a registration whose confirmation matches',
+      signUpSchema,
+      {
+        fullName: 'Test Customer',
+        email: 'customer@example.com',
+        mobile: '03001234567',
+        password: 'a long passphrase',
+        confirmPassword: 'a long passphrase',
+      },
+    ],
+  ])('accepts %s', (_label, contract, input) => {
+    expect(contract.safeParse(input).success).toBe(true);
   });
 });
 
@@ -85,12 +70,13 @@ describe('a mobile number on the wire', () => {
 });
 
 /* §11 `issueCode` returns VOID. A backend that answers with nothing at all must
-   not break the code sign-in, and the mock's development code stays optional. */
+   not break the code sign-in, and the code it shows while demo sign-in codes are
+   on stays optional. */
 describe('what issueCode may answer', () => {
   it.each([
     ['nothing', null],
     ['an empty object', {}],
-    ["the mock's development code", { devCode: '123456' }],
+    ['the demo sign-in code', { devCode: '123456' }],
   ])('accepts %s', (_label, answer) => {
     expect(codeIssuedSchema.safeParse(answer).success).toBe(true);
   });

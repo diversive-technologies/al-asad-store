@@ -1,6 +1,5 @@
 import { EMPTY_SUGGESTIONS, parseCatalogueQuery, suggest } from '@/features/catalogue';
 import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 import { NO_STORE } from '@/lib/utils/route';
 
@@ -20,14 +19,6 @@ import { NO_STORE } from '@/lib/utils/route';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<Response> {
-  /*
-   * D1 — the root layout arms the mock layer per request, but a Route Handler
-   * never renders the layout, so it has to arm its own module context. Without
-   * this the first suggestion request after a hot reload reaches a real socket
-   * and is refused.
-   */
-  await ensureMockServer();
-
   const url = new URL(request.url);
   const requestedLocale = url.searchParams.get('locale');
   const locale = isLocale(requestedLocale) ? requestedLocale : DEFAULT_LOCALE;

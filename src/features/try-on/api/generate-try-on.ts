@@ -5,13 +5,12 @@ import type { Locale } from '@/i18n/locales';
 import type { ApiError } from '@/lib/api/errors';
 import type { ProductId } from '@/lib/domain/ids';
 import { ok, type Result } from '@/lib/result';
-import { logProviderFailure } from '@/lib/utils/log';
+import { logContentIssue, logProviderFailure } from '@/lib/utils/log';
 
-import { PROVIDER_TIMEOUT_MS, SAMPLE_LATENCY_MS, refusesPhoto } from '../lib/try-on-limits';
+import { PROVIDER_TIMEOUT_MS, refusesPhoto } from '../lib/try-on-limits';
 import type { TryOnGarment } from '../lib/try-on-prompt';
 import type { ImagePayload, SizedImagePayload } from '../schemas/provider.schema';
 import type { TryOnResult } from '../schemas/try-on.schema';
-import { isTryOnAvailable } from './fetch-try-on-offer';
 import { imageModelProvider } from './gemini-provider';
 import { correctWhiteBalance, garmentImage, toTryOnImage } from './try-on-images';
 
@@ -23,14 +22,12 @@ import { correctWhiteBalance, garmentImage, toTryOnImage } from './try-on-images
  * Every other read in this storefront is `apiRequest` to a contract the Java
  * service owns. This one is not, because there is nothing on the other side to
  * own it: §24 is a frontend capability sitting on an image model, and routing
- * it through a backend that does not implement it — as the mock layer used to —
- * would be a pretend round trip whose only effect is to make the feature look
+ * it through a backend that does not implement it would be a pretend round trip whose only effect is to make the feature look
  * like it needs a service it does not.
  *
  * What it DOES read from the backend is the catalogue: the garment's name and
  * its photograph come from the ordinary product projection, so the try-on can
  * never disagree with the product page about what the customer is looking at.
- * That read works against the mocks or against Java without either caring.
  *
  * ## The customer's photograph is never stored
  *
@@ -87,25 +84,23 @@ export async function generateTryOn(
   const product = products.value[0];
   if (product === undefined) return { ok: false, error: UNKNOWN_PRODUCT };
 
-  const garment = await garmentImage(product.images[0] ?? '');
+  const mediaUrl = product.images[0] ?? '';
+  const garment = await garmentImage(mediaUrl);
   // The store cannot show its own garment: the model is not at fault and is not asked.
-  if (garment === null) return ok(unavailable('PROVIDER_FAILED'));
+  if (garment === null) {
+    // ERR-10: said here, or this failure reads exactly like the model refusing.
+    logContentIssue('try-on:garment', `${mediaUrl || '(no photograph)'} could not be read`);
+    return ok(unavailable('PROVIDER_FAILED'));
+  }
 
   const corrected = await correctWhiteBalance({ bytes, mimeType: photo.type });
   // Sharp could not decode it, whatever its declared type said. That is the photo.
   if (corrected === null) return { ok: false, error: REFUSED };
 
-  if (imageModelProvider.isConfigured()) {
-    return ok(await render(corrected, garment, product));
-  }
+  // No credential: §28.5's unavailable state, as the offer already said.
+  if (!imageModelProvider.isConfigured()) return ok(unavailable('PROVIDER_DISABLED'));
 
-  /*
-   * No credential. `TRY_ON_SAMPLE_RESULT` decides between the labelled sample
-   * and §28.5's genuine unavailable state, and it has to agree with what the
-   * OFFER said — `isTryOnAvailable` reads the same two values, so the panel
-   * cannot announce the feature is off and then produce a picture.
-   */
-  return ok(isTryOnAvailable() ? await sample(garment) : unavailable('PROVIDER_DISABLED'));
+  return ok(await render(corrected, garment, product));
 }
 
 /** The real path: the model, under the module's own timeout. */
@@ -132,20 +127,4 @@ async function render(
 
   const image = await toTryOnImage(outcome.value);
   return image === null ? unavailable('PROVIDER_FAILED') : { status: 'READY', image };
-}
-
-/**
- * The fallback when no key is configured: the garment's own catalogue
- * photograph, returned as SAMPLE and labelled as such by the panel.
- *
- * It is not a pretend generation and is never presented as one — `SAMPLE` is a
- * separate status in the contract precisely so the interface cannot show it as
- * a picture of the customer. It exists so that a checkout of this repository
- * with no credential still demonstrates the whole flow: pick, wait, look.
- */
-async function sample(garment: ImagePayload): Promise<TryOnResult> {
-  await new Promise((resolve) => setTimeout(resolve, SAMPLE_LATENCY_MS));
-
-  const image = await toTryOnImage(garment);
-  return image === null ? unavailable('PROVIDER_FAILED') : { status: 'SAMPLE', image };
 }

@@ -291,10 +291,7 @@ export const en = {
     passwordsDiffer: 'Both passwords must match.',
     nameInvalid: 'Please enter your name.',
     mobileInvalid: 'Enter a valid mobile number.',
-    /* D3 — shown only while the mock layer is armed. */
-    testAccountHeading: 'Test account',
-    testAccountEmail: 'Email',
-    testAccountPassword: 'Password',
+    /* Shown only when the backend hands back a demo sign-in code. */
     testCode: 'Test code',
     accountMenuLabel: 'Your account',
 
@@ -810,15 +807,6 @@ export const en = {
     phasePlacing: 'Placing the piece',
     resultHeading: 'You in this piece',
     resultAlt: 'A generated image of you wearing {product}',
-    /*
-     * With no provider connected the result is the garment's own catalogue
-     * photograph — the model it was shot on, NOT the customer. Heading, alt text
-     * and a visible line all say so, so nobody reads it as their own likeness.
-     */
-    sampleHeading: 'A sample, not your photo',
-    sampleAlt: 'The catalogue photograph of {product}, worn by the model it was shot on',
-    sampleLabel:
-      'Sample only. Try-on is not connected yet, so this is the catalogue photograph of the model this piece was shot on — not an image of you.',
     startAgain: 'Try another photo',
     unavailableDisabled:
       'Try-on is not switched on yet. Everything else on this page works as usual.',

@@ -1,16 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { styleOffersSchema } from '@/lib/domain/style-offer';
-import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
-import { STYLE_OFFERS } from '@/lib/mocks/measurement-sets-db';
-
-import { measurementCopySchema } from '../schemas/measurement-copy.schema';
 import { joinCopy } from './studio-set';
 import { lastLoadedAfter, shownStudio, type StudioData } from './studio-shown';
-import { servedSet } from './test-support';
-
-const OFFERS = styleOffersSchema.parse(STYLE_OFFERS);
-const COPY = measurementCopySchema.parse(measurementCopyFor('en'));
+import { COPY, OFFERS, servedSet } from './test-support';
 
 function loadedList(garmentStyle: string): StudioData {
   const joined = joinCopy(servedSet(garmentStyle), OFFERS, COPY);

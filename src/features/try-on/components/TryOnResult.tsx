@@ -22,11 +22,7 @@ export interface TryOnResultProps {
 /**
  * The image that came back, shown in the same frame the photo was chosen in.
  *
- * A generated image is headed and described as the customer in the piece. A
- * SAMPLE is not one — it is the catalogue photograph of the model the piece was
- * shot on — so its heading, its alt text and a visible line all say so. A
- * photograph of a stranger captioned "You in this piece" would be the page lying
- * about the one thing the customer came to see.
+ * A generated image is headed and described as the customer in the piece.
  *
  * MOD-05 layer 3 — presentational. It receives an image and a callback and owns
  * no state. Its heading takes focus when the image arrives, so the result is
@@ -40,19 +36,14 @@ export function TryOnResult({
   headingRef,
 }: TryOnResultProps) {
   const t = messages.tryOn;
-  const isSample = picture.status === 'SAMPLE';
 
   return (
     <div className="flex flex-col gap-3">
       {/* A11Y-09: under the dialog's own h2. It names the state rather than the
           feature — "Try it on" is what the header says. */}
       <h3 ref={headingRef} tabIndex={-1} className="text-fg text-sm font-medium">
-        {isSample ? t.sampleHeading : t.resultHeading}
+        {t.resultHeading}
       </h3>
-
-      {isSample ? (
-        <p className="rounded-card bg-surface-muted text-fg p-3 text-xs">{t.sampleLabel}</p>
-      ) : null}
 
       {/*
        * `unoptimized` is required rather than lazy. The source is a data URL
@@ -63,7 +54,7 @@ export function TryOnResult({
        */}
       <Image
         src={picture.image.dataUrl}
-        alt={formatTemplate(isSample ? t.sampleAlt : t.resultAlt, { product: productName })}
+        alt={formatTemplate(t.resultAlt, { product: productName })}
         width={picture.image.widthPx}
         height={picture.image.heightPx}
         unoptimized

@@ -1,7 +1,6 @@
 import { claimTryOnGeneration, fetchTryOnOffer, generateTryOn } from '@/features/try-on';
 import { getLocale } from '@/i18n';
 import { productIdSchema } from '@/lib/domain/ids';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { declaredLength, NO_STORE, readFormBody } from '@/lib/utils/route';
@@ -16,9 +15,8 @@ import { declaredLength, NO_STORE, readFormBody } from '@/lib/utils/route';
  *
  * Unlike the other six, what it composes is not a Java contract. §24 runs in
  * this process against an image model, so there is no round trip here to
- * proxy — see `generate-try-on.ts` for why that is deliberate. The mock layer
- * is still armed because the module reads the CATALOGUE for the garment, and
- * that read is Java's.
+ * proxy — see `generate-try-on.ts` for why that is deliberate. The garment
+ * still comes from the CATALOGUE, and that read is Java's.
  *
  * ## What this route must not do, and does not
  *
@@ -71,10 +69,6 @@ async function refusedBySize(request: Request): Promise<Response | null> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  // D1 — a Route Handler never renders the root layout, so it arms its own
-  // module context or the first request after a hot reload hits a real socket.
-  await ensureMockServer();
-
   /*
    * SEC-08. Nothing here changes durable state, so this is not the usual CSRF
    * case — but a generation spends a metered external resource on the

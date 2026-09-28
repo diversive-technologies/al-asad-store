@@ -28,7 +28,7 @@ export interface ResolvedOwner {
  * backend refuses a well-shaped token it never issued. D5: named through the
  * client's key prefix.
  */
-// SSOT-00: the name lives in `lib/utils/cookies`, where the mock session reads it too.
+// SSOT-00: the name lives in `lib/utils/cookies`, with every other cookie.
 const DEVICE_COOKIE = DEVICE_COOKIE_NAME;
 const DEVICE_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 const deviceTokenShape = z.uuid();
@@ -37,7 +37,7 @@ const deviceTokenShape = z.uuid();
  * Who a save belongs to — from the session, or this device's own token; never
  * from the request body (A2-5).
  *
- * D3: a signed-in customer is keyed by the mock session's email (or mobile, for
+ * D3: a signed-in customer is keyed by the session's email (or mobile, for
  * a code sign-in). That cookie is unsigned and confers no authority of its own;
  * §11 replaces it with a session Java verifies, which the BFF then forwards in
  * place of this header.

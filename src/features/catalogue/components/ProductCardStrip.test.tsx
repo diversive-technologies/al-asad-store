@@ -2,10 +2,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { en } from '@/i18n/messages/en';
-import { CATALOGUE, toProductCard } from '@/lib/mocks/catalogue-db';
 import { formatMetres } from '@/lib/utils/format';
 
-import { productCardSchema } from '../schemas/product-card.schema';
+import { productCardFixture } from '../lib/test-fixtures';
+import type { ProductCard } from '../schemas/product-card.schema';
 import { ProductCardStrip } from './ProductCardStrip';
 
 /**
@@ -15,27 +15,26 @@ import { ProductCardStrip } from './ProductCardStrip';
  * where nothing can hover (`card-touch-only`).
  */
 
-function cardFor(hasMetreage: boolean) {
-  const record = CATALOGUE.find((entry) => (entry.metreage !== null) === hasMetreage);
-  return productCardSchema.parse(record === undefined ? null : toProductCard(record, 'en'));
-}
+const METREAGE = 2.5;
+/** Unstitched cloth, sold by length. */
+const LENGTH = productCardFixture(1, { metreage: METREAGE });
+/** A stitched garment, sold by size — it has no length to state. */
+const GARMENT = productCardFixture(2, { metreage: null });
 
-function strip(hasMetreage: boolean): string {
-  return renderToStaticMarkup(
-    <ProductCardStrip product={cardFor(hasMetreage)} locale="en" messages={en} />,
-  );
+function strip(product: ProductCard): string {
+  return renderToStaticMarkup(<ProductCardStrip product={product} locale="en" messages={en} />);
 }
 
 describe('the card strip', () => {
   it('says a length’s metreage where nothing can hover', () => {
-    const metres = formatMetres(cardFor(true).metreage ?? 0, 'en');
+    const metres = formatMetres(METREAGE, 'en');
 
-    expect(strip(true)).toContain(
+    expect(strip(LENGTH)).toContain(
       `<span class="card-touch-only"><span aria-hidden="true"> · </span><bdi>${metres}</bdi></span>`,
     );
   });
 
   it('says nothing more for a garment sold by size', () => {
-    expect(strip(false)).not.toContain('card-touch-only');
+    expect(strip(GARMENT)).not.toContain('card-touch-only');
   });
 });

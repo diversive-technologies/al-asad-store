@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 
-import { addressChoiceBody, addressWriteBody } from '@/lib/mocks/request-bodies';
-
 import { addressBookSchema, addressChoiceSchema, addressWriteSchema } from './address.schema';
 
 /**
- * The mock that stands in for Java states each request's wire shape for itself
- * (MOD-01), so this holds the two together: what the address book sends must be
- * a body the mock accepts.
+ * Each request the address book sends passes its own contract before it leaves
+ * for the backend: a new address, a revision of a saved one, and a choice among
+ * them.
  */
 const ADDRESS = {
   recipientName: 'Test Customer',
@@ -17,26 +15,13 @@ const ADDRESS = {
   city: 'Lahore',
 };
 
-describe('the address book requests and the bodies the mock backend reads', () => {
-  it.each<[string, z.ZodType, z.ZodType, unknown]>([
-    ['a new address', addressWriteSchema, addressWriteBody, { address: ADDRESS }],
-    [
-      'a revision',
-      addressWriteSchema,
-      addressWriteBody,
-      { address: ADDRESS, addressId: crypto.randomUUID() },
-    ],
-    [
-      'a choice of address',
-      addressChoiceSchema,
-      addressChoiceBody,
-      { addressId: crypto.randomUUID() },
-    ],
-  ])('%s passes both', (_label, contract, mock, input) => {
-    const sent = contract.safeParse(input);
-
-    expect(sent.success).toBe(true);
-    expect(mock.safeParse(sent.data).success).toBe(true);
+describe('the address book requests', () => {
+  it.each<[string, z.ZodType, unknown]>([
+    ['a new address', addressWriteSchema, { address: ADDRESS }],
+    ['a revision', addressWriteSchema, { address: ADDRESS, addressId: crypto.randomUUID() }],
+    ['a choice of address', addressChoiceSchema, { addressId: crypto.randomUUID() }],
+  ])('accepts %s', (_label, contract, input) => {
+    expect(contract.safeParse(input).success).toBe(true);
   });
 });
 

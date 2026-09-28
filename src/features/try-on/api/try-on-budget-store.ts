@@ -20,8 +20,7 @@ import {
  * actually produces a surprise invoice on a demonstration deployment.
  *
  * It does NOT stop a determined attacker. The control that would is a counter
- * in a store shared across instances; that is the same missing piece the mock
- * session cookie works around elsewhere, and it is named here rather than left
+ * in a store shared across instances, and it is named here rather than left
  * for an invoice to discover (PD-05).
  *
  * The claim is recorded BEFORE the generation runs, not after. A generation

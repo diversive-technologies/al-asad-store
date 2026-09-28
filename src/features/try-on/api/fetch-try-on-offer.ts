@@ -1,6 +1,5 @@
 import 'server-only';
 
-import { serverEnv } from '@/config/env.server';
 import type { ApiError } from '@/lib/api/errors';
 import { ok, type Result } from '@/lib/result';
 
@@ -23,13 +22,11 @@ import { imageModelProvider } from './gemini-provider';
  */
 
 /**
- * The two answers have to agree, and this is the line that keeps them agreeing:
- * if a SAMPLE is what a generation will return, the feature IS available.
- * Reporting otherwise would have the panel announce that try-on is switched off
- * and then produce an image anyway, which is worse than either state alone.
+ * Available exactly when a provider is configured. Without one the module
+ * answers §28.5's unavailable state, and the offer has to say the same.
  */
 export function isTryOnAvailable(): boolean {
-  return imageModelProvider.isConfigured() || serverEnv.TRY_ON_SAMPLE_RESULT === 'enabled';
+  return imageModelProvider.isConfigured();
 }
 
 export function fetchTryOnOffer(): Promise<Result<TryOnOffer, ApiError>> {

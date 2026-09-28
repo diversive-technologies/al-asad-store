@@ -4,7 +4,7 @@
  *
  * This exists as its own function because getting it wrong shipped twice.
  * `/order/[orderNumber]` treated every unsuccessful read as "no such order", so a
- * mock layer the page could not reach, a timeout and a response that failed its
+ * backend the page could not reach, a timeout and a response that failed its
  * schema all rendered as a 404 — a customer holding a receipt was told their
  * order did not exist. `/checkout` then made the same collapse the other way
  * round: an unreachable store was shown as "There is nothing to check out", which

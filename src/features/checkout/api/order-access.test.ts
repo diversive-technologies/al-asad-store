@@ -1,34 +1,30 @@
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { clientKey } from '@/config/client';
-import { addForCustomer, readCartId } from '@/features/bag';
-import { addToBagRequestSchema } from '@/features/bag/contract';
-import { orderNumberSchema, type OrderNumber } from '@/lib/domain/ids';
-import { resetCarts } from '@/lib/mocks/bag-db';
-import { resetReservations } from '@/lib/mocks/bag-reservations';
-import { CATALOGUE } from '@/lib/mocks/catalogue-db';
-import { resetOrders } from '@/lib/mocks/checkout-db';
-import { handlers } from '@/lib/mocks/handlers';
-import { onHandFor } from '@/lib/mocks/inventory-db';
-import { resetOrderAccess } from '@/lib/mocks/order-access-db';
-import { toProductDetail } from '@/lib/mocks/product-detail-db';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import { API_HEADERS } from '@/lib/api/headers';
+import { cartIdSchema, orderNumberSchema, type OrderNumber } from '@/lib/domain/ids';
 
+import { ORDER, ORDER_NUMBER } from '../lib/test-fixtures';
 import { placeOrderRequestSchema } from '../schemas/place-order.schema';
-import { fetchQuote } from './checkout-server';
 import { lookUpOrderFor, placeForCustomer, readOrderFor } from './order-access';
 
 /**
  * §28.3 — who may read an order back, end to end below the Route Handlers: the
- * real client, the real mock backend at the HTTP layer (TEST-04) and the real
- * cookies, with only the framework's cookie store replaced by a jar.
+ * real client and the real cookies, against per-test handlers at the HTTP layer
+ * (TEST-04), with only the framework's cookie store replaced by a jar.
  *
  * Order numbers run in sequence. Before this, the number alone read the name,
  * mobile, address and measurements of any order anyone cared to count up to.
+ * Whether a reader may see an order is the backend's decision; what these pin is
+ * this side's part of it — which token is kept, which is presented, and that
+ * none ever reaches the browser. The handlers answer as §28.3 says the backend
+ * does: the order for a reader it recognises, and a bare 404 for anyone else.
  */
 
 const jar = vi.hoisted(() => {
-  process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
   const values = new Map<string, string>();
   return {
     values,
@@ -42,10 +38,13 @@ const jar = vi.hoisted(() => {
 
 vi.mock('next/headers', () => ({ cookies: () => Promise.resolve(jar.store) }));
 
-const server = setupServer(...handlers);
+const server = setupServer();
 
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
+});
+afterEach(() => {
+  server.resetHandlers();
 });
 afterAll(() => {
   server.close();
@@ -53,50 +52,63 @@ afterAll(() => {
 
 beforeEach(() => {
   jar.values.clear();
-  resetCarts();
-  resetReservations();
-  resetOrders();
-  resetOrderAccess();
 });
 
-const MOBILE = '0300 1234567';
+const CART_ID = cartIdSchema.parse('00000000-0000-4000-8000-0000000000c0');
+const OWNER = 'customer@example.com';
+const MOBILE = ORDER.contactMobile;
 
-/** Places one stock order from this browser and answers its number and body. */
-async function placeFromThisBrowser(accountKey: string | null) {
-  const record = CATALOGUE.find((entry) =>
-    toProductDetail(entry, 'en').pieces.every((piece) =>
-      piece.sizes.some((size) => onHandFor(piece.id, size.id) > 0),
-    ),
+/* Tokens the backend issues — opaque to this side, and plainly not real ones. */
+const PLACEMENT_TOKEN = 'placement-token-0001';
+const LOOKUP_TOKEN = 'lookup-token-000000001';
+
+/** The placement the checkout form sends, for the fixture order. */
+const PLACEMENT = placeOrderRequestSchema.parse({
+  contactName: ORDER.contactName,
+  contactMobile: MOBILE,
+  contactEmail: '',
+  addressLine: ORDER.deliveryAddress,
+  addressCity: ORDER.deliveryCity,
+  deliveryOptionId: 'standard',
+  paymentMethodId: 'cod',
+  isGift: false,
+  giftMessage: '',
+  expectedTotalMinor: ORDER.totals.totalMinor,
+});
+
+const NOT_FOUND = () => new HttpResponse(null, { status: 404 });
+
+/** §7.2 placement: the order, and beside it the token for reading it back. */
+const placing = http.post(`*${ENDPOINTS.checkout.place(CART_ID)}`, () =>
+  HttpResponse.json({ kind: 'PLACED', order: ORDER, accessToken: PLACEMENT_TOKEN }),
+);
+
+/**
+ * The order read, at each address it is asked for: the order for the account
+ * named, or for the token named, and the 404 an unknown number gets otherwise.
+ */
+function readableBy(
+  reader: { readonly accountKey?: string; readonly token?: string },
+  ...addresses: OrderNumber[]
+) {
+  return addresses.map((address) =>
+    http.get(`*${ENDPOINTS.checkout.order(address)}`, ({ request }) => {
+      const account = request.headers.get(API_HEADERS.accountKey);
+      const token = request.headers.get(API_HEADERS.orderAccess);
+      return account === reader.accountKey || token === reader.token
+        ? HttpResponse.json(ORDER)
+        : NOT_FOUND();
+    }),
   );
-  const pieces = record === undefined ? [] : toProductDetail(record, 'en').pieces;
-  const selections = pieces.map((piece) => ({
-    pieceId: piece.id,
-    sizeId: piece.sizes.find((size) => onHandFor(piece.id, size.id) > 0)?.id,
-  }));
-  await addForCustomer(
-    addToBagRequestSchema.parse({ productId: record?.id, selections, quantity: 1 }),
-    'en',
+}
+
+/** §28.3's lookup: the order and a fresh token for the mobile it was placed with, sent in the body. */
+function lookupAt(address: OrderNumber) {
+  return http.post(`*${ENDPOINTS.checkout.orderLookup(address)}`, async ({ request }) =>
+    (await request.text()) === JSON.stringify({ mobile: MOBILE })
+      ? HttpResponse.json({ order: ORDER, accessToken: LOOKUP_TOKEN })
+      : NOT_FOUND(),
   );
-
-  const cartId = await readCartId();
-  if (cartId === null) throw new Error('Expected a cart.');
-  const quote = await fetchQuote(cartId, null, false, 'en');
-  const request = placeOrderRequestSchema.parse({
-    contactName: 'Test Customer',
-    contactMobile: MOBILE,
-    contactEmail: '',
-    addressLine: '12 Example Street, Block A',
-    addressCity: 'Lahore',
-    deliveryOptionId: quote.ok ? quote.value.deliveryOptionId : '',
-    paymentMethodId: 'cod',
-    isGift: false,
-    giftMessage: '',
-    expectedTotalMinor: quote.ok ? quote.value.totals.totalMinor : -1,
-  });
-
-  const placed = await placeForCustomer(cartId, request, 'en', accountKey);
-  if (!placed.ok || placed.value.kind !== 'PLACED') throw new Error('Expected a placed order.');
-  return { number: placed.value.order.orderNumber, answer: placed.value };
 }
 
 function kindOf(result: { ok: boolean; error?: { kind: string } }): string {
@@ -105,59 +117,53 @@ function kindOf(result: { ok: boolean; error?: { kind: string } }): string {
 
 describe('reading an order back', () => {
   it('opens the confirmation for the browser that placed it, with no token in the answer', async () => {
-    const { number, answer } = await placeFromThisBrowser(null);
+    server.use(placing, ...readableBy({ token: PLACEMENT_TOKEN }, ORDER_NUMBER));
 
-    expect(Object.keys(answer)).toEqual(['kind', 'order']);
-    expect(kindOf(await readOrderFor(number, null))).toBe('OK');
+    const placed = await placeForCustomer(CART_ID, PLACEMENT, 'en', null);
+
+    expect(placed).toEqual({ ok: true, value: { kind: 'PLACED', order: ORDER } });
+    expect(JSON.stringify(placed)).not.toContain(PLACEMENT_TOKEN);
+    expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('OK');
   });
 
-  it('refuses a browser holding no token, exactly as it refuses an unknown number', async () => {
-    const { number } = await placeFromThisBrowser(null);
+  it('refuses a browser holding no token: the number alone reads nothing', async () => {
+    server.use(placing, ...readableBy({ token: PLACEMENT_TOKEN }, ORDER_NUMBER));
+    await placeForCustomer(CART_ID, PLACEMENT, 'en', null);
     jar.values.clear();
 
-    expect(kindOf(await readOrderFor(number, null))).toBe('NOT_FOUND');
-    expect(kindOf(await readOrderFor(orderNumberSchema.parse('AA999999'), null))).toBe('NOT_FOUND');
+    expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('NOT_FOUND');
   });
 
   it.each([
-    ['the account that placed it', 'customer@example.com', 'OK'],
+    ['the account that placed it', OWNER, 'OK'],
     ['a different account', 'someone@example.com', 'NOT_FOUND'],
   ])('answers %s on another browser', async (_label, reader, expected) => {
-    const { number } = await placeFromThisBrowser('customer@example.com');
-    jar.values.clear();
+    server.use(...readableBy({ accountKey: OWNER }, ORDER_NUMBER));
 
-    expect(kindOf(await readOrderFor(number, reader))).toBe(expected);
+    expect(kindOf(await readOrderFor(ORDER_NUMBER, reader))).toBe(expected);
   });
 
   it('ignores an order number written into the cookie without its token', async () => {
-    const { number } = await placeFromThisBrowser(null);
-    jar.values.set(clientKey('orders'), `${number}.${crypto.randomUUID()}`);
+    server.use(...readableBy({ token: PLACEMENT_TOKEN }, ORDER_NUMBER));
+    jar.values.set(clientKey('orders'), `${ORDER_NUMBER}.not-the-issued-token`);
 
-    expect(kindOf(await readOrderFor(number, null))).toBe('NOT_FOUND');
+    expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('NOT_FOUND');
   });
 });
 
 describe('§28.3 finding an order again by its mobile number', () => {
-  async function placedElsewhere(): Promise<OrderNumber> {
-    const { number } = await placeFromThisBrowser(null);
-    jar.values.clear();
-    return number;
-  }
+  it('passes a wrong mobile on as NOT_FOUND, and keeps nothing for this browser', async () => {
+    server.use(lookupAt(ORDER_NUMBER), ...readableBy({ token: LOOKUP_TOKEN }, ORDER_NUMBER));
 
-  it('answers a wrong mobile exactly as a number that names nothing', async () => {
-    const number = await placedElsewhere();
-
-    expect(kindOf(await lookUpOrderFor(number, { mobile: '03119876543' }))).toBe('NOT_FOUND');
-    expect(
-      kindOf(await lookUpOrderFor(orderNumberSchema.parse('AA999999'), { mobile: MOBILE })),
-    ).toBe('NOT_FOUND');
+    expect(kindOf(await lookUpOrderFor(ORDER_NUMBER, { mobile: '03119876543' }))).toBe('NOT_FOUND');
+    expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('NOT_FOUND');
   });
 
   it('opens the order for the right mobile, and keeps it open for this browser', async () => {
-    const number = await placedElsewhere();
+    server.use(lookupAt(ORDER_NUMBER), ...readableBy({ token: LOOKUP_TOKEN }, ORDER_NUMBER));
 
-    expect(kindOf(await lookUpOrderFor(number, { mobile: '03001234567' }))).toBe('OK');
-    expect(kindOf(await readOrderFor(number, null))).toBe('OK');
+    expect(kindOf(await lookUpOrderFor(ORDER_NUMBER, { mobile: MOBILE }))).toBe('OK');
+    expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('OK');
   });
 
   /*
@@ -166,11 +172,11 @@ describe('§28.3 finding an order again by its mobile number', () => {
    * asked for the mobile again on every reload.
    */
   it('keeps it open at the address it was asked at, spelt as the customer typed it', async () => {
-    const number = await placedElsewhere();
-    const typed = orderNumberSchema.parse(number.toLowerCase());
+    const typed = orderNumberSchema.parse(ORDER_NUMBER.toLowerCase());
+    server.use(lookupAt(typed), ...readableBy({ token: LOOKUP_TOKEN }, typed, ORDER_NUMBER));
 
     expect(kindOf(await lookUpOrderFor(typed, { mobile: MOBILE }))).toBe('OK');
     expect(kindOf(await readOrderFor(typed, null))).toBe('OK');
-    expect(kindOf(await readOrderFor(number, null))).toBe('OK');
+    expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('OK');
   });
 });

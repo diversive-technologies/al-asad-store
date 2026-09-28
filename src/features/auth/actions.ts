@@ -24,10 +24,9 @@ import {
 /**
  * Architecture §11 Identity and Access, as Server Actions.
  *
- * D3: still the placeholder — the Java module is what will actually hold
- * accounts, hash passwords and rate-limit attempts. What is real here is the
- * SHAPE: every call below is the §11 operation it is named after, so replacing
- * the mock is a base-URL change and nothing above this file moves.
+ * The Java module holds accounts, hashes passwords and rate-limits attempts.
+ * Every call below is the §11 operation it is named after; D3 survives only in
+ * the session cookie, which this file writes from what Java answers.
  *
  * SEC-01, and it governs every function here: a password crosses this boundary
  * once, in a POST body, and is never stored, echoed, logged or written to a
@@ -86,9 +85,9 @@ export async function signInWithPasswordAction(input: unknown): Promise<Result<S
 /**
  * §11 `issueCode(mobile) -> void`.
  *
- * Resolves to the mock's `devCode` when there is one. The real §11 returns
- * nothing and sends an SMS; this exists because no SMS provider is wired up and
- * the path would otherwise be unreachable. The caller treats it as optional.
+ * Resolves to the backend's `devCode` when it hands one back, which it does only
+ * while its demo sign-in codes are switched on. Otherwise it returns nothing and
+ * sends the code itself; the caller treats it as optional.
  */
 export async function requestCodeAction(input: unknown): Promise<Result<string | null, ApiError>> {
   const parsed = codeRequestSchema.safeParse(input);

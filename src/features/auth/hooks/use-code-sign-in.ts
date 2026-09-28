@@ -20,9 +20,9 @@ export interface CodeSignIn {
   readonly notice: string | null;
   readonly refusal: string | null;
   /**
-   * D1 — the mock returns the code it "sent", because no SMS provider is wired up
-   * and the path would otherwise be untestable. The real §11 returns void and this
-   * stays null, which is why nothing depends on it.
+   * The backend returns the code it "sent" only while its demo sign-in codes are
+   * switched on, because no SMS or WhatsApp sender may be running. Otherwise it
+   * returns void and this stays null, which is why nothing depends on it.
    */
   readonly devCode: string | null;
   /** Changing the number invalidates the step it belongs to. */
@@ -33,7 +33,7 @@ export interface CodeSignIn {
   readonly submit: () => Promise<void>;
 }
 
-/** The code step, once reached: what the mock handed back, if anything. */
+/** The code step, once reached: what the backend handed back, if anything. */
 interface SentStep {
   readonly devCode: string | null;
 }

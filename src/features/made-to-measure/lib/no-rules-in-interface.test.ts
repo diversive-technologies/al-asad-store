@@ -3,8 +3,6 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { RULE_SETS } from '@/lib/mocks/profile-rule-rows';
-
 /*
  * The tailor's rules are the SERVER's, and the plan's Phase 6 check says so: no
  * rule number appears in the interface code. The page reads a reason, a rule id
@@ -13,6 +11,25 @@ import { RULE_SETS } from '@/lib/mocks/profile-rule-rows';
  */
 
 const ROOTS = ['src/features/made-to-measure', 'app'];
+
+/*
+ * The ids the backend's rule set judges by today (§34.4, A2-6). The rows behind
+ * them — ratios, tolerances, severities — never reach this repository; an id is
+ * the one part of a rule the page is ever served, on a finding, so it is the one
+ * part it could be tempted to branch on. A rule the backend adds later is not
+ * listed until someone adds it here.
+ */
+const RULE_IDS = [
+  'hemAtLeastChest',
+  'shoulderForChest',
+  'neckForChestBan',
+  'neckForChestCollar',
+  'waistcoatOverKameez',
+];
+
+/* A rule row's own columns: a copy of the rulebook would have to name them,
+   whatever its rules are called. */
+const RULE_COLUMNS = ['permille', 'toleranceBelowMm', 'toleranceAboveMm', 'showsTarget'];
 
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -24,30 +41,22 @@ function sourceFiles(directory: string): string[] {
 }
 
 describe('the rulebook stays on the server', () => {
-  const files = ROOTS.flatMap((root) => sourceFiles(root));
-  const sources = files.map((path) => ({ path, text: readFileSync(path, 'utf8') }));
+  const sources = ROOTS.flatMap((root) => sourceFiles(root)).map((path) => ({
+    path,
+    text: readFileSync(path, 'utf8'),
+  }));
+  const filesNaming = (word: string) =>
+    sources.filter(({ text }) => text.includes(word)).map(({ path }) => path);
 
   it('reads enough of the storefront to mean something', () => {
-    expect(files.length).toBeGreaterThan(40);
+    expect(sources.length).toBeGreaterThan(40);
   });
 
-  it('names no rule, and holds no tolerance of its own', () => {
-    const numbers = new Set<string>();
-    const ids = new Set<string>();
-    for (const set of RULE_SETS) {
-      for (const rule of set.rows) {
-        ids.add(rule.id);
-        numbers.add(String(rule.permille));
-        numbers.add(String(rule.toleranceBelowMm));
-        if (rule.toleranceAboveMm !== null) numbers.add(String(rule.toleranceAboveMm));
-      }
-    }
+  it.each(RULE_IDS)('names no rule — %s appears nowhere', (id) => {
+    expect(filesNaming(id)).toEqual([]);
+  });
 
-    for (const { path, text } of sources) {
-      for (const id of ids) expect(text, `${path} names the rule ${id}`).not.toContain(id);
-      for (const word of ['permille', 'toleranceBelowMm', 'toleranceAboveMm', 'showsTarget']) {
-        expect(text, `${path} holds ${word}`).not.toContain(word);
-      }
-    }
+  it.each(RULE_COLUMNS)('holds no tolerance of its own — %s appears nowhere', (column) => {
+    expect(filesNaming(column)).toEqual([]);
   });
 });

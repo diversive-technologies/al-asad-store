@@ -1,28 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { styleOffersSchema } from '@/lib/domain/style-offer';
-import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
-
-import { measurementCopySchema } from '../schemas/measurement-copy.schema';
 import {
   acknowledgementSchema,
   findingSchema,
   type Finding,
   type MeasurementCheck,
 } from '../schemas/profile.schema';
-import { joinCopy } from './studio-set';
-import { pointId, servedSet } from './test-support';
+import { pointId, studioFor } from './test-support';
 import { judgeCheck, judgeRejection, splitOf } from './verdicts';
 
-const joined = joinCopy(
-  servedSet('KAMEEZ_SHALWAR'),
-  styleOffersSchema.parse([
-    { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
-  ]),
-  measurementCopySchema.parse(measurementCopyFor('en')),
-);
-if (!joined.ok) throw new Error(`missing: ${joined.error.join(', ')}`);
-const STUDIO = joined.value.studio;
+const STUDIO = studioFor('KAMEEZ_SHALWAR');
 
 const hemBelowChest = findingSchema.parse({
   pointId: 'kameezBottom',

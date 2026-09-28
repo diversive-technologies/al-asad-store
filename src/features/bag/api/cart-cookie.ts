@@ -24,8 +24,7 @@ import { createCart } from './bag-server';
  * cookie is the ONLY thing tying an anonymous customer to their reservations.
  *
  * D5: the name carries the client's key prefix rather than a brand written here.
- * SSOT-00 keeps the name itself in `lib/utils/cookies`, because the mock
- * layer's session cookie reads it too.
+ * SSOT-00 keeps the name itself in `lib/utils/cookies`, with every other cookie.
  */
 const COOKIE_NAME = CART_COOKIE_NAME;
 

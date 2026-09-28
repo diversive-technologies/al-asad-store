@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 
-import { orderLookupBody, placeBody } from '@/lib/mocks/request-bodies';
-
 import { orderLookupRequestSchema } from './order-lookup.schema';
 import {
   placeOrderReplySchema,
@@ -11,16 +9,14 @@ import {
 } from './place-order.schema';
 
 /**
- * The mock that stands in for Java states each request's wire shape for itself
- * (MOD-01), so this holds the two together: every request checkout's contract
- * accepts must be a body the mock accepts.
+ * Each request checkout sends passes its own contract before it leaves for the
+ * backend: a placement as the form fills it in, and an order lookup by mobile.
  */
-describe('the checkout requests and the bodies the mock backend reads', () => {
-  it.each<[string, z.ZodType, z.ZodType, unknown]>([
+describe('the checkout requests', () => {
+  it.each<[string, z.ZodType, unknown]>([
     [
       'a placement',
       placeOrderRequestSchema,
-      placeBody,
       {
         contactName: 'Test Customer',
         contactMobile: '0300 1234567',
@@ -34,12 +30,9 @@ describe('the checkout requests and the bodies the mock backend reads', () => {
         expectedTotalMinor: 725_000,
       },
     ],
-    ['a lookup by mobile', orderLookupRequestSchema, orderLookupBody, { mobile: '03001234567' }],
-  ])('%s passes both', (_label, contract, mock, input) => {
-    const sent = contract.safeParse(input);
-
-    expect(sent.success).toBe(true);
-    expect(mock.safeParse(sent.data).success).toBe(true);
+    ['a lookup by mobile', orderLookupRequestSchema, { mobile: '03001234567' }],
+  ])('accepts %s', (_label, contract, input) => {
+    expect(contract.safeParse(input).success).toBe(true);
   });
 });
 

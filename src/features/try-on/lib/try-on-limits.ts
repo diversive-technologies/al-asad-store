@@ -51,17 +51,6 @@ export const MAX_EDGE_PX = 1024;
 export const PROVIDER_TIMEOUT_MS = 30_000;
 
 /**
- * How long the labelled SAMPLE pretends to take.
- *
- * It applies only when no key is configured. A real generation runs for tens of
- * seconds; the sample is ready in a few hundred milliseconds because all it
- * does is re-encode a file already on disk. Returning it instantly would make
- * the waiting state — which is most of what this feature feels like — invisible
- * and untested. A configured provider is never delayed.
- */
-export const SAMPLE_LATENCY_MS = 2600;
-
-/**
  * Whether the module refuses this photograph outright.
  *
  * SEC-03 — enforced here as well as in the picker, because the picker runs in

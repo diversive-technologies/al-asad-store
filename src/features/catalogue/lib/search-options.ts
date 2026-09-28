@@ -26,8 +26,7 @@ export type SortOption = (typeof SORT_OPTIONS)[number];
 
 export const DEFAULT_SORT: SortOption = 'NEWEST';
 /*
- * The page the backend serves (the mock's `PAGE_SIZE` stands in for it), mirrored
- * here for the grid arithmetic in `grid-columns.ts`: it must divide by every column
+ * The page the backend serves, mirrored here for the grid arithmetic in `grid-columns.ts`: it must divide by every column
  * count, or a page ends on a part-filled row. 12 divides 1, 2, 3, 4 and 6; the
  * operator chose it over 24 so a 24-product catalogue pages at all.
  */

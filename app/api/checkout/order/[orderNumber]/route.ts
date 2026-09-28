@@ -1,7 +1,6 @@
 import { currentAccountKey } from '@/features/auth/server';
 import { readOrderFor } from '@/features/checkout';
 import { orderNumberSchema } from '@/lib/domain/ids';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 import { NO_STORE } from '@/lib/utils/route';
 
@@ -10,19 +9,9 @@ import { NO_STORE } from '@/lib/utils/route';
  *
  * ## Why this route exists at all
  *
- * `/order/[orderNumber]` used to read the order during its own server render,
- * which is the obvious thing to do and is wrong here. Under D1 the "backend" is
- * MSW answering from Maps held in the Node process, and a serverless platform
- * does not give a page render and a Route Handler the same process: the order
- * was written to `ORDERS` by `POST /api/checkout/place` and read back by a
- * function whose `ORDERS` had never been written to. Every placement ended on a
- * 404, deterministically, on the deployment and never once locally — where a
- * single long-lived `next dev` process hides the whole problem.
- *
- * So the rule this route restores is: MUTABLE state under D1 is reached from
- * Route Handlers only, never from a Server Component render. The bag already
- * worked precisely because it obeys that — `/bag` renders a Client Component
- * that fetches `/api/bag`. This is the order doing the same thing.
+ * `/order/[orderNumber]` renders a Client Component that reads the order here,
+ * the way `/bag` renders one that fetches `/api/bag`, rather than reading it
+ * during its own server render.
  *
  * ## Who may read it (§28.3)
  *
@@ -42,10 +31,6 @@ interface RouteContext {
 }
 
 export async function GET(_request: Request, context: RouteContext): Promise<Response> {
-  // D1 — a Route Handler never renders the root layout, so it arms its own
-  // module context or the first request after a hot reload hits a real socket.
-  await ensureMockServer();
-
   /*
    * SEC-02 — the path segment is untrusted and goes into a backend path. It is
    * parsed as an order number, which declines anything that is not one path

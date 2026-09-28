@@ -1,18 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { styleOffersSchema } from '@/lib/domain/style-offer';
-import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
 
-import { measurementCopySchema, type MeasurementCopy } from '../schemas/measurement-copy.schema';
+import type { MeasurementCopy } from '../schemas/measurement-copy.schema';
 import { requestedProduct, requestedSource, requestedStyle } from './studio-params';
 import { joinCopy } from './studio-set';
-import { servedSet } from './test-support';
+import { COPY, OFFERS, servedSet } from './test-support';
 
 const PAIR = servedSet('KAMEEZ_SHALWAR');
-const OFFERS = styleOffersSchema.parse([
-  { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
-]);
-const COPY = measurementCopySchema.parse(measurementCopyFor('en'));
 
 describe('joining the list to its words', () => {
   it('gives every garment and point its words, in the served order', () => {
@@ -24,13 +19,10 @@ describe('joining the list to its words', () => {
       id: 'kameezLength',
       label: 'Kameez length',
     });
+    // Each offer keeps its days and its charge, and gains its name.
     expect(joined.value.styles).toEqual([
-      {
-        garmentStyle: 'KAMEEZ_SHALWAR',
-        leadTimeDays: 7,
-        stitchingChargeMinor: 250000,
-        label: 'Kameez shalwar',
-      },
+      { ...OFFERS[0], label: 'Kameez shalwar' },
+      { ...OFFERS[1], label: 'Waistcoat suit' },
     ]);
   });
 
@@ -62,7 +54,7 @@ describe('joining the list to its words', () => {
 
   it('leaves out a style with no name, and says so, without taking the list down', () => {
     const offers = styleOffersSchema.parse([
-      { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
+      OFFERS[0],
       { garmentStyle: 'SHERWANI', leadTimeDays: 14, stitchingChargeMinor: 250000 },
     ]);
 

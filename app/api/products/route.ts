@@ -1,6 +1,5 @@
 import { fetchAvailability, fetchProductsByIds, mergeAvailability } from '@/features/catalogue';
 import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 
 /**
@@ -35,10 +34,6 @@ export const dynamic = 'force-dynamic';
 const MAX_IDS = 100;
 
 export async function GET(request: Request): Promise<Response> {
-  // D1 — a Route Handler never renders the root layout, so it arms its own
-  // module context or the first request after a hot reload hits a real socket.
-  await ensureMockServer();
-
   const url = new URL(request.url);
   const requestedLocale = url.searchParams.get('locale');
   const locale = isLocale(requestedLocale) ? requestedLocale : DEFAULT_LOCALE;

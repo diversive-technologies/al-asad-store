@@ -19,8 +19,8 @@ import {
  * wait and the result went unannounced.
  */
 
-const SAMPLE: TryOnPicture = {
-  status: 'SAMPLE',
+const PICTURE: TryOnPicture = {
+  status: 'READY',
   image: { dataUrl: 'data:image/jpeg;base64,AA==', widthPx: 4, heightPx: 5 },
 };
 const UNAVAILABLE = tryOnResultSchema.parse({ status: 'UNAVAILABLE', reason: 'PROVIDER_FAILED' });
@@ -28,7 +28,7 @@ const PREVIEW = 'blob:photo';
 
 describe('tryOnFaceOf', () => {
   it.each([
-    ['an image that came back is looked at', { result: SAMPLE, isPending: false }, 'RESULT'],
+    ['an image that came back is looked at', { result: PICTURE, isPending: false }, 'RESULT'],
     ['a request in flight is waited on', { result: undefined, isPending: true }, 'PENDING'],
     ['an answer of no image is the picker', { result: UNAVAILABLE, isPending: false }, 'PICKER'],
     ['nothing asked yet is the picker', { result: undefined, isPending: false }, 'PICKER'],
@@ -54,7 +54,7 @@ describe('tryOnStatusOf — the one line that outlives every face', () => {
       t.unavailableFailed,
     ],
     ['says nothing when the picker has nothing to say', { kind: 'PICKER' }, null, ''],
-    ['leaves a result to its heading', { kind: 'RESULT', picture: SAMPLE }, null, ''],
+    ['leaves a result to its heading', { kind: 'RESULT', picture: PICTURE }, null, ''],
   ] as const)('%s', (_case, face: TryOnFace, notice, expected) => {
     expect(tryOnStatusOf(face, notice, t)).toBe(expected);
   });

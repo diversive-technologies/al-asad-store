@@ -1,6 +1,5 @@
 import { fetchProduct, fetchProductAvailability, unifiedSizesFor } from '@/features/catalogue';
 import { getLocale } from '@/i18n';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 
 /**
@@ -18,10 +17,6 @@ import { logApiError } from '@/lib/utils/log';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<Response> {
-  // D1 — a Route Handler never renders the root layout, so it arms its own
-  // module context or the first request after a hot reload hits a real socket.
-  await ensureMockServer();
-
   const slug = new URL(request.url).searchParams.get('slug') ?? '';
   if (slug.length === 0) return new Response(null, { status: 400 });
 

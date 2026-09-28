@@ -16,7 +16,7 @@ export default defineConfig({
        * which Vitest, being neither a bundler nor a browser, does not set.
        *
        * Without this, every module that transitively reaches `env.server.ts` is
-       * untestable, which is most of the mock layer that stands in for Java.
+       * untestable, which is every read the BFF makes of Java.
        * Pointing at the package's own shim keeps that decision visible here
        * rather than hidden in a stub file of our own.
        */

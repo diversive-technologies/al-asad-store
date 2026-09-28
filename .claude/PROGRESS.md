@@ -10,10 +10,47 @@ none, because it is believed.
 **Layout (2026-09-17):** this repository is the storefront alone. The Java service
 is its own repository beside it (`../backend`), and the two deploy separately.
 
-Last updated: 2026-09-23, on `main`, which was fast-forwarded to
-`backend-integration` (`e4854e8`) and now carries the serverless session work
-below. `main` is AHEAD of `origin/main` and unpushed — publishing is the
-operator's, per `.claude/GIT.md`.
+Last updated: 2026-09-28, on `main`. Publishing is the operator's, per
+`.claude/GIT.md`.
+
+**28 September — the mock layer is gone; the storefront runs on Java alone.**
+
+Operator decision: the frontend stays clean and the backend deals with
+everything. D1 is over (`CLAUDE.md`).
+
+- **Deleted:** `src/lib/mocks/` (103 files, about 15,800 lines), `instrumentation.ts`,
+  the `API_MOCKING` switch, and the demo pieces built on the mocks. That means
+  the seeded test account on `/sign-in` (`TestAccountNotice`) and Try-On's
+  `SAMPLE` placeholder with `TRY_ON_SAMPLE_RESULT`. With no key, Try-On now
+  answers `UNAVAILABLE / PROVIDER_DISABLED`.
+- **Unwired:** every Route Handler, the root layout and the sitemap lost
+  `ensureMockServer()`. The fifteen write routes wrapped in `withMockSession`
+  are plain `export async function POST/PATCH` again, so no `aa_session.N`
+  cookie is written any more. `serverExternalPackages` for msw is gone from
+  `next.config.ts`.
+- **Tests:** the unit tests that ran against the stateful mock now answer
+  their own requests with per-test MSW handlers (TEST-04). Pure-logic tests
+  that borrowed mock rows as input use colocated test-only fixtures
+  (`test-fixtures.ts` in `catalogue/lib`, `checkout/lib` and
+  `made-to-measure/lib`, and `bag/api/test-support.ts`). The made-to-measure
+  rows are copied from the backend's seed (`V0030__seed_storefront_measurement_content.sql`).
+  The unit suite is now 151 files and 1,242 tests.
+  Checks whose subject was the mock itself are dropped: its request parsers,
+  its Urdu page copy, its rules and stock accounting. MSW stays a
+  devDependency for this alone. **Gap:** nothing checks any more that a
+  tailor's-card save stores its figures as TRANSCRIBED, and the Java tests
+  do not cover it either.
+- **End-to-end:** `npm run test:e2e` starts `next dev` against
+  `JAVA_API_BASE_URL` from `.env.local`, so the backend must be running (see
+  `../backend/README.md`). Alternatively, set `E2E_BASE_URL` to run against a
+  deployment. The journeys place real orders wherever they point. 17/17
+  passed against a local Java at backend `ad1bf97`, after this change.
+- **Still NOT through Java:** Try-On (§24) calls the image model from the Next
+  server (`features/try-on`). The backend has no try-on endpoint.
+
+Everything below this entry that names `src/lib/mocks/`, MSW handlers or
+"on the mocks" is history. The behaviour it describes now lives in Java or
+nowhere.
 
 **23 September — the deployed store lost every bag on the way to checkout.**
 

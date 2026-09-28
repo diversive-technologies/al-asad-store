@@ -10,9 +10,7 @@ import { addressIdSchema } from '@/lib/domain/ids';
  * against too — the plan's requirement that nothing is validated twice.
  *
  * SEC-02 — the ceiling is on the wire, because the length of a served list is
- * untrusted input however friendly the sender looks. The mock holds the same
- * bound on the way in, as a stand-in for Java that has no business trusting its
- * caller either.
+ * untrusted input however friendly the sender looks.
  */
 export const MAX_SAVED_ADDRESSES = 20;
 

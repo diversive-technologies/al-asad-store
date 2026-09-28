@@ -2,8 +2,6 @@ import { addForCustomer, fetchBagSummary, readCartId } from '@/features/bag';
 import { addToBagRequestSchema } from '@/features/bag/contract';
 import { readProfileOwner } from '@/features/made-to-measure';
 import { getLocale } from '@/i18n';
-import { ensureMockServer } from '@/lib/mocks/ensure';
-import { withMockSession } from '@/lib/mocks/session';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -33,10 +31,6 @@ function noBag(): Response {
 
 /** §16 `summary(cart)`. A read: it changes nothing, so SEC-08 does not apply. */
 export async function GET(): Promise<Response> {
-  // D1 — a Route Handler never renders the root layout, so it arms its own
-  // module context or the first request after a hot reload hits a real socket.
-  await ensureMockServer();
-
   const cartId = await readCartId();
 
   /*
@@ -64,9 +58,7 @@ export async function GET(): Promise<Response> {
 }
 
 /** §16 `addItem` — the write that creates the cart if there is not one yet. */
-async function postHandler(request: Request): Promise<Response> {
-  await ensureMockServer();
-
+export async function POST(request: Request): Promise<Response> {
   // SEC-08 — a write that can create a cart and replace the cookie naming one.
   if (!isSameOrigin(request)) return new Response(null, { status: 403, headers: NO_STORE });
 
@@ -101,9 +93,3 @@ async function postHandler(request: Request): Promise<Response> {
    */
   return Response.json(result.value, { headers: NO_STORE });
 }
-
-/*
- * D1 serverless — the cookie is written after the handler has answered, so
- * the rows it carries are the ones this request left behind.
- */
-export const POST = withMockSession(postHandler);

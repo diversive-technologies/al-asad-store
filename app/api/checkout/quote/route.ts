@@ -1,7 +1,6 @@
 import { readCartId } from '@/features/bag';
 import { fetchQuote } from '@/features/checkout';
 import { getLocale } from '@/i18n';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 
 /**
@@ -15,10 +14,6 @@ export const dynamic = 'force-dynamic';
 const NO_STORE = { 'Cache-Control': 'no-store' } as const;
 
 export async function GET(request: Request): Promise<Response> {
-  // D1 — a Route Handler never renders the root layout, so it arms its own
-  // module context or the first request after a hot reload hits a real socket.
-  await ensureMockServer();
-
   const cartId = await readCartId();
   // No cart means nothing to quote. Not an error — there is simply no checkout.
   if (cartId === null) return new Response(null, { status: 404 });

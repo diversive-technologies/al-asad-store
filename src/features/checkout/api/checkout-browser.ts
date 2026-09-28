@@ -120,7 +120,7 @@ export async function placeOrder(
  *
  * Deliberately NOT `send`, and the difference is the entire point. `send` answers
  * `FAILED` for every non-ok response, which folds "nothing here" into "the read
- * failed" — the exact collapse that made a dead mock layer read as a missing order
+ * failed" — the exact collapse that made an unreachable backend read as a missing order
  * and sent a customer holding a receipt looking for a mistake they had not made.
  * So absence stays in the SUCCESS channel as `null`, and the error channel carries
  * transport and contract failure only (`classifyReadResponse`). A schema that

@@ -1,8 +1,6 @@
 import { currentAccountKey } from '@/features/auth/server';
 import { fetchSavedSizes, rememberSize, savedSizeChoiceSchema } from '@/features/saved-sizes';
 import { getLocale } from '@/i18n';
-import { ensureMockServer } from '@/lib/mocks/ensure';
-import { withMockSession } from '@/lib/mocks/session';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -25,9 +23,6 @@ import { NO_STORE, readJsonBody } from '@/lib/utils/route';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<Response> {
-  // D1 — a Route Handler never renders the root layout, so it arms its own
-  // module context or the first request after a hot reload hits a real socket.
-  await ensureMockServer();
   if (!isSameOrigin(request)) return new Response(null, { status: 403 });
 
   const accountKey = await currentAccountKey();
@@ -43,10 +38,9 @@ export async function GET(request: Request): Promise<Response> {
   return Response.json(sizes.value, { headers: NO_STORE });
 }
 
-async function postHandler(request: Request): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
   // SEC-08 — this one writes, so a foreign origin is refused before anything else.
   if (!isSameOrigin(request)) return new Response(null, { status: 403 });
-  await ensureMockServer();
 
   const accountKey = await currentAccountKey();
   if (accountKey === null) return new Response(null, { status: 401 });
@@ -65,9 +59,3 @@ async function postHandler(request: Request): Promise<Response> {
 
   return Response.json(sizes.value, { headers: NO_STORE });
 }
-
-/*
- * D1 serverless — §28.3's rows belong to the account and are recorded in
- * the visitor's own cookie, so the next instance can still answer with them.
- */
-export const POST = withMockSession(postHandler);

@@ -1,6 +1,4 @@
 import { measurementSubmissionSchema, saveForCustomer } from '@/features/made-to-measure';
-import { ensureMockServer } from '@/lib/mocks/ensure';
-import { withMockSession } from '@/lib/mocks/session';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -16,9 +14,7 @@ import { NO_STORE, readJsonBody } from '@/lib/utils/route';
  */
 export const dynamic = 'force-dynamic';
 
-async function postHandler(request: Request): Promise<Response> {
-  await ensureMockServer();
-
+export async function POST(request: Request): Promise<Response> {
   // SEC-08 — a write, so another origin is refused.
   if (!isSameOrigin(request)) return new Response(null, { status: 403, headers: NO_STORE });
 
@@ -38,10 +34,3 @@ async function postHandler(request: Request): Promise<Response> {
    */
   return Response.json(result.value, { headers: NO_STORE });
 }
-
-/*
- * D1 serverless — a saved set of measurements is recorded in the visitor's
- * own cookie, with the device token it was saved against. Without the token
- * the next instance refuses them with a 401 before looking.
- */
-export const POST = withMockSession(postHandler);

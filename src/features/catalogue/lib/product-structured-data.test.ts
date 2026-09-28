@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import type { z } from 'zod';
 
 import { CLIENT } from '@/config/client';
 import { ROUTES } from '@/config/routes';
 import { absoluteUrl } from '@/config/site';
-import { CATALOGUE, type CatalogueRecord } from '@/lib/mocks/catalogue-db';
-import { toProductDetail } from '@/lib/mocks/product-detail-db';
 import { serializeJsonLd } from '@/lib/utils/json-ld';
 import { schemaOrgPrice } from '@/lib/utils/structured-data';
 
@@ -15,21 +14,75 @@ import {
 } from '../schemas/piece-availability.schema';
 import { productDetailSchema, type ProductDetail } from '../schemas/product-detail.schema';
 import { productStructuredData, schemaOrgAvailability } from './product-structured-data';
+import { fixtureProductId } from './test-fixtures';
 
 /**
  * §30.5 — Product structured data, from the two reads the page itself renders:
  * the projection as the contract parses it, and the live overlay's verdict.
- * Products are found by PROPERTY, never by a slug or code written here.
+ * The products are the smallest the contract admits, written in the wire shape
+ * and parsed through `productDetailSchema`, so each holds what the page holds.
  */
 
-function detailOf(predicate: (record: CatalogueRecord) => boolean): ProductDetail {
-  const record = CATALOGUE.find(predicate);
-  if (record === undefined) throw new Error('the fixture has no product of that kind');
-  return productDetailSchema.parse(toProductDetail(record, 'en'));
+type ProductDetailWire = z.input<typeof productDetailSchema>;
+type PieceWire = ProductDetailWire['pieces'][number];
+
+/** One sized piece — `n` keeps its ids apart from its neighbours'. */
+function piece(n: number, name: string): PieceWire {
+  const serial = String(n).padStart(12, '0');
+  return {
+    id: `00000000-0000-4000-8001-${serial}`,
+    code: `FX-${String(n)}`,
+    name,
+    position: n,
+    fabric: {
+      id: `00000000-0000-4000-8002-${serial}`,
+      name: 'Cotton',
+      weight: 'MEDIUM',
+      explainer: 'A placeholder cloth.',
+      careText: 'Placeholder care text.',
+    },
+    colour: { displayName: 'Ivory', description: 'A placeholder colour.', hex: '#efe9dd' },
+    sizes: [{ id: `00000000-0000-4000-8003-${serial}`, label: 'M' }],
+    lengthMetres: null,
+  };
 }
 
-const SET = detailOf((record) => record.type === 'SET');
-const DISCOUNTED = detailOf((record) => record.originalMinor !== null);
+/** A one-piece product at full price, changed only where a case needs it. */
+function productDetail(n: number, overrides: Partial<ProductDetailWire>): ProductDetail {
+  return productDetailSchema.parse({
+    id: fixtureProductId(n),
+    code: `FX-${String(n)}`,
+    slug: `fixture-product-${String(n)}`,
+    name: `Fixture product ${String(n)}`,
+    description: 'A placeholder description.',
+    type: 'SIMPLE',
+    media: [{ url: `/placeholders/product-${String(n)}.avif`, alt: 'A placeholder photograph' }],
+    pieces: [piece(n * 10, 'Kurta')],
+    pricing: { currentMinor: 349_900, originalMinor: null },
+    isUnstitched: false,
+    model: null,
+    estimatedDeliveryDate: '2026-09-11',
+    infoSections: [],
+    fabricCalculator: null,
+    stitching: null,
+    isNew: false,
+    ...overrides,
+  } satisfies ProductDetailWire);
+}
+
+/** A two-piece set, photographed from more than one side. */
+const SET = productDetail(1, {
+  type: 'SET',
+  pieces: [piece(11, 'Kameez'), piece(12, 'Shalwar')],
+  media: [
+    { url: '/placeholders/product-1.avif', alt: 'A placeholder photograph, front' },
+    { url: '/placeholders/product-1-2.avif', alt: 'A placeholder photograph, back' },
+  ],
+});
+/** On sale: the backend sent a was-price beside the current one. */
+const DISCOUNTED = productDetail(2, {
+  pricing: { currentMinor: 349_900, originalMinor: 472_400 },
+});
 
 function availabilityOf(
   product: ProductDetail,

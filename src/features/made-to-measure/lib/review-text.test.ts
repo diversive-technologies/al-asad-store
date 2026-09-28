@@ -2,31 +2,17 @@ import { describe, expect, it } from 'vitest';
 
 import { en } from '@/i18n/messages/en';
 import { ur } from '@/i18n/messages/ur';
-import { styleOffersSchema } from '@/lib/domain/style-offer';
-import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
-import { STYLE_OFFERS } from '@/lib/mocks/measurement-sets-db';
 
-import { measurementCopySchema } from '../schemas/measurement-copy.schema';
 import type { ReviewRow } from './review';
 import { keptText, typedText } from './review-text';
-import { joinCopy, type StudioSet } from './studio-set';
-import { servedSet } from './test-support';
+import type { StudioSet } from './studio-set';
+import { studioFor } from './test-support';
 import type { Unit } from './units';
 
-/* The real served lists and their real wording, parsed through the contracts —
-   the review and the account page are handed these, never bare strings. */
-function studioFor(source?: string): StudioSet {
-  const joined = joinCopy(
-    servedSet('KAMEEZ_SHALWAR', source),
-    styleOffersSchema.parse(STYLE_OFFERS),
-    measurementCopySchema.parse(measurementCopyFor('en')),
-  );
-  if (!joined.ok) throw new Error(`no wording for ${joined.error.join(', ')}`);
-  return joined.value.studio;
-}
-
-const GARMENT = studioFor();
-const CARD = studioFor('TAILOR_CARD');
+/* The served lists and their wording, parsed through the contracts — the review
+   and the account page are handed these, never bare strings. */
+const GARMENT = studioFor('KAMEEZ_SHALWAR');
+const CARD = studioFor('KAMEEZ_SHALWAR', 'TAILOR_CARD');
 
 /** A review row as the review builds one: what was typed, and what the server recorded. */
 function row(studio: StudioSet, id: string, raw: string, unit: Unit, valueMm: number): ReviewRow {

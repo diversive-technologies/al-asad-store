@@ -1,12 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
-import { E2E_BASE_URL, E2E_PORT } from './tests/e2e/support/server';
+import { E2E_BASE_URL, E2E_IS_DEPLOYED, E2E_PORT } from './tests/e2e/support/server';
 
 /**
  * TEST-07 — the critical customer journeys, end to end: a real `next dev`, the
- * real Route Handlers and the real typed client, with MSW standing in for the
- * Java service inside that server process exactly as it does in development (D1).
- * Nothing here stubs the application; the browser only ever talks to the store.
+ * real Route Handlers and the real typed client, against the Java service at
+ * `JAVA_API_BASE_URL` in `.env.local`. Nothing here stubs the application or the
+ * backend, so start the backend first — and point the suite only at one whose
+ * data is test data, because the journeys place real orders there.
  *
  * `npm run test:e2e`. Unit and component tests stay in Vitest (`npm run test`),
  * whose `include` is `src/**` — this suite lives in `tests/e2e`, so neither
@@ -14,10 +15,9 @@ import { E2E_BASE_URL, E2E_PORT } from './tests/e2e/support/server';
  *
  * ## Why the server is started this way
  *
- * - **A fresh server for every run** (`reuseExistingServer: false`). The mock
- *   stores are in memory, so a server left over from an earlier run — or a
- *   developer's own — would hand every journey stock that is already held and
- *   carts that already exist. Playwright refuses to start if port 3107 is busy,
+ * - **A fresh server for every run** (`reuseExistingServer: false`). A server
+ *   left over from an earlier run — or a developer's own — may be serving other
+ *   code or other settings. Playwright refuses to start if port 3107 is busy,
  *   which is the right answer rather than testing whatever is there.
  * - **Stop your own `npm run dev` first.** A different port keeps the suite from
  *   TESTING a developer's server; it does not let the two run side by side.
@@ -28,22 +28,19 @@ import { E2E_BASE_URL, E2E_PORT } from './tests/e2e/support/server';
  *   directory's generated types to `tsconfig.json`, and a type check reads both
  *   sets of route declarations, which declare the same globals twice.
  * - **One worker, in file order.** One dev server compiles each route on its
- *   first request, and the mock layer's interception is re-armed per request
- *   (`src/lib/mocks/node.ts`). Parallel browsers racing first compiles bought
- *   nothing but timeouts, and every journey creates its own customer, cart and
+ *   first request. Parallel browsers racing first compiles bought nothing but
+ *   timeouts, and every journey creates its own customer, cart and
  *   measurements, so none depends on another having run.
- * - **The backend address points at nothing.** Every call MSW intercepts never
- *   leaves the process; one it does NOT intercept would otherwise go to
- *   `JAVA_API_BASE_URL` from `.env.local` — a real service, if one is running on
- *   this machine. Port 9 is the discard port, which nothing here listens on, so
- *   such a call is refused at once and fails the journey visibly instead.
- * - **Every route is compiled, and the mock proven to answer, before the first
- *   journey** (`tests/e2e/global-setup.ts`). A mock that has stopped
- *   intercepting stops the run there, by name, instead of failing every
- *   journey in a different place.
+ * - **Every route is compiled, and the backend proven to answer, before the
+ *   first journey** (`tests/e2e/global-setup.ts`). A backend that is down stops
+ *   the run there, by name, instead of failing every journey in a different
+ *   place.
  * - **The app's own address is this server's.** `NEXT_PUBLIC_APP_URL` builds the
  *   canonical link a product page copies, so it has to be the address the
  *   browser is actually on.
+ *
+ * With `E2E_BASE_URL` set (`tests/e2e/support/server.ts`) none of the above
+ * applies: no server is started and the journeys run against that deployment.
  */
 export default defineConfig({
   testDir: './tests/e2e',
@@ -65,17 +62,17 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: `npm run dev -- --port ${String(E2E_PORT)}`,
-    url: E2E_BASE_URL,
-    reuseExistingServer: false,
-    timeout: 180_000,
-    stdout: 'ignore',
-    stderr: 'pipe',
-    env: {
-      API_MOCKING: 'enabled',
-      JAVA_API_BASE_URL: 'http://127.0.0.1:9',
-      NEXT_PUBLIC_APP_URL: E2E_BASE_URL,
-    },
-  },
+  ...(E2E_IS_DEPLOYED
+    ? {}
+    : {
+        webServer: {
+          command: `npm run dev -- --port ${String(E2E_PORT)}`,
+          url: E2E_BASE_URL,
+          reuseExistingServer: false,
+          timeout: 180_000,
+          stdout: 'ignore',
+          stderr: 'pipe',
+          env: { NEXT_PUBLIC_APP_URL: E2E_BASE_URL },
+        },
+      }),
 });

@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { savedSizeBody } from '@/lib/mocks/request-bodies';
-
 import { MAX_SAVED_SIZES, savedSizeChoiceSchema, savedSizesSchema } from './saved-size.schema';
 
 /**
- * The saved sizes' contract (SSOT-09), and the one body the mock backend reads
- * from it. The mock states its wire shapes for itself (MOD-01), so this holds the
- * two together: what the storefront sends must be a body the mock accepts.
+ * The saved sizes' contract (SSOT-09): the one choice the storefront sends, and
+ * the list a backend answers with.
  */
 
 const SET_ID = '00000000-0000-4000-8000-0000000000aa';
@@ -21,10 +18,8 @@ function entry(sizeSetId: string, sizeId: string): unknown {
 }
 
 describe('a saved-size choice', () => {
-  it('is a body the mock backend reads', () => {
-    const sent = savedSizeChoiceSchema.parse({ sizeId: crypto.randomUUID() });
-
-    expect(savedSizeBody.safeParse(sent).success).toBe(true);
+  it('accepts a size id', () => {
+    expect(savedSizeChoiceSchema.safeParse({ sizeId: crypto.randomUUID() }).success).toBe(true);
   });
 
   it.each([

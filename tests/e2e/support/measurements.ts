@@ -8,12 +8,11 @@ import { messagePattern } from './copy';
  * §34 — figures a customer would copy off a garment they own, in inches, keyed by
  * the field's label as the studio draws it.
  *
- * They are the set the mock's own unit tests hold valid (`profiles-db.test.ts`,
- * `stitched-line.test.ts`): every figure inside its point's range, the hem wider
- * than the chest, the shoulder and neck where the tailor's rules expect them
- * beside a 21 in chest, and a waistcoat chest over the kameez's — so a check
- * raises neither a refusal nor a note. Whichever style a product is cut as, its
- * required fields are among these.
+ * Every figure is inside its point's range, the hem wider than the chest, the
+ * shoulder and neck where the tailor's rules expect them beside a 21 in chest,
+ * and a waistcoat chest over the kameez's — so a check raises neither a refusal
+ * nor a note. Whichever style a product is cut as, its required fields are among
+ * these.
  */
 const GARMENT_FIGURES: Readonly<Record<string, string>> = {
   'Kameez length': '40',

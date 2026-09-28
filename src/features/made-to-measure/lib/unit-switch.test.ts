@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkSubmission } from '@/lib/mocks/profiles-db';
-
 import { servedSet } from './test-support';
 import { NOTHING_HELD, switchUnit, typedEntriesOf } from './unit-switch';
 
@@ -46,24 +44,12 @@ describe('a unit switch across every figure the form holds', () => {
 
 describe('what is sent for a save', () => {
   it('sends a figure as it was typed, in its own unit, whichever unit is showing', () => {
+    // So the server derives 991 mm from 19.5 in across, never from the 49.5 cm
+    // on screen — that derivation is the server's (A2-2), and is tested there.
     const toCm = switchUnit(PAIR, { kameezChest: '19.5' }, NOTHING_HELD, 'IN', 'CM');
     expect(typedEntriesOf(PAIR, toCm.display, toCm.held, 'CM')).toEqual([
       { pointId: 'kameezChest', raw: '19.5', unit: 'IN' },
     ]);
-  });
-
-  it('so 19.5 in across records 991 mm with centimetres on screen', () => {
-    const toCm = switchUnit(PAIR, { kameezChest: '19.5' }, NOTHING_HELD, 'IN', 'CM');
-    const sent = typedEntriesOf(PAIR, toCm.display, toCm.held, 'CM');
-    const { recorded } = checkSubmission({
-      garmentStyle: 'KAMEEZ_SHALWAR',
-      source: 'GARMENT_COPY',
-      version: 1,
-      entries: sent.map((entry) => ({ ...entry })),
-      preferences: [],
-      acknowledgedFindings: [],
-    });
-    expect(recorded).toContainEqual({ pointId: 'kameezChest', valueMm: 991 });
   });
 
   it("sends an Urdu keyboard's digits as the ASCII the contract reads", () => {

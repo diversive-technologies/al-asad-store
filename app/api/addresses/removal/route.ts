@@ -1,7 +1,5 @@
 import { addressChoiceSchema, removeAddress } from '@/features/addresses';
 import { currentAccountKey } from '@/features/auth/server';
-import { ensureMockServer } from '@/lib/mocks/ensure';
-import { withMockSession } from '@/lib/mocks/session';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -17,8 +15,7 @@ import { NO_STORE, readJsonBody } from '@/lib/utils/route';
  */
 export const dynamic = 'force-dynamic';
 
-async function postHandler(request: Request): Promise<Response> {
-  await ensureMockServer();
+export async function POST(request: Request): Promise<Response> {
   // SEC-08 — a write, so a foreign origin is refused outright.
   if (!isSameOrigin(request)) return new Response(null, { status: 403 });
 
@@ -39,9 +36,3 @@ async function postHandler(request: Request): Promise<Response> {
 
   return Response.json(book.value, { headers: NO_STORE });
 }
-
-/*
- * D1 serverless — §28.3's rows belong to the account and are recorded in
- * the visitor's own cookie, so the next instance can still answer with them.
- */
-export const POST = withMockSession(postHandler);

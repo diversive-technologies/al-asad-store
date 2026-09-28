@@ -16,7 +16,19 @@
  */
 export const E2E_PORT = 3107;
 
-export const E2E_BASE_URL = `http://localhost:${String(E2E_PORT)}`;
+/**
+ * A deployed store to run the journeys against instead, e.g.
+ * `E2E_BASE_URL=https://al-asad-store.vercel.app npm run test:e2e`. Set, no local
+ * server is started and every journey — orders included — runs against THAT
+ * store's backend, so point it only at one whose data is test data.
+ */
+const DEPLOYED_BASE_URL = (process.env.E2E_BASE_URL ?? '').replace(/\/+$/, '');
+
+export const E2E_IS_DEPLOYED = DEPLOYED_BASE_URL !== '';
+
+export const E2E_BASE_URL = E2E_IS_DEPLOYED
+  ? DEPLOYED_BASE_URL
+  : `http://localhost:${String(E2E_PORT)}`;
 
 /**
  * How long a journey waits to ARRIVE somewhere — a new address, a page's first

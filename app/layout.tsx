@@ -19,7 +19,6 @@ import { getLocale, getMessages } from '@/i18n';
 import { DIRECTION, localeSwitchPlace } from '@/i18n/locales';
 import { MessagesProvider } from '@/i18n/use-messages';
 import { cn } from '@/lib/utils/cn';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { getThemePreference } from '@/lib/theme.server';
 import { QueryProvider } from '@/providers/query-provider';
 
@@ -89,9 +88,6 @@ export interface RootLayoutProps {
  * - The bag panel is mounted once, above the routes: one dialog, one top layer.
  */
 export default async function RootLayout({ children }: RootLayoutProps) {
-  // D1: re-arms the mock layer for this module context; a no-op once armed.
-  await ensureMockServer();
-
   // PERF-02: independent reads run in parallel, never as a waterfall.
   const [locale, messages, themePreference, session] = await Promise.all([
     getLocale(),

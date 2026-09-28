@@ -12,11 +12,11 @@ async function request(path: string): Promise<string> {
  * Runs once, after Playwright has started the dev server and before the first
  * journey. Both of its jobs are about the SERVER, not the store:
  *
- * 1. **It proves the mock layer is answering.** When MSW stops intercepting (a
- *    known `next dev` failure — PROGRESS, "Things that cost time") every page
- *    still renders, as "we could not reach the store", and every journey then
- *    fails somewhere unhelpful. A listing with no product cards in its HTML is
- *    that state, and the run stops here saying so.
+ * 1. **It proves the backend is answering.** With the Java service down, or
+ *    `JAVA_API_BASE_URL` pointing at nothing, every page still renders, as "we
+ *    could not reach the store", and every journey then fails somewhere
+ *    unhelpful. A listing with no product cards in its HTML is that state, and
+ *    the run stops here saying so.
  * 2. **It compiles every route once, one at a time.** `next dev` compiles a route
  *    on its first request; left to the journeys, the first one to reach each
  *    route pays for it inside an assertion's timeout. The pages are the ones the
@@ -33,7 +33,7 @@ export default async function globalSetup(): Promise<void> {
   const cards = listing.match(/<article\b/g)?.length ?? 0;
   if (cards === 0) {
     throw new Error(
-      `${ROUTES.catalogue.list} rendered no products, so the mock layer is not answering. ` +
+      `${ROUTES.catalogue.list} rendered no products, so the backend is not answering. ` +
         'Nothing any journey could check would mean anything; stopping here.',
     );
   }

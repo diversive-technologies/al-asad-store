@@ -49,7 +49,7 @@ export const ADDRESS_RULES = {
  * whatever the interface calls them.
  *
  * Email is deliberately NOT here. The order does not record one (§6.5 keeps it
- * on the contact block and the mock drops it), and an email address belongs to
+ * on the contact block), and an email address belongs to
  * a person rather than to a place.
  */
 export const addressDetailSchema = z.object({

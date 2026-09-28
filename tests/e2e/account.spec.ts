@@ -15,7 +15,7 @@ async function openFromAccountMenu(page: Page, link: string): Promise<void> {
 }
 
 /**
- * §28.3 — the signed-in customer. The session is the D3 mock cookie, set
+ * §28.3 — the signed-in customer. The session is the D3 cookie, set
  * directly; every journey signs in a NEW customer, so what an account holds is
  * only what the journey itself put there.
  */

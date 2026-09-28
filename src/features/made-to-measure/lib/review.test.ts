@@ -2,25 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { en } from '@/i18n/messages/en';
 import type { MeasurementPointId } from '@/lib/domain/ids';
-import { styleOffersSchema } from '@/lib/domain/style-offer';
-import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
 
-import { measurementCopySchema } from '../schemas/measurement-copy.schema';
 import { acknowledgementSchema, findingSchema, preferenceSchema } from '../schemas/profile.schema';
 import { describeProblems, type FieldProblem } from './field-problems';
 import { keptFigure, reviewGroups } from './review';
-import { joinCopy } from './studio-set';
-import { pointId, servedSet } from './test-support';
+import { pointId, studioFor } from './test-support';
 
-const joined = joinCopy(
-  servedSet('KAMEEZ_SHALWAR'),
-  styleOffersSchema.parse([
-    { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
-  ]),
-  measurementCopySchema.parse(measurementCopyFor('en')),
-);
-if (!joined.ok) throw new Error(`missing: ${joined.error.join(', ')}`);
-const STUDIO = joined.value.studio;
+const STUDIO = studioFor('KAMEEZ_SHALWAR');
 
 const hemBelowChest = findingSchema.parse({
   pointId: 'kameezBottom',

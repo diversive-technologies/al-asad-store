@@ -225,9 +225,6 @@ export const ur: Messages = {
     passwordsDiffer: 'دونوں پاس ورڈ ایک جیسے ہونے چاہئیں۔',
     nameInvalid: 'براہِ کرم اپنا نام درج کریں۔',
     mobileInvalid: 'درست موبائل نمبر درج کریں۔',
-    testAccountHeading: 'ٹیسٹ اکاؤنٹ',
-    testAccountEmail: 'ای میل',
-    testAccountPassword: 'پاس ورڈ',
     testCode: 'ٹیسٹ کوڈ',
     accountMenuLabel: 'آپ کا اکاؤنٹ',
 
@@ -636,10 +633,6 @@ export const ur: Messages = {
     phasePlacing: 'پیس رکھا جا رہا ہے',
     resultHeading: 'آپ اس پیس میں',
     resultAlt: '{product} پہنے ہوئے آپ کا تیار کردہ عکس',
-    sampleHeading: 'نمونہ، آپ کی تصویر نہیں',
-    sampleAlt: '{product} کی کیٹلاگ تصویر، اسی ماڈل پر جس پر یہ کھینچی گئی',
-    sampleLabel:
-      'صرف نمونہ۔ ٹرائی آن ابھی منسلک نہیں، اس لیے یہ اس ماڈل کی کیٹلاگ تصویر ہے جس پر یہ پیس کھینچا گیا — آپ کا عکس نہیں۔',
     startAgain: 'دوسری تصویر آزمائیں',
     unavailableDisabled:
       'ٹرائی آن ابھی فعال نہیں ہے۔ اس صفحے کی باقی ہر چیز معمول کے مطابق کام کرتی ہے۔',

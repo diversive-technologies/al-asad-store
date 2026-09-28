@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-
-import { checkSubmission, saveProfile, type SubmissionRow } from '@/lib/mocks/profiles-db';
+import type { z } from 'zod';
 
 import {
   measurementCheckSchema,
@@ -8,7 +7,7 @@ import {
   saveOutcomeSchema,
 } from './profile.schema';
 
-const SUBMISSION: SubmissionRow = {
+const SUBMISSION: z.input<typeof measurementSubmissionSchema> = {
   garmentStyle: 'KAMEEZ_SHALWAR',
   source: 'GARMENT_COPY',
   version: 1,
@@ -25,6 +24,73 @@ const SUBMISSION: SubmissionRow = {
   preferences: [{ group: 'sleeveFinish', value: 'CUFF' }],
   acknowledgedFindings: [],
 };
+
+/*
+ * The backend's answers to it, as the wire carries them. What the server finds
+ * and records is its own to decide (§34.4), and is tested there; these pin only
+ * the SHAPE the studio reads. The millimetres are the server's for SUBMISSION —
+ * a half doubled, then rounded once.
+ */
+const CHECKED = {
+  findings: [],
+  recorded: [
+    { pointId: 'kameezLength', valueMm: 1016 },
+    { pointId: 'kameezSleeve', valueMm: 610 },
+    { pointId: 'kameezShoulder', valueMm: 457 },
+    { pointId: 'kameezNeck', valueMm: 394 },
+    { pointId: 'kameezChest', valueMm: 1067 },
+    { pointId: 'kameezBottom', valueMm: 1118 },
+    { pointId: 'shalwarLength', valueMm: 1016 },
+    { pointId: 'shalwarPaincha', valueMm: 381 },
+  ],
+  acknowledged: [],
+  ruleSetVersion: 2,
+} satisfies z.input<typeof measurementCheckSchema>;
+
+const SAVED = {
+  kind: 'SAVED',
+  profile: {
+    id: crypto.randomUUID(),
+    garmentStyle: 'KAMEEZ_SHALWAR',
+    setVersion: 1,
+    ruleSetVersion: 2,
+    version: 1,
+    source: 'GARMENT_COPY',
+    preferences: SUBMISSION.preferences,
+    // A2-8 — each value keeps what was typed beside what was recorded.
+    values: [
+      {
+        pointId: 'kameezChest',
+        enteredValue: '21',
+        unitEntered: 'IN',
+        enteredAs: 'HALF',
+        basis: 'GARMENT',
+        origin: 'TYPED',
+        valueMm: 1067,
+      },
+    ],
+    acknowledgedFindings: [],
+    keptWith: 'DEVICE',
+    createdAt: '2026-09-28T10:00:00.000Z',
+  },
+  replaced: false,
+} satisfies z.input<typeof saveOutcomeSchema>;
+
+// Sent against a list version the backend does not know.
+const REJECTED = {
+  kind: 'REJECTED',
+  findings: [
+    {
+      pointId: null,
+      ruleId: null,
+      severity: 'REFUSED',
+      reason: 'SET_VERSION_UNKNOWN',
+      relatedPoints: [],
+      direction: null,
+      expectedMm: null,
+    },
+  ],
+} satisfies z.input<typeof saveOutcomeSchema>;
 
 describe('the save contract (A2-5, A2-8)', () => {
   it('accepts what the studio sends', () => {
@@ -58,16 +124,15 @@ describe('the save contract (A2-5, A2-8)', () => {
   });
 
   it("reads the backend's check in the shape the studio expects", () => {
-    const parsed = measurementCheckSchema.safeParse(checkSubmission(SUBMISSION));
+    const parsed = measurementCheckSchema.safeParse(CHECKED);
     expect(parsed.success).toBe(true);
-    expect(parsed.data?.recorded).toHaveLength(8);
+    expect(parsed.data?.recorded).toEqual(CHECKED.recorded);
   });
 
-  it('reads both a saved profile and a refusal', () => {
-    const owner = { keptWith: 'DEVICE' as const, key: 'contract-test' };
-    expect(saveOutcomeSchema.safeParse(saveProfile(owner, SUBMISSION)).success).toBe(true);
-    expect(
-      saveOutcomeSchema.safeParse(saveProfile(owner, { ...SUBMISSION, version: 99 })).success,
-    ).toBe(true);
+  it.each([
+    ['a saved profile', SAVED],
+    ['a refusal', REJECTED],
+  ])('reads %s', (_label, outcome) => {
+    expect(saveOutcomeSchema.safeParse(outcome).success).toBe(true);
   });
 });

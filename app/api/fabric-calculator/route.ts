@@ -1,5 +1,4 @@
 import { evaluateFabric } from '@/features/catalogue';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 
 /**
@@ -11,10 +10,6 @@ import { logApiError } from '@/lib/utils/log';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<Response> {
-  // D1 — a Route Handler never renders the root layout, so it arms its own
-  // module context or the first request after a hot reload hits a real socket.
-  await ensureMockServer();
-
   const url = new URL(request.url);
   // SEC-02: untrusted input. `Number` yields NaN for junk, which the backend
   // rejects — the frontend does not pre-judge what a valid height is (DATA-13).

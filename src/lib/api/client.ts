@@ -122,11 +122,6 @@ function requestInit<TSchema extends z.ZodType>(options: RequestOptions<TSchema>
  * and schema validation exist in one place.
  *
  * DATA-03: returns a Result and never throws.
- *
- * D1: while the Java service is unbuilt, MSW intercepts these calls in the Next
- * server process. The interception happens at the HTTP layer (TEST-04), so this
- * module and its schema validation run unchanged against mocks and against the
- * real service.
  */
 export async function apiRequest<TSchema extends z.ZodType>(
   options: RequestOptions<TSchema>,

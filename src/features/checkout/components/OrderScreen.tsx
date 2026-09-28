@@ -18,16 +18,11 @@ export interface OrderScreenProps {
 /**
  * §28.3's order, read from the browser.
  *
- * DATA-05 — a Client Component fetches through TanStack Query. The read moved
- * off the server render deliberately: under D1 the order lives in mock state
- * that only the Route Handler process has written to, so a server render was
- * reading an empty table and answering 404 for every real order. `/bag` has
- * always worked this way; this is the order joining it. See the BFF at
- * `app/api/checkout/order/[orderNumber]` for the whole story.
+ * DATA-05 — a Client Component fetches through TanStack Query, through the BFF
+ * at `app/api/checkout/order/[orderNumber]`, the way `/bag` reads its bag.
  *
- * The three outcomes below are three different things and are kept apart, which
- * is the other half of the fix. Collapsing them is what made a dead mock layer
- * read as a missing order.
+ * The three outcomes below are three different things and are kept apart.
+ * Collapsing them is what made an unreachable backend read as a missing order.
  */
 export function OrderScreen({ orderNumber, locale, messages }: OrderScreenProps) {
   // MOD-05 — the read, keyed by who is reading, and a lookup's arrival (`useOrderRead`).

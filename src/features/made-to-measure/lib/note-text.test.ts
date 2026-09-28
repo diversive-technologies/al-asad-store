@@ -2,25 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { en } from '@/i18n/messages/en';
 import { ur } from '@/i18n/messages/ur';
-import { styleOffersSchema } from '@/lib/domain/style-offer';
-import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
 
-import { measurementCopySchema } from '../schemas/measurement-copy.schema';
 import { findingSchema } from '../schemas/profile.schema';
 import { isNote, type Note } from './field-notes';
 import { noteTextFor, type FieldNoteText, type NoteCopy } from './note-text';
-import { joinCopy } from './studio-set';
-import { servedSet } from './test-support';
+import { studioFor } from './test-support';
 
-const joined = joinCopy(
-  servedSet('KAMEEZ_SHALWAR'),
-  styleOffersSchema.parse([
-    { garmentStyle: 'KAMEEZ_SHALWAR', leadTimeDays: 7, stitchingChargeMinor: 250000 },
-  ]),
-  measurementCopySchema.parse(measurementCopyFor('en')),
-);
-if (!joined.ok) throw new Error(`missing: ${joined.error.join(', ')}`);
-const POINTS = joined.value.studio.points;
+const POINTS = studioFor('KAMEEZ_SHALWAR').points;
 
 const noteOn = (overrides: Record<string, unknown> = {}): Note => {
   const finding = findingSchema.parse({

@@ -3,35 +3,21 @@ import { describe, expect, it } from 'vitest';
 import type { Locale } from '@/i18n/locales';
 import { en } from '@/i18n/messages/en';
 import { ur } from '@/i18n/messages/ur';
-import { styleOffersSchema } from '@/lib/domain/style-offer';
-import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
-import { STYLE_OFFERS } from '@/lib/mocks/measurement-sets-db';
 import { formatList } from '@/lib/utils/format';
 
 import type { UseFieldNotesResult } from '../hooks/use-field-notes';
-import { measurementCopySchema } from '../schemas/measurement-copy.schema';
 import { findingSchema, type Finding } from '../schemas/profile.schema';
 import type { FieldProblem } from './field-problems';
 import { isNote, type Note } from './field-notes';
 import { formView, type FormView } from './form-view';
-import { joinCopy, type StudioSet } from './studio-set';
-import { pointId, servedSet } from './test-support';
+import type { StudioSet } from './studio-set';
+import { pointId, studioFor } from './test-support';
 import type { Unit } from './units';
 
-/* The real served lists and their real wording, so the groups follow the order
-   the backend serves rather than one written into the test. */
-function studioFor(source?: string): StudioSet {
-  const joined = joinCopy(
-    servedSet('KAMEEZ_SHALWAR', source),
-    styleOffersSchema.parse(STYLE_OFFERS),
-    measurementCopySchema.parse(measurementCopyFor('en')),
-  );
-  if (!joined.ok) throw new Error(`no wording for ${joined.error.join(', ')}`);
-  return joined.value.studio;
-}
-
-const GARMENT = studioFor();
-const CARD = studioFor('TAILOR_CARD');
+/* The served lists and their wording, so the groups follow the order the backend
+   serves rather than one written into the test. */
+const GARMENT = studioFor('KAMEEZ_SHALWAR');
+const CARD = studioFor('KAMEEZ_SHALWAR', 'TAILOR_CARD');
 
 function labelOf(studio: StudioSet, id: string): string {
   const point = studio.points.find((candidate) => candidate.id === id);

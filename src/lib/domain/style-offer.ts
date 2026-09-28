@@ -23,9 +23,8 @@ export const styleOfferSchema = z.object({
    * so a charge stated anywhere else would be a second copy of a backend rule
    * (DATA-13) and the two would eventually quote different numbers.
    *
-   * §31 #35 makes it configuration, by garment style, "To be set". The figure in
-   * the mock is FIXTURE — see the header of `measurement-sets-db.ts` — and is the
-   * operator's to supply before anyone is asked to pay it.
+   * §31 #35 makes it configuration, by garment style, "To be set". The figure is
+   * the backend's, and the operator's to supply before anyone is asked to pay it.
    */
   stitchingChargeMinor: z.number().int().nonnegative(),
 });

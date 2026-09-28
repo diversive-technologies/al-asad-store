@@ -177,8 +177,7 @@ export const ROUTES = {
      * §28.3 — reading one order back.
      *
      * The confirmation page reads through here rather than during its own
-     * server render, because under D1 the order lives in mock state that only
-     * the Route Handler process has written to.
+     * server render.
      */
     checkoutOrder: (orderNumber: string) =>
       `/api/checkout/order/${encodeURIComponent(orderNumber)}`,

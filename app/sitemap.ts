@@ -1,7 +1,6 @@
 import type { MetadataRoute } from 'next';
 
 import { fetchProductSitemapPages } from '@/features/catalogue';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 import { PUBLIC_PAGE_PATHS, sitemapEntries, type SitemapPage } from '@/lib/utils/sitemap';
 
@@ -15,9 +14,6 @@ import { PUBLIC_PAGE_PATHS, sitemapEntries, type SitemapPage } from '@/lib/utils
  * cannot be read costs the sitemap its products, never the pages it always has.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // D1: a metadata route runs outside the root layout, so it arms the mock itself.
-  await ensureMockServer();
-
   const products = await fetchProductSitemapPages();
   if (!products.ok) logApiError('sitemap', products.error); // ERR-10
 

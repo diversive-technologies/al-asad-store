@@ -1,26 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { styleOffersSchema } from '@/lib/domain/style-offer';
-import { measurementCopyFor } from '@/lib/mocks/measurement-copy-db';
-import { STYLE_OFFERS } from '@/lib/mocks/measurement-sets-db';
-
-import { measurementCopySchema } from '../schemas/measurement-copy.schema';
 import { measurementProfileSchema, type MeasurementProfile } from '../schemas/profile.schema';
 import { checkedFromProfile, figuresNotAsked, savedGroups } from './saved-view';
-import { joinCopy, type StudioSet } from './studio-set';
-import { pointId, servedSet } from './test-support';
-
-/* The real served list and the real wording, so these run against the shapes the
-   account page is handed rather than a hand-made copy of them. */
-function studioFor(garmentStyle: string, source?: string): StudioSet {
-  /* Through the real contracts, because the ids are BRANDED: the account page is
-     handed parsed values, never bare strings. */
-  const copy = measurementCopySchema.parse(measurementCopyFor('en'));
-  const offers = styleOffersSchema.parse(STYLE_OFFERS);
-  const joined = joinCopy(servedSet(garmentStyle, source), offers, copy);
-  if (!joined.ok) throw new Error(`no wording for ${joined.error.join(', ')}`);
-  return joined.value.studio;
-}
+import { pointId, studioFor } from './test-support';
 
 interface SavedValue {
   readonly pointId: string;

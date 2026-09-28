@@ -1,7 +1,6 @@
 import { lookUpOrderFor } from '@/features/checkout';
 import { orderLookupRequestSchema } from '@/features/checkout/contract';
 import { orderNumberSchema } from '@/lib/domain/ids';
-import { ensureMockServer } from '@/lib/mocks/ensure';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -25,8 +24,6 @@ interface RouteContext {
 }
 
 export async function POST(request: Request, context: RouteContext): Promise<Response> {
-  await ensureMockServer();
-
   // SEC-08 — a write: it issues and keeps a capability, so another origin is refused.
   if (!isSameOrigin(request)) return new Response(null, { status: 403, headers: NO_STORE });
 

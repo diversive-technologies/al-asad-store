@@ -1,23 +1,22 @@
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import { cartIdSchema, cartLineIdSchema } from '@/lib/domain/ids';
-import { addItem, createCart, removeLine, resetCarts, summaryFor } from '@/lib/mocks/bag-db';
-import { resetReservations } from '@/lib/mocks/bag-reservations';
-import { handlers } from '@/lib/mocks/handlers';
-import { availableKeys, stockedProduct } from '@/lib/mocks/stock-test-support';
-import { savedItemsFor } from '@/lib/mocks/wishlist-db';
+import { ENDPOINTS } from '@/lib/api/endpoints';
 
+import { EMPTY_BAG } from '../lib/empty-bag';
 import { moveToWishlist } from './bag-server';
+import { CART_ID, LINE_ID, recordInto, type Sent } from './test-support';
 
 /**
  * §16 `moveToWishlist` across the HTTP boundary (TEST-04): the real API client
- * and its schema, against the real mock handlers. What the store tests cannot
- * reach is whether what the mock SENDS is what the contract ACCEPTS, and that
- * the account travels in the header and nowhere else.
+ * and its schema, against per-test handlers answering as the contract says the
+ * backend does. What it pins is what the storefront SENDS — the account in the
+ * header and nowhere else — and that every answer, refusals included, arrives
+ * as a value (TEST-05). Which line moves, and into whose list, is the backend's.
  */
 
-const server = setupServer(...handlers);
+const server = setupServer();
 
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
@@ -29,68 +28,51 @@ afterAll(() => {
   server.close();
 });
 
-beforeEach(() => {
-  resetCarts();
-  resetReservations();
-});
-
-/** A cart holding one stock line, with the ids the client addresses them by. */
-function cartWithLine() {
-  const record = stockedProduct('SIMPLE');
-  const bySize = new Map(availableKeys(record).map((key) => [key.pieceId, key.sizeId]));
-  const selections = [...bySize.entries()].map(([pieceId, sizeId]) => ({ pieceId, sizeId }));
-  const cartId = createCart();
-  const outcome = addItem(cartId, record.id, selections, 1, 'en');
-  const lineId = outcome.kind === 'ADDED' ? outcome.summary.lines[0]?.id : undefined;
-  if (lineId === undefined) throw new Error(`Expected ${record.code} to be addable.`);
-
-  return {
-    productId: record.id,
-    cartId: cartIdSchema.parse(cartId),
-    lineId: cartLineIdSchema.parse(lineId),
-  };
-}
+const MOVE = `*${ENDPOINTS.bag.lineWishlistMove(CART_ID, LINE_ID)}`;
+const ACCOUNT = 'client-moves@example.com';
 
 describe('moveToWishlist through the real client', () => {
-  it('parses a move and saves into the account the header named', async () => {
-    const account = 'client-moves@example.com';
-    const { productId, cartId, lineId } = cartWithLine();
+  it('names the account in the header and nowhere else, and parses the move', async () => {
+    const received: Sent[] = [];
+    const moved = { kind: 'MOVED', summary: EMPTY_BAG } as const;
+    server.use(
+      http.post(
+        MOVE,
+        recordInto(received, () => HttpResponse.json(moved)),
+      ),
+    );
 
-    const result = await moveToWishlist(cartId, lineId, account, 'en');
+    const result = await moveToWishlist(CART_ID, LINE_ID, ACCOUNT, 'ur');
 
-    expect(result.ok ? result.value.kind : result.error.kind).toBe('MOVED');
-    expect(summaryFor(cartId, 'en')?.lines).toEqual([]);
-    expect(savedItemsFor(account)).toEqual([productId]);
+    expect(result).toEqual({ ok: true, value: moved });
+    expect(received).toEqual([
+      {
+        method: 'POST',
+        path: ENDPOINTS.bag.lineWishlistMove(CART_ID, LINE_ID),
+        locale: 'ur',
+        account: ACCOUNT,
+        body: {},
+      },
+    ]);
   });
 
   it('parses the answer for a line already gone, carrying the bag', async () => {
-    const { cartId, lineId } = cartWithLine();
-    removeLine(cartId, lineId, 'en');
+    const gone = { kind: 'NOT_IN_BAG', summary: EMPTY_BAG } as const;
+    server.use(http.post(MOVE, () => HttpResponse.json(gone)));
 
-    const result = await moveToWishlist(cartId, lineId, 'client-gone@example.com', 'en');
+    const result = await moveToWishlist(CART_ID, LINE_ID, ACCOUNT, 'en');
 
-    expect(
-      result.ok && result.value.kind === 'NOT_IN_BAG' ? result.value.summary.lines : null,
-    ).toEqual([]);
+    expect(result).toEqual({ ok: true, value: gone });
   });
 
-  it('is refused without an account, and the line stays in the bag', async () => {
-    const { cartId, lineId } = cartWithLine();
+  it.each([
+    ['a request with no account', '', 401, 'UNAUTHORIZED'],
+    ['a cart that is not a bag', ACCOUNT, 404, 'NOT_FOUND'],
+  ])('reports the refusal of %s as a value', async (_label, account, status, kind) => {
+    server.use(http.post(MOVE, () => new HttpResponse(null, { status })));
 
-    const result = await moveToWishlist(cartId, lineId, '', 'en');
+    const result = await moveToWishlist(CART_ID, LINE_ID, account, 'en');
 
-    expect(result.ok ? null : result.error.kind).toBe('UNAUTHORIZED');
-    expect(summaryFor(cartId, 'en')?.lines.map((line) => line.id)).toEqual([lineId]);
-  });
-
-  it('answers NOT_FOUND only for a cart that is not a bag', async () => {
-    const result = await moveToWishlist(
-      cartIdSchema.parse(crypto.randomUUID()),
-      cartLineIdSchema.parse(crypto.randomUUID()),
-      'client-nocart@example.com',
-      'en',
-    );
-
-    expect(result.ok ? null : result.error.kind).toBe('NOT_FOUND');
+    expect(result).toMatchObject({ ok: false, error: { kind } });
   });
 });

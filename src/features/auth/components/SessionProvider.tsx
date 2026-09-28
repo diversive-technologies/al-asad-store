@@ -3,7 +3,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 interface SessionContextValue {
-  /** D3: a mock session today, a real one when §11 lands. */
+  /** D3: the session the sign-in actions store; a Java-issued one when §11 lands. */
   isSignedIn: boolean;
   displayName: string;
   /** Empty when the customer signed in by code and has no email on file. */

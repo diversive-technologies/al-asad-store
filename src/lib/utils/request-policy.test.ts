@@ -29,15 +29,13 @@ function routeFiles(): string[] {
 /**
  * Where a method's body begins, however the file chooses to export it.
  *
- * Two shapes are in the tree. Most routes declare the handler AS the export.
- * The bag and checkout writes are wrapped so they record the mock session
- * (D1 serverless, `lib/mocks/session.ts`), which names the function separately
- * and exports the wrapped value:
+ * Every route today declares the handler AS the export. A handler can also be
+ * wrapped, which names the function separately and exports the wrapped value:
  *
  *     async function postHandler(request: Request) { … }
- *     export const POST = withMockSession(postHandler);
+ *     export const POST = wrap(postHandler);
  *
- * Finding only the first shape is how this guard quietly stopped covering
+ * Finding only the first shape is how this guard once quietly stopped covering
  * seven write handlers the moment they were wrapped — which is the exact
  * failure it exists to prevent, so it reads both.
  */

@@ -4,8 +4,9 @@ Custom-built storefront for the Pakistani domestic market, English and Urdu.
 Next.js 16 App Router frontend against a Java REST/JSON backend. Modular
 monolith, single market, single currency (PKR), single warehouse.
 
-**Status:** built against mocked backend responses (D1); what is done, what is
-left and what is deliberately missing is in `PROGRESS.md`, imported below.
+**Status:** integrated with the Java backend — the mock layer was removed on
+2026-09-28 (D1). What is done, what is left and what is deliberately missing is
+in `PROGRESS.md`, imported below.
 
 ## Repository layout
 
@@ -14,7 +15,7 @@ repository, checked out beside this one as `../backend` on the operator's
 machine, and the two are versioned and deployed separately — this one to Vercel
 through `.github/workflows/vercel-deploy.yml`. Nothing here builds, imports or
 deploys the backend: the boundary between them is the typed API client
-(guidelines §8), and the MSW mocks stand in for the service until it answers (D1).
+(guidelines §8), and every read and write crosses it to the Java service (D1).
 
 ---
 
@@ -79,13 +80,17 @@ resolve must not be able to switch them off:
 
 ## Decisions taken (not in either document)
 
-**D1 — Frontend first, mocks at the HTTP boundary.** The Java backend is not
-being waited on. Zod schemas are the API contract; MSW handlers stand in for
-the service. Per `TEST-04`, mocking happens at the HTTP layer and never by
-stubbing the project's own API client — so the real typed client and its schema
-validation run in every mock path. Swapping in the real backend is a base-URL
-change plus deleting handlers; no application code moves. Goal is a complete,
-demonstrable UI for the client.
+**D1 — Frontend first, mocks at the HTTP boundary — ENDED 2026-09-28.** The
+storefront was built against MSW handlers standing in for the Java service. On
+2026-09-28 the operator had the mock layer (`src/lib/mocks/`), the
+`API_MOCKING` switch and the demo placeholders built on it (the seeded test
+account on the sign-in page, Try-On's sample photograph) removed: every read and
+write now goes to `JAVA_API_BASE_URL`, and there is no stand-in to fall back
+to. Zod schemas remain the API contract. MSW stays a devDependency for unit
+tests only — per `TEST-04`, each test answers the requests it makes at the HTTP
+layer — and the end-to-end suite needs a running backend. Try-On is the one
+capability that does not go through Java (§24 calls the image model from the
+Next server, `features/try-on`).
 
 **D2 — RTL-safe from commit 1; Urdu content as a final phase.** Every component
 is direction-agnostic from the first file per §18 — this is not deferrable.
@@ -93,11 +98,11 @@ Urdu strings, Nastaliq and the protected-terms list land as a closing phase.
 This follows architecture §33 Risk 1, which recommends decoupling the English
 launch from the Urdu launch to protect first revenue.
 
-**D3 — Dummy sign-in in M1; real auth deferred to M6.** Entry to the store is
-through a mock-backed sign-in screen: no real credentials, no credential
-storage, MSW issues a mock session, and the user enters as an authenticated
-Customer rather than a Visitor. It is a placeholder for the auth design the
-operator intends to do separately (§11 is M6).
+**D3 — Dummy sign-in in M1; real auth deferred to M6.** Entry to the store was
+through a mock-backed sign-in screen. Since D1 ended, sign-in, sign-up and codes
+are answered by Java; what remains of D3 is the session cookie — unsigned JSON
+the storefront writes from Java's answer — which a Java-issued session replaces
+when the operator's auth design (§11, M6) lands.
 
 Noted for scheduling, not as an objection: guest checkout is Release 1 scope
 (§28.2) and guest order tracking by number and mobile is too (§28.3). The dummy
@@ -241,9 +246,7 @@ opened. The rules themselves live in the documents.
    (§16). This is the central correctness problem of the system (§1.2).
 
 Stock, pricing and promotion rules are server-owned. The frontend renders a
-constraint it was told about; it never computes or enforces one. Under D1 the
-mocks must honour this — a mock that computes availability client-side teaches
-the UI a habit the real backend will not support.
+constraint it was told about; it never computes or enforces one.
 
 ## Working agreements
 

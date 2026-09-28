@@ -1,10 +1,9 @@
 /**
  * STRUCT-04 / STRUCT-06 — the public barrel.
  *
- * D3: this whole feature is the placeholder for architecture §11 Identity and
- * Access. The SHAPE is the real part — every action is the §11 operation it is
- * named after — so when the Java module lands, repointing the base URL and
- * deleting `lib/mocks/auth-db.ts` is the whole migration.
+ * Architecture §11 Identity and Access. Every action is the §11 operation it is
+ * named after and is answered by the Java service; D3's session cookie is the
+ * part still standing in for a session Java issues.
  */
 export {
   readSession,

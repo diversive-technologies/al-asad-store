@@ -5,7 +5,7 @@ import { EVERY_POINT, pointOf as byId } from './test-support';
 import { DECIMALS, formatFigure, UNITS, type Unit } from './units';
 
 // The record's own order (multiply, double a half, round once) is the server's,
-// and is tested there: `src/lib/mocks/profiles-db.test.ts`.
+// and is tested there, in the backend's `ValidationEngineTest`.
 
 describe('a figure written the other way', () => {
   it('tells a whole chest typed where the half across is read', () => {
