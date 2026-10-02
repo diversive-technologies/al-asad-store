@@ -306,6 +306,7 @@ export const en = {
   },
   footer: {
     helpHeading: 'Help',
+    findOrder: 'Find my order',
     shopHeading: 'Shop',
     fabricGlossary: 'Fabric glossary',
     paymentGuide: 'Payment guide',
@@ -511,9 +512,13 @@ export const en = {
      */
     lookupHeading: 'Find your order',
     lookupBody: 'Enter the mobile number this order was placed with to see it.',
+    lookupStandaloneBody: 'Enter your order number and the mobile number it was placed with.',
     lookupSubmit: 'Show my order',
     lookupNotFound: 'We could not find an order with that number and mobile number.',
     lookupFailed: 'We could not check that just now. Please try again.',
+    lookupRateLimited: 'Too many attempts. Please wait a few minutes and try again.',
+    orderNumberInvalid: 'Enter a valid order number.',
+    findOrder: 'Find my order',
     /*
      * An order paid by transfer carries where to pay. Checkout promises "our
      * account", so the confirmation has to name it — and the reference is the
@@ -577,6 +582,7 @@ export const en = {
     ordersMoreItems: { one: '{item} and {count} more', other: '{item} and {count} more' },
     ordersView: 'View',
     ordersCancelled: 'Cancelled',
+    ordersFindOrder: 'Find my order',
     /* §28.3 — the history a page at a time, as links that work without JavaScript. */
     ordersShowMore: 'Show more orders',
     ordersShowOlder: 'Show older orders',

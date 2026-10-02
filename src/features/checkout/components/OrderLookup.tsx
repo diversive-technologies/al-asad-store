@@ -11,10 +11,10 @@ import { useOrderLookup } from '../hooks/use-order-lookup';
 import type { Order } from '../schemas/checkout.schema';
 
 export interface OrderLookupProps {
-  orderNumber: string;
+  orderNumber?: string | undefined;
   messages: Messages;
   /** The order, once the backend has matched the mobile number to it. */
-  onFound: (order: Order) => void;
+  onFound?: ((order: Order) => void) | undefined;
 }
 
 /**
@@ -32,7 +32,7 @@ export function OrderLookup({ orderNumber, messages, onFound }: OrderLookupProps
   const t = messages.order;
   const { form, notice, isPending, onSubmit, warmUp } = useOrderLookup(
     orderNumber,
-    { notFound: t.lookupNotFound, failed: t.lookupFailed },
+    { notFound: t.lookupNotFound, failed: t.lookupFailed, rateLimited: t.lookupRateLimited },
     onFound,
   );
   const example = CLIENT.market.mobile.example;
@@ -40,10 +40,33 @@ export function OrderLookup({ orderNumber, messages, onFound }: OrderLookupProps
   return (
     <section className="page-shell max-w-sm py-16">
       <h1 className="text-fg text-2xl font-semibold">{t.lookupHeading}</h1>
-      <p className="text-fg-muted mt-3 text-sm">{t.lookupBody}</p>
+      <p className="text-fg-muted mt-3 text-sm">
+        {orderNumber !== undefined ? t.lookupBody : t.lookupStandaloneBody}
+      </p>
 
       {/* FORM-02: the browser's own validation is off; Zod is the source (FORM-01). */}
       <form onSubmit={onSubmit} onFocus={warmUp} noValidate className="mt-6 flex flex-col gap-4">
+        {orderNumber !== undefined ? null : (
+          <Field
+            id="order-lookup-number"
+            label={t.numberLabel}
+            error={
+              form.formState.errors.orderNumber === undefined
+                ? undefined
+                : t.orderNumberInvalid
+            }
+          >
+            {(aria) => (
+              <Input
+                {...aria}
+                type="text"
+                autoComplete="off"
+                placeholder="AA100001"
+                {...form.register('orderNumber')}
+              />
+            )}
+          </Field>
+        )}
         <Field
           id="order-lookup-mobile"
           label={messages.checkout.mobileLabel}

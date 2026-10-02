@@ -28,10 +28,11 @@ const loadSchemas = () =>
  */
 
 export interface CheckoutError {
-  kind: 'UNAVAILABLE';
+  kind: 'UNAVAILABLE' | 'RATE_LIMITED';
 }
 
 const FAILED: Result<never, CheckoutError> = err({ kind: 'UNAVAILABLE' });
+const RATE_LIMITED: Result<never, CheckoutError> = err({ kind: 'RATE_LIMITED' });
 
 /**
  * Why a placement came back with no answer to show — two different facts, kept
@@ -130,6 +131,7 @@ async function optionalBody<TSchema extends z.ZodType>(
   response: Response | null,
   schema: TSchema | null,
 ): Promise<Result<z.infer<TSchema> | null, CheckoutError>> {
+  if (response?.status === 429) return RATE_LIMITED;
   const outcome = classifyReadResponse(response === null ? null : response.status);
 
   if (outcome === 'FAILED') return FAILED;

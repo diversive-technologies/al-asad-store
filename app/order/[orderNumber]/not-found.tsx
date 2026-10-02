@@ -13,9 +13,14 @@ export default async function OrderNotFound() {
 
   return (
     <NotFoundState heading={t.notFound} body={t.notFoundBody}>
-      <ButtonLink href={ROUTES.catalogue.list} variant="primary">
-        {t.continueShopping}
-      </ButtonLink>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <ButtonLink href={ROUTES.findOrder} variant="primary">
+          {t.findOrder}
+        </ButtonLink>
+        <ButtonLink href={ROUTES.catalogue.list} variant="secondary">
+          {t.continueShopping}
+        </ButtonLink>
+      </div>
     </NotFoundState>
   );
 }

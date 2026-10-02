@@ -24,6 +24,7 @@ export const CRAWL_EXCLUDED_PATHS: readonly string[] = [
   ROUTES.bag,
   ROUTES.checkout,
   ROUTES.orderPrefix,
+  ROUTES.findOrder,
   ROUTES.signIn,
   ROUTES.signUp,
   ROUTES.forgotPassword,

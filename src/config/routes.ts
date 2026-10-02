@@ -213,6 +213,8 @@ export const ROUTES = {
   /** §28.3's address book, managed on its own page so `/account` stays a read. */
   accountAddresses: '/account/addresses',
   checkout: '/checkout',
+  /** F-04: Standalone order lookup route. */
+  findOrder: '/order',
   /** §28.3 — the order number is the address, so it can be shared and returned to. */
   orderConfirmation: (orderNumber: string) => `${ORDER_PREFIX}${encodeURIComponent(orderNumber)}`,
   /** The start every order's address shares; nothing is served at it alone. */

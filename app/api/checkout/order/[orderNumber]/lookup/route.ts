@@ -41,6 +41,10 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
       return new Response(null, { status: 404, headers: NO_STORE });
     }
 
+    if (result.error.kind === 'RATE_LIMITED') {
+      return new Response(null, { status: 429, headers: NO_STORE });
+    }
+
     logApiError('api:checkout:order:lookup', result.error); // ERR-10
     return new Response(null, { status: 502, headers: NO_STORE });
   }
