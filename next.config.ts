@@ -22,11 +22,36 @@ const devAllowedOrigins = (process.env.DEV_ALLOWED_ORIGINS ?? '')
   .filter((origin) => origin.length > 0);
 
 /**
+ * F-07: Security headers and CSP configuration.
+ */
+function buildContentSecurityPolicy(): string {
+  const isDev = process.env.NODE_ENV !== 'production';
+  const scriptSrc = isDev ? "'self' 'unsafe-inline' 'unsafe-eval'" : "'self' 'unsafe-inline'";
+  const connectSrc = isDev ? "'self' ws:" : "'self'";
+
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSrc}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "media-src 'self'",
+    "font-src 'self'",
+    `connect-src ${connectSrc}`,
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "upgrade-insecure-requests",
+  ].join('; ');
+}
+
+/**
  * NEXT-09: remote image hosts are declared here as `remotePatterns` when the
  * CDN origin is known. `images.domains` is deprecated and PROHIBITED.
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
   /**
    * `typedRoutes` is deliberately OFF.
    *
@@ -66,6 +91,40 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: { '/api/try-on': ['./public/products/**'] },
   // Omitted entirely when unset, so the default (block everything) still holds.
   ...(devAllowedOrigins.length > 0 ? { allowedDevOrigins: devAllowedOrigins } : {}),
+
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: buildContentSecurityPolicy(),
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

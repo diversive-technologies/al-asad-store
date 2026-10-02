@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
-import { useForm, type UseFormReturn } from 'react-hook-form';
+import { useForm, type Resolver, type UseFormReturn } from 'react-hook-form';
 
 import { ROUTES } from '@/config/routes';
 import { unwrap } from '@/lib/result';
@@ -75,7 +75,7 @@ export function useOrderLookup(
 
   const resolver = (orderNumber !== undefined
     ? requestValidation.resolver
-    : standaloneValidation.resolver) as unknown as import('react-hook-form').Resolver<OrderLookupFormValues>;
+    : standaloneValidation.resolver) as unknown as Resolver<OrderLookupFormValues>;
 
   const form = useForm<OrderLookupFormValues>({
     resolver,
