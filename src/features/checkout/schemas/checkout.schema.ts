@@ -213,6 +213,7 @@ export const paymentStateSchema = z.enum([
   'AUTHORIZED',
   'SETTLED',
   'FAILED',
+  'REFUNDED',
 ]);
 
 /**

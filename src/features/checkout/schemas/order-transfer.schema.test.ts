@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ORDER, ORDER_NUMBER, TRANSFER_INSTRUCTIONS } from '../lib/test-fixtures';
+import { orderSchema } from './checkout.schema';
 import { placeOrderResultSchema } from './place-order.schema';
 
 /**
@@ -49,5 +50,14 @@ describe('transfer instructions on a placed order', () => {
     };
 
     expect(placeOrderResultSchema.safeParse(broken).success).toBe(false);
+  });
+
+  it('parses a cancelled and refunded order successfully', () => {
+    const cancelledOrder = {
+      ...ORDER,
+      state: 'CANCELLED',
+      paymentState: 'REFUNDED',
+    };
+    expect(orderSchema.safeParse(cancelledOrder).success).toBe(true);
   });
 });
