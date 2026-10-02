@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { CLIENT } from '@/config/client';
 import { ROUTES } from '@/config/routes';
 import { ur } from '@/i18n/messages/ur';
 
@@ -13,11 +14,19 @@ import { ARRIVAL } from './support/server';
  * I18N-12 — "an E2E smoke path runs in Urdu". The locale cookie a language
  * choice sets is set directly; every page must then come back right to left, in
  * Urdu words, with nothing mirrored off the edge of the screen.
+ *
+ * F-10: Skipped while languageSwitcher is off. A unit test covers the path with
+ * the flag mocked on.
  */
 test('the store reads right to left in Urdu, from the homepage to a product', async ({
   page,
   context,
 }) => {
+  test.skip(
+    !CLIENT.features.languageSwitcher,
+    'Urdu is disabled for launch while content is under review (F-10)',
+  );
+
   await readInLocale(context, 'ur');
 
   await page.goto(ROUTES.home);

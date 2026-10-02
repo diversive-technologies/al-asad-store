@@ -26,13 +26,30 @@ describe('a page’s canonical address and its alternates', () => {
     expect(languages['x-default']).toBe(ROUTES.catalogue.list);
   });
 
-  it.each(OTHER_LOCALES)('offers the SAME page in %s, chosen by the locale parameter', (locale) => {
-    const { languages } = localeAlternates(ROUTES.catalogue.list, DEFAULT_LOCALE);
-    const address = new URL(languages[locale] ?? '', 'https://store.test');
+  it('publishes only the default language and x-default when the language switcher is off (F-10)', () => {
+    const { canonical, languages } = localeAlternates(ROUTES.catalogue.list, DEFAULT_LOCALE, false);
 
-    expect(address.pathname).toBe(ROUTES.catalogue.list);
-    expect(address.searchParams.get('locale')).toBe(locale);
+    expect(canonical).toBe(ROUTES.catalogue.list);
+    expect(Object.keys(languages)).toEqual([DEFAULT_LOCALE, 'x-default']);
+    expect(languages['ur']).toBeUndefined();
   });
+
+  it('canonical is always the default address when language switcher is off, even if ur is passed', () => {
+    const { canonical } = localeAlternates(ROUTES.catalogue.list, 'ur', false);
+
+    expect(canonical).toBe(ROUTES.catalogue.list);
+  });
+
+  it.each(OTHER_LOCALES)(
+    'offers the SAME page in %s when switch is on, chosen by the locale parameter',
+    (locale) => {
+      const { languages } = localeAlternates(ROUTES.catalogue.list, DEFAULT_LOCALE, true);
+      const address = new URL(languages[locale] ?? '', 'https://store.test');
+
+      expect(address.pathname).toBe(ROUTES.catalogue.list);
+      expect(address.searchParams.get('locale')).toBe(locale);
+    },
+  );
 
   /*
    * TEST-08 — the Urdu render named the bare, English address as its canonical
@@ -40,17 +57,17 @@ describe('a page’s canonical address and its alternates', () => {
    * own canonical and a search engine would ignore the whole hreflang cluster.
    */
   it.each(LOCALES)(
-    'names, rendered in %s, that language’s own address — the one its alternates give',
+    'names, rendered in %s when switch is on, that language’s own address — the one its alternates give',
     (locale) => {
-      const { canonical, languages } = localeAlternates(ROUTES.catalogue.list, locale);
+      const { canonical, languages } = localeAlternates(ROUTES.catalogue.list, locale, true);
 
       expect(canonical).toBe(languages[locale]);
     },
   );
 
-  it('gives every language version a different canonical address', () => {
+  it('gives every language version a different canonical address when switch is on', () => {
     const canonicals = LOCALES.map(
-      (locale) => localeAlternates(ROUTES.catalogue.list, locale).canonical,
+      (locale) => localeAlternates(ROUTES.catalogue.list, locale, true).canonical,
     );
 
     expect(new Set(canonicals).size).toBe(LOCALES.length);

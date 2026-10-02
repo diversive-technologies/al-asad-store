@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { clientEnv } from '@/config/env.client';
 import { HELP_PAGE_SLUGS, ROUTES, STORE_PAGE_SLUGS } from '@/config/routes';
 import { absoluteUrl } from '@/config/site';
-import { DEFAULT_LOCALE, LOCALES } from '@/i18n/locales';
+import { DEFAULT_LOCALE } from '@/i18n/locales';
 
 import { localeAlternates } from './locale-alternates';
 import { PUBLIC_PAGE_PATHS, sitemapEntries } from './sitemap';
@@ -54,16 +54,16 @@ describe('sitemapEntries', () => {
     expect(entry?.url.startsWith(new URL(clientEnv.NEXT_PUBLIC_APP_URL).origin)).toBe(true);
   });
 
-  it.each(LOCALES)(
-    'declares the same page in %s, at the address its own metadata names',
-    (locale) => {
-      expect(entry?.alternates.languages[locale]).toBe(
-        absoluteUrl(
-          localeAlternates(ROUTES.catalogue.list, DEFAULT_LOCALE).languages[locale] ?? '',
-        ),
-      );
-    },
-  );
+  it('declares the same page at the address its own metadata names for offered languages', () => {
+    const { languages } = localeAlternates(ROUTES.catalogue.list, DEFAULT_LOCALE);
+    for (const [locale, path] of Object.entries(languages)) {
+      expect(entry?.alternates.languages[locale]).toBe(absoluteUrl(path));
+    }
+  });
+
+  it('omits disabled languages when language switcher is off (F-10)', () => {
+    expect(entry?.alternates.languages['ur']).toBeUndefined();
+  });
 
   /*
    * TEST-08 — the listed address was the bare one while every alternate carried
@@ -90,8 +90,10 @@ describe('sitemapEntries', () => {
 
     expect(hostile?.url).not.toMatch(/[<>"']|&(?!amp;|lt;|gt;|quot;|apos;)/);
     expect(asXmlReadsIt(hostile?.url ?? '')).toBe(absoluteUrl(path));
-    expect(Object.values(hostile?.alternates.languages ?? {})).toEqual(
-      [...LOCALES, 'x-default'].map(() =>
+    const languageValues = Object.values(hostile?.alternates.languages ?? {});
+    expect(languageValues.length).toBeGreaterThan(0);
+    expect(languageValues).toEqual(
+      languageValues.map(() =>
         expect.not.stringMatching(/[<>"']|&(?!amp;|lt;|gt;|quot;|apos;)/),
       ),
     );

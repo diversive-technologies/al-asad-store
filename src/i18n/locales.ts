@@ -1,3 +1,5 @@
+import { CLIENT } from '@/config/client';
+
 /** I18N-03 — THE locale list, default and direction map. Leaf module (MOD-01). */
 export const LOCALES = ['en', 'ur'] as const; // TS-10: no enum
 export type Locale = (typeof LOCALES)[number];
@@ -25,13 +27,22 @@ export function isLocale(value: unknown): value is Locale {
  * Which locale cookie a request should LEAVE with, or `null` when the one it
  * carries is already right.
  *
+ * F-10: when `features.languageSwitcher` is off, `localeToRemember` never returns
+ * a non-default locale (returns `null` so no locale cookie is written).
+ *
+ * When the switch is offered:
  * A valid `?locale=` wins — it is somebody asking for that language, by a link
  * or an alternate — and is remembered, exactly as the cookie a language switch
  * sets. SEC-02: both inputs are untrusted, so a query value that is not a locale
  * is ignored rather than trusted, and a missing or tampered cookie is replaced
  * with the default.
  */
-export function localeToRemember(queryValue: string | null, cookieValue: unknown): Locale | null {
+export function localeToRemember(
+  queryValue: string | null,
+  cookieValue: unknown,
+  isSwitchOffered: boolean = CLIENT.features.languageSwitcher,
+): Locale | null {
+  if (!isSwitchOffered) return null;
   if (isLocale(queryValue)) return queryValue === cookieValue ? null : queryValue;
   return isLocale(cookieValue) ? null : DEFAULT_LOCALE;
 }
@@ -42,18 +53,14 @@ export type LocaleSwitchPlace = 'HEADER' | 'FOOTER' | null;
 /**
  * Where the language switch goes, for a visitor reading `current`.
  *
- * The deployment's own switch sits in the header, when it offers one
- * (`features.languageSwitcher`). A deployment may not — this one does not,
- * while its Urdu awaits review — but a visitor can still ARRIVE reading another
- * language, by a `?locale=` link or an `hreflang` alternate, and that choice is
- * remembered for a year. Such a visitor is always offered the way back, at the
- * foot of the page, which takes no room from a bar the deployment chose to keep
- * clear; without it the only ways out are editing the address by hand or
- * clearing the store's cookies. A visitor reading the default is offered
- * nothing the deployment did not ask to offer.
+ * F-10: when `features.languageSwitcher` is false, Urdu is disabled and the
+ * switch is drawn nowhere (`null`).
+ * When offered, the switch sits in the header.
  */
-export function localeSwitchPlace(current: Locale, isSwitchOffered: boolean): LocaleSwitchPlace {
-  if (LOCALES.length < 2) return null;
-  if (isSwitchOffered) return 'HEADER';
-  return current === DEFAULT_LOCALE ? null : 'FOOTER';
+export function localeSwitchPlace(
+  _current: Locale,
+  isSwitchOffered: boolean = CLIENT.features.languageSwitcher,
+): LocaleSwitchPlace {
+  if (LOCALES.length < 2 || !isSwitchOffered) return null;
+  return 'HEADER';
 }

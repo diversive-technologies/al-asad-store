@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 
 import { z } from 'zod';
 
+import { CLIENT } from '@/config/client';
 import { LOCALE_COOKIE, LOCALES, type Locale } from '@/i18n/locales';
 import { err, ok, type Result } from '@/lib/result';
 
@@ -29,6 +30,11 @@ export async function setLocaleAction(
   _previous: SetLocaleState,
   formData: FormData,
 ): Promise<SetLocaleState> {
+  // F-10: language switcher is disabled for launch.
+  if (!CLIENT.features.languageSwitcher) {
+    return err({ kind: 'INVALID_LOCALE', message: 'Language switching is disabled.' });
+  }
+
   // SEC-02: form input is untrusted and is validated, never cast.
   const parsed = setLocaleInputSchema.safeParse({ locale: formData.get('locale') });
 
