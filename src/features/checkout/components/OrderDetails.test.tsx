@@ -104,5 +104,86 @@ describe('the order page', () => {
     it('gives the heading a place focus can land when a lookup finds the order', () => {
       expect(markup).toMatch(/<h1[^>]*tabindex="-1"[^>]*>Order placed<\/h1>/);
     });
+
+    it('shows the celebration mark for active orders', () => {
+      expect(markup).toContain('class="order-mark"');
+    });
+  });
+
+  describe('a cancelled order', () => {
+    const bankTransferCancelled = orderSchema.parse({
+      ...ORDER,
+      state: 'CANCELLED',
+      paymentLabel: 'Bank transfer',
+      transferInstructions: {
+        reference: 'AA100001',
+        bankName: 'Example Bank',
+        accountTitle: 'Al-Asad Collections',
+        accountNumber: '0000000000000000',
+        iban: 'PK00EXMP0000000000000000',
+      },
+    });
+
+    const codCancelled = orderSchema.parse({
+      ...ORDER,
+      state: 'CANCELLED',
+      paymentLabel: 'Cash on delivery',
+      transferInstructions: null,
+    });
+
+    const cardCancelled = orderSchema.parse({
+      ...ORDER,
+      state: 'CANCELLED',
+      paymentLabel: 'Debit or credit card',
+      transferInstructions: null,
+    });
+
+    it('handles a cancelled bank-transfer order without celebration or transfer details', () => {
+      const markup = renderToStaticMarkup(
+        <QueryClientProvider client={new QueryClient()}>
+          <OrderConfirmation order={bankTransferCancelled} locale="en" messages={en} />
+        </QueryClientProvider>,
+      );
+
+      // Headed "This order was cancelled"
+      expect(markup).toContain('This order was cancelled');
+      expect(markup).not.toContain('Order placed');
+      // No celebration mark
+      expect(markup).not.toContain('class="order-mark"');
+      // No bank-transfer instructions
+      expect(markup).not.toContain(en.order.transferHeading);
+      expect(markup).not.toContain('Example Bank');
+      // Keeps lines and totals
+      expect(markup).toContain('Plain Waistcoat Suit');
+      expect(markup).toContain(en.order.total);
+    });
+
+    it('handles a cancelled cash-on-delivery order', () => {
+      const markup = renderToStaticMarkup(
+        <QueryClientProvider client={new QueryClient()}>
+          <OrderConfirmation order={codCancelled} locale="en" messages={en} />
+        </QueryClientProvider>,
+      );
+
+      expect(markup).toContain('This order was cancelled');
+      expect(markup).not.toContain('class="order-mark"');
+      expect(markup).toContain('Cash on delivery');
+      expect(markup).toContain('Plain Waistcoat Suit');
+      expect(markup).toContain(en.order.total);
+    });
+
+    it('handles a cancelled card order', () => {
+      const markup = renderToStaticMarkup(
+        <QueryClientProvider client={new QueryClient()}>
+          <OrderConfirmation order={cardCancelled} locale="en" messages={en} />
+        </QueryClientProvider>,
+      );
+
+      expect(markup).toContain('This order was cancelled');
+      expect(markup).not.toContain('class="order-mark"');
+      expect(markup).toContain('Debit or credit card');
+      expect(markup).toContain('Plain Waistcoat Suit');
+      expect(markup).toContain(en.order.total);
+    });
   });
 });

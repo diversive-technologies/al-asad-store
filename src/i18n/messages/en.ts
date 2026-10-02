@@ -488,6 +488,7 @@ export const en = {
     /* True in every state an order can be in. "Confirmed" was said of cash
        orders awaiting confirmation and transfers awaiting payment (§6.6). */
     title: 'Order placed',
+    cancelledTitle: 'This order was cancelled',
     /* Prominent, because §28.3 tracks a guest order by exactly this. */
     numberLabel: 'Order number',
     placedOn: 'Placed: {date}',
@@ -575,6 +576,7 @@ export const en = {
     /* I18N-06 — the whole phrase, so a translation can put the count first. */
     ordersMoreItems: { one: '{item} and {count} more', other: '{item} and {count} more' },
     ordersView: 'View',
+    ordersCancelled: 'Cancelled',
     /* §28.3 — the history a page at a time, as links that work without JavaScript. */
     ordersShowMore: 'Show more orders',
     ordersShowOlder: 'Show older orders',

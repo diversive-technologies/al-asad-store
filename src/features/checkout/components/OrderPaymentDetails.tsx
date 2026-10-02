@@ -20,7 +20,7 @@ export function OrderPaymentDetails({ order, locale, messages }: OrderPaymentDet
       <h2 className="text-fg text-sm font-medium">{t.paymentLabel}</h2>
       <p className="text-fg-muted mt-1 text-sm">{order.paymentLabel}</p>
 
-      {order.transferInstructions === null ? null : (
+      {order.transferInstructions === null || order.state === 'CANCELLED' ? null : (
         <OrderTransferInstructions
           instructions={order.transferInstructions}
           totalMinor={order.totals.totalMinor}

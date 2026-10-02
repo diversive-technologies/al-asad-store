@@ -373,6 +373,7 @@ export const ur: Messages = {
   },
   order: {
     title: 'آرڈر دے دیا گیا',
+    cancelledTitle: 'یہ آرڈر منسوخ کر دیا گیا تھا',
     numberLabel: 'آرڈر نمبر',
     placedOn: 'دیا گیا: {date}',
     deliveringTo: 'ترسیل کا پتہ',
@@ -440,6 +441,7 @@ export const ur: Messages = {
       other: '{item} اور {count} مزید',
     },
     ordersView: 'دیکھیں',
+    ordersCancelled: 'منسوخ',
     ordersShowMore: 'مزید آرڈر دکھائیں',
     ordersShowOlder: 'پرانے آرڈر دکھائیں',
     ordersBackToLatest: 'اپنے تازہ ترین آرڈرز پر واپس',

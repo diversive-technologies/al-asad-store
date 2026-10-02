@@ -8,6 +8,8 @@ export interface OrderPlacedHeroProps {
   placedLine: string;
   /** The heading, for a page that has to move focus to it (a lookup that matched). */
   headingRef?: Ref<HTMLHeadingElement> | undefined;
+  /** Whether to show the celebration burst and checkmark. Omitted on cancelled orders. */
+  showCelebrationMark?: boolean | undefined;
 }
 
 /** The burst rays. Eight is enough to read as a burst without becoming a star. */
@@ -41,24 +43,27 @@ export function OrderPlacedHero({
   orderNumber,
   placedLine,
   headingRef,
+  showCelebrationMark = true,
 }: OrderPlacedHeroProps) {
   return (
     <div className="flex flex-col items-center text-center">
       {/* A11Y-04: the heading below names this; the whole mark is decoration. */}
-      <div className="order-mark" aria-hidden>
-        {RAYS.map((ray) => (
-          <span key={ray} className="order-mark-ray" />
-        ))}
+      {!showCelebrationMark ? null : (
+        <div className="order-mark" aria-hidden>
+          {RAYS.map((ray) => (
+            <span key={ray} className="order-mark-ray" />
+          ))}
 
-        <svg viewBox="0 0 120 120" className="order-mark-svg">
-          {/* The filled disc, scaling up under everything else. */}
-          <circle className="order-mark-disc" cx="60" cy="60" r="52" />
-          {/* The ring that draws itself around it. */}
-          <circle className="order-mark-ring" cx="60" cy="60" r="52" />
-          {/* The tick, stroked on last. */}
-          <path className="order-mark-tick" d="M38 62 l16 16 l30 -32" />
-        </svg>
-      </div>
+          <svg viewBox="0 0 120 120" className="order-mark-svg">
+            {/* The filled disc, scaling up under everything else. */}
+            <circle className="order-mark-disc" cx="60" cy="60" r="52" />
+            {/* The ring that draws itself around it. */}
+            <circle className="order-mark-ring" cx="60" cy="60" r="52" />
+            {/* The tick, stroked on last. */}
+            <path className="order-mark-tick" d="M38 62 l16 16 l30 -32" />
+          </svg>
+        </div>
+      )}
 
       {/* `tabIndex={-1}`: never in the tab order, but focusable by the page when
           the order replaces the form that found it (A11Y-02). */}
