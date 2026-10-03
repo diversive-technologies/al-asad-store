@@ -170,6 +170,8 @@ export const en = {
     inStock: 'Size {size} can be bought again. The sizes have been refreshed so you can choose it.',
     notOffered: 'Size {size} is no longer offered. Refresh the page to see the sizes there are.',
     unreachable: 'We could not take your request just now. Please try again.',
+    /* F-09 — Java's per-address limit on Notify Me requests. */
+    rateLimited: 'Please wait a few minutes and try again.',
   },
   /*
    * §28.3's saved sizes. A size is saved only when a signed-in customer asks, per
@@ -244,6 +246,8 @@ export const en = {
     subscribeCta: 'Subscribe',
     successMessage: 'You are on the list. Look out for the next launch.',
     invalidEmail: 'Enter a valid email address.',
+    /* F-09 — Java's per-address limit on subscriptions. */
+    rateLimited: 'Please wait a few minutes and try again.',
   },
   auth: {
     signInHeading: 'Sign in',
@@ -303,6 +307,14 @@ export const en = {
     resetCta: 'Send reset link',
     resetSent: 'If that address has an account, a reset link is on its way.',
     backToSignIn: 'Back to sign in',
+    /* F-03 — the page a reset link opens. Nothing here says whether an account exists. */
+    newPasswordHeading: 'Choose a new password',
+    newPasswordBody: 'Enter a new password for your account.',
+    newPasswordLabel: 'New password',
+    resetConfirmCta: 'Save new password',
+    resetDone: 'Your password has been changed. You can now sign in with it.',
+    resetLinkExpired: 'This link has expired or was already used.',
+    resetLinkExpiredCta: 'Ask for a new link',
   },
   footer: {
     helpHeading: 'Help',
@@ -455,6 +467,8 @@ export const en = {
     expiredBody: 'These went back on sale before you finished: {items}. Please review your bag.',
     backToBag: 'Back to the bag',
     failedTitle: 'We could not place your order',
+    /* F-09 — Java's per-address limit on placement; refused before anything was placed. */
+    rateLimited: 'Please wait a few minutes and try again.',
     failed: 'We could not place your order. Nothing has been charged. Please try again.',
     /* ERR-02 — no answer came back, which is not the same as a refusal: the order
        may exist. Nothing here claims it failed or that nothing was charged. */

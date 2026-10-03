@@ -6,6 +6,7 @@ import { serverEnv } from '@/config/env.server';
 import { err, ok, type Result } from '@/lib/result';
 
 import { fromHttpStatus, toApiError, type ApiError } from './errors';
+import { API_HEADERS } from './headers';
 
 interface RequestOptions<TSchema extends z.ZodType> {
   path: string;
@@ -80,6 +81,28 @@ async function readPayload(response: Response, path: string): Promise<Result<unk
   });
 }
 
+/**
+ * F-02 — what identifies this server to Java on every call.
+ *
+ * The Access service token, when configured: Cloudflare checks it before the
+ * request reaches Java at all (TD-1). Absent in local development, where nothing
+ * stands in front of the backend. And a fresh `x-request-id` per call, so a line
+ * in Java's log can be matched to the storefront call that caused it.
+ *
+ * SEC-10: the values are written onto the request and nowhere else — no log call
+ * in this file or its callers prints a header.
+ */
+function identityHeaders(): Record<string, string> {
+  const id = serverEnv.CF_ACCESS_CLIENT_ID;
+  const secret = serverEnv.CF_ACCESS_CLIENT_SECRET;
+  return {
+    [API_HEADERS.requestId]: crypto.randomUUID(),
+    ...(id !== undefined && secret !== undefined
+      ? { [API_HEADERS.accessClientId]: id, [API_HEADERS.accessClientSecret]: secret }
+      : {}),
+  };
+}
+
 function requestInit<TSchema extends z.ZodType>(options: RequestOptions<TSchema>): RequestInit {
   const { method = 'GET', body, headers, signal, next } = options;
   const timeout = AbortSignal.timeout(options.timeoutMs ?? serverEnv.JAVA_API_TIMEOUT_MS);
@@ -108,6 +131,8 @@ function requestInit<TSchema extends z.ZodType>(options: RequestOptions<TSchema>
       ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
       Accept: 'application/json',
       ...headers,
+      // After the caller's own headers: a caller cannot overwrite the credentials.
+      ...identityHeaders(),
     },
     signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     next,

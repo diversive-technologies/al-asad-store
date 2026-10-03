@@ -8,6 +8,7 @@ import { fetchProduct, fetchProductAvailability, ProductScreen } from '@/feature
 import { fetchHelpPage, InlineHelpPage } from '@/features/content';
 import { fetchTryOnOffer, ProductTryOn } from '@/features/try-on';
 import { getLocale, getMessages } from '@/i18n';
+import { recordPageEvents } from '@/lib/analytics';
 import { localeAlternates } from '@/lib/utils/locale-alternates';
 import { logApiError } from '@/lib/utils/log';
 
@@ -51,6 +52,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   // A stale link matching nothing is ordinary: the 404, not a "cannot reach store" lie.
   if (product.value === null) notFound();
+
+  // M-03 — counted from here, after the 404 above, so only a product that exists is a view.
+  await recordPageEvents({
+    type: 'product_view',
+    path: ROUTES.catalogue.detail(slug),
+    productId: product.value.id,
+  });
 
   const availability = await fetchProductAvailability(product.value.id);
 

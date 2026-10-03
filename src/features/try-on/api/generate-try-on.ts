@@ -5,7 +5,7 @@ import type { Locale } from '@/i18n/locales';
 import type { ApiError } from '@/lib/api/errors';
 import type { ProductId } from '@/lib/domain/ids';
 import { ok, type Result } from '@/lib/result';
-import { logContentIssue, logProviderFailure } from '@/lib/utils/log';
+import { logProviderFailure } from '@/lib/utils/log';
 
 import { PROVIDER_TIMEOUT_MS, refusesPhoto } from '../lib/try-on-limits';
 import type { TryOnGarment } from '../lib/try-on-prompt';
@@ -85,13 +85,14 @@ export async function generateTryOn(
   if (product === undefined) return { ok: false, error: UNKNOWN_PRODUCT };
 
   const mediaUrl = product.images[0] ?? '';
-  const garment = await garmentImage(mediaUrl);
+  const fetched = await garmentImage(mediaUrl);
   // The store cannot show its own garment: the model is not at fault and is not asked.
-  if (garment === null) {
+  if (!fetched.ok) {
     // ERR-10: said here, or this failure reads exactly like the model refusing.
-    logContentIssue('try-on:garment', `${mediaUrl || '(no photograph)'} could not be read`);
-    return ok(unavailable('PROVIDER_FAILED'));
+    logProviderFailure('try-on:garment', fetched.error.detail);
+    return ok(unavailable(fetched.error.reason));
   }
+  const garment = fetched.value;
 
   const corrected = await correctWhiteBalance({ bytes, mimeType: photo.type });
   // Sharp could not decode it, whatever its declared type said. That is the photo.

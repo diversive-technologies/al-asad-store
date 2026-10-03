@@ -36,6 +36,20 @@ function segment(value: string): string {
  * and credential material is never archived. Neither is a deletion path.
  */
 export const ENDPOINTS = {
+  /**
+   * F-08 — `GET`, answers `200 {"status":"UP"}` or `503 {"status":"DOWN"}` after a
+   * one-second database check. Behind Access like every other path. Read only by
+   * this storefront's own `/api/health`, which an uptime monitor polls.
+   */
+  health: '/api/v1/health',
+  /**
+   * M-03 — behaviour events: `POST` a batch of at most 20, answered `202` with no
+   * body. Written by `lib/analytics` from the server, after the page's own response
+   * has gone.
+   */
+  analytics: {
+    events: '/api/v1/events',
+  },
   content: {
     /** Section 21 ContentQuery.homepage(locale) — locale travels as a query param. */
     homepage: '/api/v1/content/homepage',
@@ -104,17 +118,21 @@ export const ENDPOINTS = {
   fabricCalculator: {
     evaluate: '/api/v1/fabric-calculator/evaluate',
   },
-  /*
-   * Section 24 Try-On had two entries here — `offer` and `generations` — and
-   * has none now. SSOT-04 lists what this storefront asks the JAVA SERVICE for,
-   * and since 2026-09-24 it asks it for nothing about try-on: §24 runs in this
-   * process against an image model, so the only backend read the feature makes
-   * is the ordinary catalogue projection for the garment, which is listed
-   * above. `features/try-on/api/generate-try-on.ts` states why.
+  /**
+   * Section 24 Try-On. The generation itself runs in THIS process against an image
+   * model (`features/try-on/api/generate-try-on.ts` says why), so this registry
+   * holds one path only: the claim. Java owns the count — a per-address hourly
+   * limit and a daily cap shared by every storefront instance (T-01) — and the
+   * storefront asks it BEFORE it spends.
    *
-   * If module 14 is ever built in Java, the two paths come back here and the
-   * provider adapter becomes an `apiRequest` — nothing above it changes.
+   * POST `{ productId }` with `x-client-ip`. `200 {"verdict":"ALLOWED","claimId"}`
+   * means go ahead; `429` with `Retry-After` and `{"verdict":"VISITOR_EXHAUSTED"}`
+   * or `{"verdict":"DAILY_CAP_REACHED"}` means do not. No photograph and no
+   * customer identity is sent or stored.
    */
+  tryOn: {
+    claim: '/api/v1/try-on/claims',
+  },
   /**
    * Section 16 `CartService`. The cart is addressed by an id the backend issues
    * and the BFF keeps in an httpOnly cookie — never a path the browser composes.
@@ -290,5 +308,11 @@ export const ENDPOINTS = {
     register: '/api/v1/auth/accounts',
     /** `resetPassword(email) -> void`. */
     resetPassword: '/api/v1/auth/password-resets',
+    /**
+     * F-03 — redeems the token from the reset email: POST `{ token, password }`.
+     * 204 on success; 400 for an unknown, used or expired token (its `detail` is
+     * `RESET_INVALID_OR_EXPIRED`); 429 when rate-limited.
+     */
+    confirmPasswordReset: '/api/v1/auth/password-resets/confirmations',
   },
 } as const;

@@ -1,5 +1,7 @@
+import { ROUTES } from '@/config/routes';
 import { claimTryOnGeneration, fetchTryOnOffer, generateTryOn } from '@/features/try-on';
 import { getLocale } from '@/i18n';
+import { recordRequestEvents } from '@/lib/analytics';
 import { productIdSchema } from '@/lib/domain/ids';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
@@ -81,15 +83,28 @@ export async function POST(request: Request): Promise<Response> {
   if (oversized !== null) return oversized;
 
   /*
-   * §24 — the budget, claimed BEFORE the body is read and before a generation
-   * is spent. A generation costs metered money, so the cheapest possible
-   * refusal is the right one: nothing is buffered, nothing is decoded, and the
-   * provider is never reached.
-   *
-   * `Retry-After` is sent because this refusal is temporary and the caller —
-   * including a well-behaved script — can act on knowing when.
+   * The product the generation is for, from the ADDRESS (`?productId=`), so the
+   * claim below can name it before any of the body is read. The form carries it
+   * too and the two must agree (checked once the form is read): a caller cannot
+   * claim for one product and generate for another.
    */
-  const claim = claimTryOnGeneration(request);
+  const claimedProduct = productIdSchema.safeParse(
+    new URL(request.url).searchParams.get('productId'),
+  );
+  if (!claimedProduct.success) return new Response(null, { status: 400, headers: NO_STORE });
+
+  /*
+   * §24 — Java's claim (T-02), taken BEFORE the body is read and before a
+   * generation is spent. A generation costs metered money, so the cheapest
+   * possible refusal is the right one: nothing is buffered, nothing is decoded,
+   * and the provider is never reached. Java counts for every instance at once —
+   * a per-address hourly limit and a daily cap — and a Java that cannot be asked
+   * REFUSES: the answer is never "go ahead" by default.
+   *
+   * A refusal is a 429 with Java's `Retry-After`, because it is temporary and the
+   * caller — including a well-behaved script — can act on knowing when.
+   */
+  const claim = await claimTryOnGeneration(request, claimedProduct.data);
   if (claim !== null) return claim;
 
   // ERR-04 — a body that is not multipart, or arrives cut short, is a 400, never a 500.
@@ -107,12 +122,25 @@ export async function POST(request: Request): Promise<Response> {
    * `ProductId` and not a string that happens to look like one (TS-12).
    */
   const parsedId = productIdSchema.safeParse(form.get('productId'));
-  if (!parsedId.success) return new Response(null, { status: 400, headers: NO_STORE });
+  if (!parsedId.success || parsedId.data !== claimedProduct.data) {
+    return new Response(null, { status: 400, headers: NO_STORE });
+  }
+
+  /* M-03 — what happens to a try-on, counted from here: the claim was granted and the
+     photograph is acceptable, so a generation really starts. Only the product and a
+     one-word outcome are recorded, never the photograph. */
+  const event = { path: ROUTES.api.tryOn, productId: parsedId.data } as const;
+  await recordRequestEvents(request, { ...event, type: 'try_on_started' });
 
   const result = await generateTryOn(parsedId.data, photo, await getLocale());
 
   if (!result.ok) {
     logApiError('api:try-on', result.error); // ERR-10
+    await recordRequestEvents(request, {
+      ...event,
+      type: 'try_on_failed',
+      outcome: result.error.kind.toLowerCase(),
+    });
 
     /*
      * A refused photograph is the customer's to fix: the module answers
@@ -123,6 +151,14 @@ export async function POST(request: Request): Promise<Response> {
     const status = result.error.kind === 'VALIDATION' ? 400 : 502;
     return new Response(null, { status, headers: NO_STORE });
   }
+
+  // The module answers UNAVAILABLE for a provider that failed or timed out (ok, not an error).
+  await recordRequestEvents(
+    request,
+    result.value.status === 'READY'
+      ? { ...event, type: 'try_on_ready' }
+      : { ...event, type: 'try_on_failed', outcome: result.value.reason.toLowerCase() },
+  );
 
   return Response.json(result.value, { headers: NO_STORE });
 }

@@ -62,19 +62,66 @@ export function authRefusal(error: ApiError, refused: string, messages: Messages
   }
 }
 
+/**
+ * Why a sign-up did not go through. Unlike sign-in, a collision IS reported — §11's
+ * enumeration rule is about AUTHENTICATION responses, and someone who cannot finish
+ * a sign-up without being told why simply leaves — but a rate limit (F-09) and an
+ * outage are said as what they are, never as a failed registration.
+ */
+export function signUpRefusal(error: ApiError, messages: Messages): string {
+  return error.kind === 'CONFLICT'
+    ? messages.auth.emailTaken
+    : authRefusal(error, messages.auth.signUpFailed, messages);
+}
+
 /** What the password-reset form shows once it has asked. */
-export type ResetOutcome = 'SENT' | 'INVALID' | 'UNREACHABLE';
+export type ResetOutcome = 'SENT' | 'INVALID' | 'RATE_LIMITED' | 'UNREACHABLE';
 
 /**
  * §11 `resetPassword` answers nothing about any account, so every answer the
  * backend GAVE reads as "a link is on its way". Two outcomes are not answers and
  * are said as what they are: an address that is not an email (the form used to
  * ignore this and promise a link to it), and a store that could not be reached.
+ *
+ * F-09 adds a third: Java's limit PER ADDRESS (429) says to wait. It names no
+ * account — the limit that depends on the email answers 204 like any other
+ * request, so it cannot be used to find out which addresses are known.
  */
 export function resetOutcomeOf(result: Result<null, ApiError>): ResetOutcome {
   if (result.ok) return 'SENT';
 
   const failure = authFailureOf(result.error);
-  if (failure === 'INVALID' || failure === 'UNREACHABLE') return failure;
+  if (failure === 'INVALID' || failure === 'UNREACHABLE' || failure === 'RATE_LIMITED') {
+    return failure;
+  }
   return 'SENT';
+}
+
+/** What the reset page shows once it has tried to set the new password. */
+export type ResetConfirmOutcome = 'DONE' | 'EXPIRED' | 'RATE_LIMITED' | 'UNREACHABLE' | 'INVALID';
+
+/**
+ * F-03 — what a redeemed reset link came to.
+ *
+ * Unlike asking for a link, redeeming one has an honest answer to give: the
+ * backend's 400 means THIS link no longer works (unknown, used or past its hour),
+ * and saying so sends the customer to ask for another instead of retyping a
+ * password at a link that will never take it. The token is 64 hex characters and
+ * the password was checked before sending, so no other 4xx is one the customer
+ * caused — they all read as the link being no good, which is also the only thing
+ * they can do something about.
+ */
+export function resetConfirmOutcomeOf(result: Result<null, ApiError>): ResetConfirmOutcome {
+  if (result.ok) return 'DONE';
+
+  switch (authFailureOf(result.error)) {
+    case 'RATE_LIMITED':
+      return 'RATE_LIMITED';
+    case 'UNREACHABLE':
+      return 'UNREACHABLE';
+    case 'INVALID':
+      return 'INVALID';
+    case 'REFUSED':
+      return 'EXPIRED';
+  }
 }

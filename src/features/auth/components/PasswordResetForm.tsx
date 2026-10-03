@@ -65,6 +65,7 @@ export function PasswordResetForm({ messages }: PasswordResetFormProps) {
 
     if (outcome === 'SENT') setIsSent(true);
     else if (outcome === 'INVALID') form.setError('email', { message: t.emailInvalid });
+    else if (outcome === 'RATE_LIMITED') setRefusal(t.tooManyAttempts);
     else setRefusal(messages.errors.network);
   });
 

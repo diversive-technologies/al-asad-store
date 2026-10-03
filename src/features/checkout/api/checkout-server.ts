@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { Locale } from '@/i18n/locales';
 import { apiRequest } from '@/lib/api/client';
+import type { ClientAddressHeaders } from '@/lib/api/client-address';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
 import { API_HEADERS } from '@/lib/api/headers';
@@ -70,6 +71,7 @@ export function placeOrder(
   request: PlaceOrderRequest,
   locale: Locale,
   accountKey: string | null,
+  clientAddress: ClientAddressHeaders,
 ): Promise<Result<PlaceOrderReply, ApiError>> {
   return apiRequest({
     path: ENDPOINTS.checkout.place(cartId),
@@ -79,7 +81,10 @@ export function placeOrder(
     /* WHOSE order it is, from the session on this side. §6.5 makes the customer
        nullable and §28.2 makes guest checkout scope, so no header is a guest
        rather than a refusal. */
-    headers: accountKey === null ? {} : { [API_HEADERS.accountKey]: accountKey },
+    headers: {
+      ...clientAddress, // F-02 — Java rate-limits placement by the customer's address (A-03)
+      ...(accountKey === null ? {} : { [API_HEADERS.accountKey]: accountKey }),
+    },
     searchParams: { locale },
     next: { revalidate: 0 },
   });
@@ -140,12 +145,14 @@ export function fetchOrder(
 export function lookupOrder(
   orderNumber: OrderNumber,
   request: OrderLookupRequest,
+  clientAddress: ClientAddressHeaders,
 ): Promise<Result<OrderLookupReply, ApiError>> {
   return apiRequest({
     path: ENDPOINTS.checkout.orderLookup(orderNumber),
     schema: orderLookupReplySchema,
     method: 'POST',
     body: request,
+    headers: clientAddress, // F-02 — rate-limited per address and per number (A-03)
     next: { revalidate: 0 },
   });
 }

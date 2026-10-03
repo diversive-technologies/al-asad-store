@@ -33,7 +33,13 @@ export async function requestTryOn(
    *
    * ERR-05(1) / ERR-01: the rejection becomes a value; no try/catch for flow.
    */
-  const response = await fetch(ROUTES.api.tryOn, {
+  /*
+   * The product also rides in the ADDRESS, because the server asks Java to claim
+   * the generation before it reads the body, and a multipart body cannot be
+   * partly read. The form's own `productId` must agree with it.
+   */
+  const address = `${ROUTES.api.tryOn}?${new URLSearchParams({ productId }).toString()}`;
+  const response = await fetch(address, {
     method: 'POST',
     body,
     signal: signal ?? null,
@@ -53,9 +59,9 @@ export async function requestTryOn(
   if (response.status === 400) return err('PHOTO_REJECTED');
 
   /*
-   * 429 is the store's own budget, and it is an ANSWER rather than a failure:
-   * the module was reached and declined to spend another metered generation on
-   * this caller. It is turned into the contract's own `UNAVAILABLE` so the
+   * 429 is Java's claim refusing (a per-address hourly limit, or the day's cap),
+   * and it is an ANSWER rather than a failure: the module was reached and
+   * declined to spend another metered generation on this caller. It is turned into the contract's own `UNAVAILABLE` so the
    * panel says the one sentence that is true — wait a little — instead of the
    * generic "could not create the image", which would send the customer to
    * press the button again immediately and be refused again.

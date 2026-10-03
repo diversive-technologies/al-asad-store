@@ -1,9 +1,10 @@
 import { lookUpOrderFor } from '@/features/checkout';
 import { orderLookupRequestSchema } from '@/features/checkout/contract';
+import { clientAddressHeader } from '@/lib/api/client-address';
 import { orderNumberSchema } from '@/lib/domain/ids';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
-import { NO_STORE, readJsonBody } from '@/lib/utils/route';
+import { NO_STORE, rateLimitedResponse, readJsonBody } from '@/lib/utils/route';
 
 /**
  * DATA-08 — §28.3's guest lookup "by number and mobile".
@@ -34,7 +35,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
   const parsed = orderLookupRequestSchema.safeParse(await readJsonBody(request));
   if (!parsed.success) return new Response(null, { status: 400, headers: NO_STORE });
 
-  const result = await lookUpOrderFor(orderNumber.data, parsed.data);
+  const result = await lookUpOrderFor(orderNumber.data, parsed.data, clientAddressHeader(request));
 
   if (!result.ok) {
     if (result.error.kind === 'NOT_FOUND') {
@@ -42,7 +43,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
     }
 
     if (result.error.kind === 'RATE_LIMITED') {
-      return new Response(null, { status: 429, headers: NO_STORE });
+      return rateLimitedResponse(result.error.retryAfterSeconds);
     }
 
     logApiError('api:checkout:order:lookup', result.error); // ERR-10

@@ -10,8 +10,254 @@ none, because it is believed.
 **Layout (2026-09-17):** this repository is the storefront alone. The Java service
 is its own repository beside it (`../backend`), and the two deploy separately.
 
-Last updated: 2026-09-28, on `main`. Publishing is the operator's, per
+Last updated: 2026-10-03, on `main`. Publishing is the operator's, per
 `.claude/GIT.md`.
+
+**3 October — M-03: behaviour events from the storefront (plan phase M).** All uncommitted. Needs the backend's
+M-02 (`POST /api/v1/events`); nothing here was run against a live Java.
+
+- **Everything runs on the server, after the response; no analytics code is in any browser bundle.** First-load
+  JavaScript re-measured and unchanged (`/stitched` 201.8, product page 194.9, catalogue 186.7, shared root
+  chunks 130.9). `/stitched` is still over budget from earlier work and this does not worsen it.
+- `proxy.ts` sets `aa_visitor` (`VISITOR_COOKIE_NAME`, through `clientKey('visitor')`): a random UUID,
+  httpOnly, `SameSite=Lax`, `secure` on https, one year, only when absent or not a UUID. The proxy also records
+  `page_view`, because it is the one place every navigation passes (a layout renders once and not again while a
+  customer moves between pages). **Deviation:** it reports through `event.waitUntil(...)` (the documented proxy
+  API) rather than `after()`; pages and Route Handlers use `after()`.
+- `src/lib/analytics/` (all `server-only`): `visitor.ts` (`parseVisitorId`, `deviceOf`, `isCountable`: false for
+  `HEAD`, Next/browser prefetch, no user agent and known crawlers, link-preview fetchers and HTTP tools),
+  `record-events.ts` (`recordEvents`: one POST, 2 s timeout, never throws, one `console.warn` with the failure
+  kind and no tracker report), `page-view.ts`, `record.ts` (`recordPageEvents`, `recordPageEventsIf`,
+  `recordRequestEvents`, `visitorHeaders`). The customer's address goes as `x-client-ip` so Java's `events-ip`
+  limit works.
+- Events: `product_view` on the product page (after the 404 check), `search` on `/search` (after the by-code
+  redirect) and on `/catalogue` when a term is present (`term`, `resultCount` = `totalCount`),
+  `checkout_started` on `/checkout` only when the bag has items (the bag is read inside `after()`, so the page
+  does not wait), `try_on_started` / `try_on_ready` / `try_on_failed` in the Try-On route once the claim and the
+  photograph are accepted (`outcome` = the lower-cased reason or error kind; never the photograph).
+- `x-visitor-id` / `x-visitor-device` (`API_HEADERS.visitorId`, `visitorDevice`) are forwarded on the bag add
+  (both attempts of `addForCustomer`), `POST /api/checkout/place` and `POST /api/back-in-stock`, so Java records
+  `add_to_bag`, `order_placed` and `notify_me_requested` itself. Absent cookie: no header, Java records null.
+- `urdu-switch.test.ts` now passes a stub fetch event to `proxy` (its signature gained one parameter).
+- **Not done: the Privacy page's cookie list.** That page is served content from Java (D-06), not a frontend file;
+  the wording "a random number that lets us count visits; it is not linked to your name or account" goes in that
+  content. No user-visible string was added here, so no EN/UR messages.
+- Tests (+51): visitor/crawler/prefetch rules, event shaping and posting (incl. an endpoint that never answers),
+  page-view rules, the proxy's cookie and `waitUntil`, page/route recording with mocked `after`, the Try-On route's
+  events, and the bag add forwarding the visitor headers on the retry. Not run: the 17 Playwright journeys.
+
+**3 October — F-06 (frontend half): `POST /api/revalidate`.** All uncommitted. The backend caller
+(`StorefrontCacheClient`) is the backend's half and is not here.
+
+- `app/api/revalidate/route.ts`: header `x-revalidate-secret` must equal `REVALIDATE_SECRET` (new, optional,
+  at least 32 characters, in `env.server.ts` and `.env.example`; unset closes the route). The comparison hashes
+  both sides with SHA-256 and uses `timingSafeEqual`. Checked BEFORE the body is read. Body
+  `{ "tags": [...] }`, each one of `catalogue`, `content`, `content:homepage`, `made-to-measure`,
+  `localisation` (contract in `src/lib/api/revalidate-request.ts`). Answers 204 after `revalidateTag(tag,
+  { expire: 0 })` per distinct tag; 400 bad body; 401 wrong or missing secret; 413 declared length over 1 kB;
+  429 + `Retry-After: 60` after 10 wrong secrets a minute from one address. No body on any answer, `no-store`.
+- Exempt from SEC-08's same-origin check (the caller is a server); recorded in `request-policy.test.ts`
+  (`SECRET_AUTHORISED`), which also asserts the secret check precedes any body read.
+- The plan's second clause (a 404 product read must not keep an older copy) needed no change: Next's data
+  cache stores only status-200 fetch responses (`patch-fetch.js`), so a 404 is never cached, and the tag
+  revalidation covers the page that rendered the product. Not exercised against a live backend here.
+- Tests: `revalidate-route.test.ts` (15). No user-visible strings, so no EN/UR messages.
+
+**3 October — R-02: the media tool and manifest (plan phase R).** All uncommitted. The upload step is
+written and was NOT run: no credentials were used and nothing was sent anywhere.
+
+- `scripts/media/prepare.mjs`: reads `<src>/products/<photoFile>-<frame>.<jpg|png|webp|avif|tif>`
+  (the frame is what follows the LAST hyphen, so a photoFile may contain hyphens) and
+  `<src>/hero/<name>.<ext>` (film, posters, logo). Each photograph is auto-oriented, cropped 4:5 about
+  its centre and written as AVIF (quality 55) at 480, 960 and 1600 under
+  `products/<photoFile>/<frame>-<width>-<hash8>.avif`, `hash8` being the first 8 hex of the SHA-256 of
+  the 1600 file (all three share it). Hero files are `hero/<name>-<hash8>.<ext>` hashed from the file.
+  A source under 1200 px, a misnamed file or a duplicated frame is refused, and every source is
+  checked BEFORE anything is written. It prints a table of outputs and sizes and writes
+  `media-manifest.json` (`{ version, products: { <photoFile>: [1600 keys in frame order] }, hero:
+  { <source file name>: key } }`, keys sorted, so identical input gives an identical file).
+- `scripts/media/upload.mjs`: copies the prepared directory to `alasad-media` with `rclone copy`
+  (`--ignore-existing`, `Cache-Control: public, max-age=31536000, immutable`, `content-type:
+  image/avif` on the photographs), never `sync`, `move` or `delete`. Credentials only from
+  `MEDIA_R2_ENDPOINT`, `MEDIA_R2_ACCESS_KEY_ID`, `MEDIA_R2_SECRET_ACCESS_KEY`, handed to rclone through
+  its own `RCLONE_S3_*` variables. It refuses to start without them, and refuses a directory that holds
+  anything that is not a media key. `--dry-run` lists the keys and the rclone commands and touches
+  nothing; `--target <dir>` copies into a local directory (same rules) to rehearse an upload.
+- `scripts/media/lib.mjs` is the pure half (naming, hashing, crop box, manifest); its widths are
+  tested equal to the storefront loader's. `npm run media:prepare` and `media:upload`;
+  `/media-source/` and `/media-out/` are gitignored.
+- **Not done here, by design:** `backend/tools/build-data.mjs` (D-02) does not exist yet and is the
+  backend's; it reads `media-manifest.json`. The tool has not been run on real photographs (O-12) or
+  against R2 (I-05).
+
+**3 October — F-12: deployment settings and a post-deploy smoke check.** All uncommitted.
+
+- `vercel.json` with `regions: ["bom1"]`. `.env.example` now lists every variable of plan 21.2 (and
+  `NEXT_PUBLIC_MEDIA_HOST`); `REVALIDATE_SECRET` is documented as read by F-06.
+- `scripts/smoke.mjs <base-url> [--wait=<s>]` (`npm run smoke`): Node built-ins only, read-only.
+  `/api/health` is 200 UP (retried while `--wait` runs, for a deploy taking over its address);
+  `/` and `/catalogue` 200 and `/catalogue` holds an `<article`; the first product address in
+  `/sitemap.xml` (taken as a PATH, so it works whatever host the sitemap names) is 200 and says
+  "Add to bag" or "Sold out"; the six F-07 headers are on `/`; `/robots.txt` is 200. Exit 1 on any
+  failure, 2 on no address. `smoke-script.test.ts` runs it against a stand-in storefront, in process and
+  as a child process. (The script sets `process.exitCode` rather than calling `process.exit`: on Windows a
+  hard exit while undici sockets closed aborted the process with 0xC0000409.)
+- Workflow: the verify job now runs `npm run build` with three build-only environment values; the
+  deploy job runs the smoke check after a PRODUCTION deploy against the repository variable
+  `STORE_URL`. **While `STORE_URL` is unset the check is skipped with a warning** rather than failing
+  an otherwise good deploy; the operator sets it at I-08.
+- Checked against a real `next start` with no backend: `FAIL /api/health (status 503)`, no products on
+  `/catalogue` or in the sitemap, exit 1. The PASS case against a live Java was NOT run here (no backend
+  was available); it is covered by the stand-in test only.
+- No `output: 'standalone'`: the block does not ask for it and Vercel does not use it.
+
+**3 October — R-04: Try-On reads the garment from the CDN.** All uncommitted.
+
+- `garmentImage(mediaUrl)` now returns `Result<ImagePayload, { reason, detail }>`. An address on the
+  media host is fetched (`https` only, no redirects, 5 s, at most 3 MB read in chunks so a lying
+  `content-length` cannot pass, the answer must be an image) and converted as before; any other
+  absolute address is refused; a path under `public/` is still read from disk. A timeout answers
+  `UNAVAILABLE / TIMEOUT`, any other fault `UNAVAILABLE / PROVIDER_FAILED`, each with ONE
+  `[try-on:garment]` line (the address WITHOUT its query string, never a body; it now reaches the
+  tracker as an error rather than a content warning).
+- **`outputFileTracingIncludes` is kept**, decision recorded in `.claude/working-docs/try-on-module.md`:
+  production and preview serve fixture addresses until R-02's upload has happened and the backend runs
+  with `ALASAD_MEDIA_BASE_URL`; remove it in the change that makes the CDN the only source.
+- Tests: a media-host address fetched and converted; a foreign host, plain http and no configured host
+  refused; a non-image, a non-200 and an oversize body refused; a timeout; no query string or credentials
+  in the fault; a fixture path still read; a path escaping `public/` refused; one log line from
+  `generateTryOn`.
+
+**3 October — R-03: the storefront loads media from the CDN.** All uncommitted.
+
+- `NEXT_PUBLIC_MEDIA_HOST` (optional, a bare host) in `env.client.ts`, parsed by
+  `src/lib/media/media-host.ts`. `images.loader: 'custom'` with `src/lib/media/image-loader.ts`: an
+  `https` address on the media host whose file is `<frame>-<480|960|1600>-<hash8>.avif` gets the
+  smallest of the three widths that covers the requested width; EVERYTHING ELSE (fixtures in
+  `public/`, the logo, hero posters and film, another host) is returned unchanged, so Vercel's
+  optimiser is out of the path. `images.deviceSizes` is `[480, 960, 1600]`, so a `srcset` offers exactly
+  the files the CDN holds. `remotePatterns` allows only the media host; the CSP's `img-src` and
+  `media-src` add `https://<host>` only when it is set.
+- **The loader reads `process.env.NEXT_PUBLIC_MEDIA_HOST` itself instead of importing `env.client.ts`**
+  (an SSOT-03 exception, commented in the file): the env module pulls in Zod, and the loader is in
+  the first load of every page with a photograph. Importing it measured +85 kB gzipped on the
+  catalogue. `env.client.ts` still validates the same variable at boot with the same parser.
+- First-load JavaScript measured with and without the custom loader: identical (`/stitched` 201.8,
+  product page 194.9 / 194.8, catalogue 186.7, shared root chunks 130.9). The eager loading of the
+  largest product image is untouched. **`/stitched` is still over the 200 kB budget by 1.8 kB and
+  that is not caused by media**: the 130.9 kB of shared root chunks (Next and React) grew from the
+  127.8 kB recorded on 19 September, and none of this work is in them. Not fixed here.
+- Local development: `next dev` warns once per fixture image that the loader "does not implement
+  width" (it returns local paths unchanged, as the plan says). The warning is development-only.
+  Fixture images are no longer resized by Next but served as they are (3.5 MB across the catalogue),
+  which matters only until the CDN carries the real photographs.
+- Tests: the loader's three buckets, a non-media address, a media address that does not match the
+  pattern, and the config's CSP and `remotePatterns` with and without the host. **Not exercised against
+  a running backend** (none was available): the "480 or 960 on a phone, 1600 in the full-screen gallery"
+  acceptance follows from `sizes` plus the three-width `deviceSizes` but was not observed in a browser.
+
+**3 October — T-02: Java counts try-on generations (plan phase T).** All uncommitted.
+
+- `claimTryOnGeneration(request, productId)` now asks Java `POST /api/v1/try-on/claims`
+  (`ENDPOINTS.tryOn.claim`, the only try-on path in the registry) with the product id and
+  `x-client-ip`, before the body is read and before the provider is reached. `ALLOWED` goes
+  on; a 429 reaches the browser as 429 with Java's own `Retry-After` (one hour when Java sent
+  none) and the panel's existing "wait" sentence; **Java unreachable, refusing the token or
+  answering off-contract REFUSES the generation** (`UNAVAILABLE / PROVIDER_FAILED`, one
+  `[api:try-on:claim]` log line) — it never allows one.
+- **Deleted:** `try-on-budget-store.ts`, `try-on-budget.ts` and both tests. The per-instance
+  ceiling went with them; the daily cap in Java is what bounds the bill now.
+- **Deviation from the plan, and why:** the plan says the claim is made before the body is
+  read, and names the product id as its input — but the id is in the multipart body, which
+  cannot be partly read. The browser therefore also sends `?productId=` in the address; the
+  route claims with that, and the form's own `productId` must agree (400 otherwise).
+- `try-on-route.test.ts` asserts the order of work (claim, then body, then generation; a
+  refusal or an unreachable Java never reads the body or reaches the provider).
+  `.claude/working-docs/try-on-module.md` is updated.
+- **The backend half (T-01) is the main session's.** The contract is coded exactly as plan T-01
+  words it; nothing here was run against a real Java claim endpoint.
+
+**3 October — F-08: error tracking and a health route.** All uncommitted.
+
+- **Sentry, server side only** (`@sentry/node` 11.4.0, no `@sentry/nextjs`, no wrapped config).
+  `instrumentation.ts` at the repository root starts it in `register()` (Node.js runtime only,
+  and only with `SENTRY_DSN` set) and hands every error Next catches to `onRequestError`.
+  The route PATTERN, method, handler kind and request id are sent — never the address (its
+  query can hold a reset token), body, cookies or headers.
+- **SDK 11 has no `sendDefaultPii`.** Its replacement `dataCollection` DEFAULTS to collecting
+  user, cookies, headers, bodies and query strings, so every category is switched off
+  explicitly, and only six integrations are installed (none records console output, requests
+  or local variables). `beforeSend` also drops `request` and `user` and masks the message.
+- `log.ts`: `logApiError` / `logContentIssue` / `logProviderFailure` also report to the tracker
+  through `src/lib/observability/error-reporter.ts`, a seam on a `globalThis` symbol (a Next
+  server holds one copy of a module per bundle layer, and `log.ts` must not carry the SDK).
+  Emails and mobiles are masked first (`redact.ts`).
+- `POST /api/client-error`: same-origin check, 2 kB cap, schema-parsed to message, digest and
+  pathname, five a minute per address, always 204 (403 only for another origin).
+  `app/error.tsx` and `app/global-error.tsx` beacon each error once. **The eleven segment
+  `error.tsx` files do not report** — the plan names only the root two.
+- `GET /api/health` calls Java `GET /api/v1/health` (3 s) and answers `200 {"status":"UP"}` or
+  `503 {"status":"DOWN"}`, never cached, and logs nothing for a failed check so a monitor cannot
+  fill the tracker.
+- Verified in a built `next start` with a dead Java and a dead DSN host: Sentry initialised
+  from `instrumentation.ts`, the beacon's message arrived masked, `logApiError` was captured,
+  health answered 503.
+- First-load JavaScript: the reporter is about 0.3 kB minified. **`/stitched` measures 201.8 kB,
+  over the 200 kB budget**; the shared root chunks are 130.9 kB against 127.8 recorded on
+  19 September, so the growth is not this change's (nothing of it is in the root chunks).
+
+**3 October — F-09: a rate limit is said in words.**
+
+- A 429 is classified once, in `errors.ts`, with `Retry-After` read into `retryAfterSeconds`.
+  The three BFF routes behind Java's limits that the browser calls (order lookup, placement,
+  Notify Me) answer 429 with the same `Retry-After` (`rateLimitedResponse` in `lib/utils/route.ts`);
+  placement used to answer 502, which the page reads as "the order may exist".
+- Every surface has its words: sign-in both ways, the code request, sign-up (it said "could not
+  create your account"), forgot password (it said "a link is on its way" — the per-address limit
+  now says wait, while the email-limited reset still answers like any other so nothing about an
+  account leaks), reset password, order lookup and find-my-order, placement, Notify Me,
+  newsletter. New messages `checkout.rateLimited`, `backInStock.rateLimited` and
+  `newsletter.rateLimited`, in both languages.
+
+**3 October — F-03: the reset-password page.**
+
+- `/reset-password?token=` (`ROUTES.resetPassword`, `ENDPOINTS.auth.confirmPasswordReset`,
+  `confirmPasswordResetAction`). The token is judged on the server: not 64 hex characters, absent
+  or repeated gives the same "expired or already used" screen a spent link does, with no form.
+  The four outcomes: changed (a link to sign in — the customer is NOT signed in by an email
+  link), expired (the backend's 400, with a link to ask again), rate-limited, unreachable.
+  `noindex`, disallowed in robots, `Referrer-Policy: no-referrer` set for the path in
+  `next.config.ts` (declared after the catch-all, because the last rule wins).
+- `ResetNotice` is the one component the three endings of the reset flow share; the old
+  `PasswordResetSent` is now a wrapper of it.
+- **No journey:** the plan's journey needs the token from a logged email, and the backend's local
+  sender (`SmtpEmailSender`) logs the subject only, never the link. Page-level and action-level
+  tests stand in, as the plan's fallback says.
+
+**3 October — F-02: the storefront authenticates to Java and forwards the customer's address.**
+
+- `apiRequest` adds `CF-Access-Client-Id` / `CF-Access-Client-Secret` when both are set (a caller's
+  own headers cannot override them) and a fresh `x-request-id` on every call.
+  `CF_ACCESS_CLIENT_ID` / `_SECRET` are optional, and required together when `VERCEL_ENV` is
+  `preview` or `production` — **a Vercel build without them now fails**, by design.
+- `src/lib/api/client-address.ts`: `x-client-ip` from the first valid IPv4/IPv6 entry of
+  `x-forwarded-for`, sent on sign-in (both ways), code request, sign-up, password reset, order
+  lookup, placement, Notify Me and the newsletter. Never on cached reads. The server functions
+  behind those take the address headers as a REQUIRED argument, so a new caller cannot forget them.
+
+**3 October — F-01: the session cookie is signed.**
+
+- The cookie is `v1.<payload>.<signature>`: HMAC-SHA256 with `SESSION_SECRET`, expiry inside the
+  signed payload (seven days), `SESSION_SECRET_PREVIOUS` accepted for opening during a
+  rotation. An old unsigned JSON cookie, a tampered, expired, oversized or wrongly-signed one
+  all read as signed out; `openSession` never throws. **Every signed-in customer is signed out
+  once, when this deploys.**
+- `session-seal.ts` is the pure half (takes the secrets as arguments, so the Playwright suite can
+  seal with it — it cannot import `server-only`), `session-token.ts` the environment-bound one.
+- `SESSION_SECRET` is REQUIRED (32+ characters): the app refuses to start without it, including
+  `next build`. The e2e suite seals its cookie with `E2E_SESSION_SECRET` (a default for the dev
+  server it starts; supply the deployment's own when running against `E2E_BASE_URL`), and a new
+  journey proves a hand-written JSON cookie is signed out and `/api/saved-items` answers 401.
 
 **28 September — the mock layer is gone; the storefront runs on Java alone.**
 

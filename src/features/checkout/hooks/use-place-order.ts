@@ -71,6 +71,7 @@ const EMPTY_CHECKOUT: CheckoutFormInput = {
 export function usePlaceOrder(
   quote: UseQueryResult<CheckoutQuote | null>,
   failedReason: string,
+  rateLimitedReason: string,
 ): PlaceOrderState {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -101,7 +102,7 @@ export function usePlaceOrder(
       router.push(ROUTES.orderConfirmation(result.order.orderNumber));
     },
     onError: (error) => {
-      follow(afterFailure(error, failedReason));
+      follow(afterFailure(error, failedReason, rateLimitedReason));
     },
   });
 

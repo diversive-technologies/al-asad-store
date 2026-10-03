@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, type NextFetchEvent } from 'next/server';
 import { describe, expect, it } from 'vitest';
 
 import { CLIENT } from '@/config/client';
@@ -7,6 +7,9 @@ import { DEFAULT_LOCALE, DIRECTION, LOCALE_COOKIE, localeSwitchPlace, localeToRe
 import { ur } from '@/i18n/messages/ur';
 import { localeAlternates } from '@/lib/utils/locale-alternates';
 import { proxy } from '../../proxy';
+
+/** M-03: the proxy takes Next's fetch event (it reports page views through `waitUntil`). */
+const EVENT = { waitUntil: () => undefined } as unknown as NextFetchEvent;
 
 /**
  * F-10 Acceptance Tests:
@@ -27,7 +30,7 @@ describe('F-10: Urdu switch behavior', () => {
 
     it('proxy sets no locale cookie on /?locale=ur', () => {
       const request = new NextRequest('https://store.alasad.com/?locale=ur');
-      const response = proxy(request);
+      const response = proxy(request, EVENT);
 
       // Must NOT set a locale cookie
       expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
@@ -35,7 +38,7 @@ describe('F-10: Urdu switch behavior', () => {
 
     it('proxy sets no locale cookie on first visit to /', () => {
       const request = new NextRequest('https://store.alasad.com/');
-      const response = proxy(request);
+      const response = proxy(request, EVENT);
 
       expect(response.cookies.get(LOCALE_COOKIE)).toBeUndefined();
     });

@@ -26,6 +26,7 @@ const TOTALS = {
 };
 
 const FAILED = 'not placed, nothing charged';
+const WAIT = 'please wait a few minutes';
 
 describe('afterRefusal', () => {
   it.each<[string, PlacementRefusal, boolean, boolean]>([
@@ -49,15 +50,23 @@ describe('afterRefusal', () => {
 
 describe('afterFailure', () => {
   it('says "not placed" only for a refusal that was answered', () => {
-    expect(afterFailure({ kind: 'NOT_PLACED' }, FAILED)).toEqual<PlacementFollowUp>({
+    expect(afterFailure({ kind: 'NOT_PLACED' }, FAILED, WAIT)).toEqual<PlacementFollowUp>({
       outcome: { kind: 'PAYMENT_FAILED', reason: FAILED },
       rereadQuote: false,
       rereadBag: false,
     });
   });
 
+  it('says to wait, and that nothing was placed, for a placement Java refused as one too many (F-09)', () => {
+    expect(afterFailure({ kind: 'RATE_LIMITED' }, FAILED, WAIT)).toEqual<PlacementFollowUp>({
+      outcome: { kind: 'PAYMENT_FAILED', reason: WAIT },
+      rereadQuote: false,
+      rereadBag: false,
+    });
+  });
+
   it('never says "not placed" when no answer came, and re-reads the bag an order empties', () => {
-    expect(afterFailure({ kind: 'UNCONFIRMED' }, FAILED)).toEqual<PlacementFollowUp>({
+    expect(afterFailure({ kind: 'UNCONFIRMED' }, FAILED, WAIT)).toEqual<PlacementFollowUp>({
       outcome: { kind: 'UNCONFIRMED' },
       rereadQuote: false,
       rereadBag: true,

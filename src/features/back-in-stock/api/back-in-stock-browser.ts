@@ -37,6 +37,7 @@ export async function postBackInStock(
   if (response === null) return err({ kind: 'UNREACHABLE' });
   if (response.status === 400) return err({ kind: 'INVALID' });
   if (response.status === 404) return err({ kind: 'NOT_OFFERED' });
+  if (response.status === 429) return err({ kind: 'RATE_LIMITED' });
   if (!response.ok || contract === null) return err({ kind: 'UNREACHABLE' });
 
   const payload: unknown = await response.json().then<unknown, null>(

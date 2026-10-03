@@ -27,16 +27,20 @@ import { clearCartId, ensureCartId } from './cart-cookie';
  * `measurementOwner` travels on the retry too: it used to be dropped there, so a
  * made-to-measure add from a browser whose cart had lapsed was refused for naming
  * measurements that belonged to nobody.
+ *
+ * M-03 — `visitor` (the visitor id and device headers) travels on both attempts too:
+ * Java records `add_to_bag` itself and needs them on whichever add succeeds.
  */
 export async function addForCustomer(
   request: AddToBagRequest,
   locale: Locale,
   measurementOwner?: string,
+  visitor?: Readonly<Record<string, string>>,
 ): Promise<Result<AddToBagResult, ApiError>> {
   const cartId = await ensureCartId();
   if (!cartId.ok) return cartId;
 
-  const first = await addItem(cartId.value, request, locale, measurementOwner);
+  const first = await addItem(cartId.value, request, locale, measurementOwner, visitor);
   if (first.ok || first.error.kind !== 'NOT_FOUND') return first;
 
   const live = await isCartLive(cartId.value);
@@ -47,5 +51,5 @@ export async function addForCustomer(
   const replacement = await ensureCartId();
   if (!replacement.ok) return replacement;
 
-  return addItem(replacement.value, request, locale, measurementOwner);
+  return addItem(replacement.value, request, locale, measurementOwner, visitor);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { declaredLength, readFormBody, readJsonBody } from './route';
+import { declaredLength, rateLimitedResponse, readFormBody, readJsonBody } from './route';
 
 const URL_ = 'https://shop.example.com/api/test';
 
@@ -52,5 +52,23 @@ describe('declaredLength', () => {
     const headers: Record<string, string> = value === null ? {} : { 'content-length': value };
 
     expect(declaredLength(new Request(URL_, { headers }))).toBe(expected);
+  });
+});
+
+describe('rateLimitedResponse (F-09)', () => {
+  it('is a 429 with Retry-After and no body, never cacheable', async () => {
+    const response = rateLimitedResponse(900);
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('900');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    await expect(response.text()).resolves.toBe('');
+  });
+
+  it('leaves Retry-After out when Java sent no figure', () => {
+    const response = rateLimitedResponse(undefined);
+
+    expect(response.status).toBe(429);
+    expect(response.headers.has('Retry-After')).toBe(false);
   });
 });

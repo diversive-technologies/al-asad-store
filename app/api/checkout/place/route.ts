@@ -3,9 +3,11 @@ import { currentAccountKey } from '@/features/auth/server';
 import { placeForCustomer } from '@/features/checkout';
 import { placeOrderRequestSchema } from '@/features/checkout/contract';
 import { getLocale } from '@/i18n';
+import { visitorHeaders } from '@/lib/analytics';
+import { clientAddressHeader } from '@/lib/api/client-address';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
-import { NO_STORE, readJsonBody } from '@/lib/utils/route';
+import { NO_STORE, rateLimitedResponse, readJsonBody } from '@/lib/utils/route';
 
 /**
  * DATA-08 — §7.2, the one write that turns a bag into an order.
@@ -36,6 +38,8 @@ export async function POST(request: Request): Promise<Response> {
     parsed.data,
     await getLocale(),
     await currentAccountKey(),
+    // F-02 the customer's address, and M-03 the visitor Java records `order_placed` against.
+    { ...clientAddressHeader(request), ...(await visitorHeaders(request)) },
   );
 
   if (!result.ok) {
@@ -48,6 +52,12 @@ export async function POST(request: Request): Promise<Response> {
      */
     if (result.error.kind === 'NOT_FOUND') {
       return new Response(null, { status: 404, headers: NO_STORE });
+    }
+
+    /* F-09 — too many placements from this address (A-03). Java refuses BEFORE it
+       runs §7.2, so nothing was placed, and the customer is told to wait. */
+    if (result.error.kind === 'RATE_LIMITED') {
+      return rateLimitedResponse(result.error.retryAfterSeconds);
     }
 
     logApiError('api:checkout:place', result.error); // ERR-10

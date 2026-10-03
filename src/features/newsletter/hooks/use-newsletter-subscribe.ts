@@ -9,6 +9,7 @@ import type { ApiError } from '@/lib/api/errors';
 import { onDemandResolver } from '@/lib/utils/on-demand-resolver';
 
 import { subscribeToNewsletterAction } from '../actions';
+import { newsletterRefusal } from '../lib/newsletter-refusal';
 import type { NewsletterSubscribeInput } from '../schemas/newsletter.schema';
 
 /*
@@ -59,13 +60,9 @@ export function useNewsletterSubscribe(initialEmail = ''): NewsletterSubscribe {
   });
 
   function handleFailure(error: ApiError): void {
-    // ERR-11: the backend's own message is never rendered; copy comes from SSOT-07.
-    if (error.kind !== 'VALIDATION') {
-      form.setError('root', { message: t.errors.network });
-      return;
-    }
-    // FORM-04: server-side field errors map back onto the field that caused them.
-    form.setError('email', { message: t.newsletter.invalidEmail });
+    // FORM-04: a refused address goes back on the field; the rest is said for the form.
+    const refusal = newsletterRefusal(error, t);
+    form.setError(refusal.field, { message: refusal.message });
   }
 
   async function onSubmit(input: NewsletterSubscribeInput): Promise<void> {

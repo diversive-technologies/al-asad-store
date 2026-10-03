@@ -69,6 +69,8 @@ export const ROUTES = {
   signInFrom: (returnTo: string | null) => withReturnTo(SIGN_IN, returnTo),
   signUpFrom: (returnTo: string | null) => withReturnTo(SIGN_UP, returnTo),
   forgotPassword: '/forgot-password',
+  /** F-03 — the page a password-reset email links to; the one-time token is in `?token=`. */
+  resetPassword: '/reset-password',
   /** §34 — the measurement studio, usable without buying anything. */
   stitched: '/stitched',
   /**
@@ -118,6 +120,10 @@ export const ROUTES = {
    * and the two never overlap.
    */
   api: {
+    /** F-08 — GET: `200 {"status":"UP"}` while Java answers, otherwise `503 {"status":"DOWN"}`. */
+    health: '/api/health',
+    /** F-08 — POST: the browser's error boundaries report an error here, once each. Always 204. */
+    clientError: '/api/client-error',
     suggest: '/api/suggest',
     fabricCalculator: '/api/fabric-calculator',
     /** Section 24. Multipart in, one JSON image out — see app/api/try-on. */

@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next';
 
+import { MEDIA_WIDTHS, parseMediaHost } from './src/lib/media/media-host';
+
 /**
  * Hosts allowed to request Next's own dev resources (`/_next/*`).
  *
@@ -22,6 +24,13 @@ const devAllowedOrigins = (process.env.DEV_ALLOWED_ORIGINS ?? '')
   .filter((origin) => origin.length > 0);
 
 /**
+ * R-03: the CDN host product media is served from, or null. Read here for the
+ * Content-Security-Policy and `remotePatterns`; `env.client.ts` validates the
+ * same variable at boot with the same parser.
+ */
+const mediaHost = parseMediaHost(process.env.NEXT_PUBLIC_MEDIA_HOST);
+
+/**
  * F-07: Security headers and CSP configuration.
  */
 function buildContentSecurityPolicy(): string {
@@ -29,26 +38,35 @@ function buildContentSecurityPolicy(): string {
   const scriptSrc = isDev ? "'self' 'unsafe-inline' 'unsafe-eval'" : "'self' 'unsafe-inline'";
   const connectSrc = isDev ? "'self' ws:" : "'self'";
 
+  const mediaOrigin = mediaHost === null ? '' : ` https://${mediaHost}`;
+
   return [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "media-src 'self'",
+    `img-src 'self' data: blob:${mediaOrigin}`,
+    `media-src 'self'${mediaOrigin}`,
     "font-src 'self'",
     `connect-src ${connectSrc}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
-    "upgrade-insecure-requests",
+    'upgrade-insecure-requests',
   ].join('; ');
 }
 
 /**
- * NEXT-09: remote image hosts are declared here as `remotePatterns` when the
- * CDN origin is known. `images.domains` is deprecated and PROHIBITED.
+ * NEXT-09: remote image hosts are declared here as `remotePatterns`.
+ * `images.domains` is deprecated and PROHIBITED. Only the media host is ever
+ * allowed, and only when it is configured.
  */
+const mediaRemotePatterns = (() => {
+  if (mediaHost === null) return [];
+  const [hostname = '', port = ''] = mediaHost.split(':');
+  return [{ protocol: 'https' as const, hostname, port, pathname: '/**' }];
+})();
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -68,11 +86,24 @@ const nextConfig: NextConfig = {
    */
   typedRoutes: false,
   /*
-   * Serve AVIF where the browser accepts it, WebP otherwise. The source assets
-   * are already AVIF, but next/image re-encodes per requested width, so the
-   * output format has to be stated here or it falls back to WebP only.
+   * R-03 — media is served by the CDN at three pre-built widths and the loader
+   * picks one itself (`src/lib/media/image-loader.ts`), so Vercel's image
+   * optimiser is not in the path. Local fixture images in `public/` pass through
+   * the loader unchanged. `remotePatterns` still names the media host, and only
+   * that host, so a stray `loader` prop or a future switch back to the built-in
+   * optimiser cannot be pointed at any other origin.
    */
-  images: { formats: ['image/avif', 'image/webp'] },
+  images: {
+    loader: 'custom',
+    loaderFile: './src/lib/media/image-loader.ts',
+    /*
+     * The widths a `srcset` offers ARE the three the CDN holds, so the browser
+     * chooses between real files rather than between descriptors that the loader
+     * then rounds. `imageSizes` stays at Next's default for small thumbnails.
+     */
+    deviceSizes: [...MEDIA_WIDTHS],
+    remotePatterns: mediaRemotePatterns,
+  },
   /**
    * §24 Try-On reads the garment's photograph off the FILESYSTEM —
    * `garmentImage` in `src/features/try-on/api/try-on-images.ts` joins
@@ -86,7 +117,9 @@ const nextConfig: NextConfig = {
    * which is the worst shape a fault can take.
    *
    * Declared against the Route Handler that needs it. 5.4 MB of AVIF, far
-   * inside the function size ceiling.
+   * inside the function size ceiling. R-04: a garment on the media host is
+   * FETCHED instead, so this goes when the CDN is the only source — see
+   * `.claude/working-docs/try-on-module.md`.
    */
   outputFileTracingIncludes: { '/api/try-on': ['./public/products/**'] },
   // Omitted entirely when unset, so the default (block everything) still holds.
@@ -122,6 +155,16 @@ const nextConfig: NextConfig = {
             value: buildContentSecurityPolicy(),
           },
         ],
+      },
+      /*
+       * F-03 — the password-reset page's address carries a one-time token. The
+       * site-wide policy sends the origin to other sites; this path sends nothing.
+       * Declared AFTER the catch-all: when two rules set the same header the last
+       * one wins.
+       */
+      {
+        source: '/reset-password',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
     ];
   },

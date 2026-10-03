@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 // I18N-02 exception, stated rather than buried: global-error replaces the root
 // layout, so the MessagesProvider that layout seeds does not exist here and
 // useMessages() would resolve nothing. Falling back to the default locale is
@@ -8,6 +10,7 @@
 // page (PERF-10, `en-root-error.ts`).
 import { DEFAULT_LOCALE, DIRECTION } from '@/i18n/locales';
 import { enRootError } from '@/i18n/messages/en-root-error';
+import { reportClientError } from '@/lib/observability/report-client-error';
 
 export interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -15,10 +18,16 @@ export interface GlobalErrorProps {
 }
 
 /**
- * ERR-09 / SEC-07 — the caught error is never rendered to the user.
+ * ERR-09 / SEC-07 — the caught error is never rendered to the user; it is
+ * reported to the server instead (F-08), once.
  * This boundary renders its own document because the root layout has failed.
  */
-export default function GlobalError({ reset }: GlobalErrorProps) {
+export default function GlobalError({ error, reset }: GlobalErrorProps) {
+  // The browser is the external system here (STATE-04): tell the server, once per error.
+  useEffect(() => {
+    reportClientError(error);
+  }, [error]);
+
   return (
     <html lang={DEFAULT_LOCALE} dir={DIRECTION[DEFAULT_LOCALE]}>
       <body>

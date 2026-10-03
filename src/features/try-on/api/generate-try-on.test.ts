@@ -125,4 +125,27 @@ describe('generateTryOn', () => {
     });
     expect(logged).toHaveBeenCalledWith(expect.stringContaining('[try-on:garment]'));
   });
+
+  /*
+   * R-04 — a garment on a host that is not the media host is refused, and the
+   * refusal is ONE log line naming the address without any query string.
+   */
+  it('refuses a garment on a foreign host with one log line', async () => {
+    catalogueAnswers(() =>
+      HttpResponse.json([
+        card(['https://elsewhere.example.com/p/front-1600-0a1b2c3d.avif?sig=abc']),
+      ]),
+    );
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const result = await generateTryOn(PRODUCT, await photograph(), 'en');
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { status: 'UNAVAILABLE', reason: 'PROVIDER_FAILED' },
+    });
+    expect(logged).toHaveBeenCalledTimes(1);
+    expect(logged.mock.calls[0]?.[0]).toContain('[try-on:garment]');
+    expect(logged.mock.calls[0]?.[0]).not.toContain('sig=abc');
+  });
 });

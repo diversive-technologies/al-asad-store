@@ -4,6 +4,7 @@ import { ErrorState } from '@/components/shared/ErrorState';
 import { ROUTES } from '@/config/routes';
 import type { Locale } from '@/i18n/locales';
 import type { Messages } from '@/i18n/messages/en';
+import { recordPageEvents } from '@/lib/analytics';
 import { logApiError } from '@/lib/utils/log';
 
 import { findByCode } from '../api/find-by-code';
@@ -59,6 +60,16 @@ export async function SearchScreen({ query, locale, messages }: SearchScreenProp
   if (!results.ok) {
     logApiError('search', results.error); // ERR-10
     return <ErrorState className="m-gutter" message={messages.errors.network} />;
+  }
+
+  // M-03 — after the code redirect above: a term that opened a product is a view of it, not a search.
+  if (query.term.length > 0) {
+    await recordPageEvents({
+      type: 'search',
+      path: ROUTES.search,
+      term: query.term,
+      resultCount: results.value.totalCount,
+    });
   }
 
   const availabilities = await listingAvailabilities(results.value.products, 'search:availability');

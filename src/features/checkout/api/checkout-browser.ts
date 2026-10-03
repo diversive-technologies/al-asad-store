@@ -40,17 +40,21 @@ const RATE_LIMITED: Result<never, CheckoutError> = err({ kind: 'RATE_LIMITED' })
  *
  * - `NOT_PLACED` — refused with an answer that says so, by the BFF or by the
  *   backend behind it (a 4xx): this request placed nothing.
+ * - `RATE_LIMITED` — Java's per-address limit on placement (429, F-09). Like
+ *   `NOT_PLACED`, nothing was placed — the limit is checked before §7.2 runs —
+ *   but the words are "wait", not a reason to change anything.
  * - `UNCONFIRMED` — no answer this side can read: the request may never have
  *   arrived, or §7.2 may have committed before its reply was lost (steps 7 and 8
  *   run after the commit, and a timeout or a reply that fails its contract comes
  *   back the same way). Nothing here may say either way.
  */
 export interface PlaceOrderError {
-  kind: 'NOT_PLACED' | 'UNCONFIRMED';
+  kind: 'NOT_PLACED' | 'UNCONFIRMED' | 'RATE_LIMITED';
 }
 
 const NOT_PLACED: Result<never, PlaceOrderError> = err({ kind: 'NOT_PLACED' });
 const UNCONFIRMED: Result<never, PlaceOrderError> = err({ kind: 'UNCONFIRMED' });
+const PLACEMENT_RATE_LIMITED: Result<never, PlaceOrderError> = err({ kind: 'RATE_LIMITED' });
 
 /**
  * §17 `quote`. Re-read whenever delivery or gifting changes the total.
@@ -101,6 +105,8 @@ export async function placeOrder(
     loadSchemas,
   );
 
+  // F-09 — Java refuses before it runs §7.2, so nothing was placed; the page says to wait.
+  if (response?.status === 429) return PLACEMENT_RATE_LIMITED;
   if (response !== null && response.status >= 400 && response.status < 500) return NOT_PLACED;
   if (response === null || !response.ok || schemas === null) return UNCONFIRMED;
 

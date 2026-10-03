@@ -4,7 +4,7 @@ import { en } from '@/i18n/messages/en';
 import type { ApiError } from '@/lib/api/errors';
 import { err, ok } from '@/lib/result';
 
-import { authFailureOf, authRefusal, resetOutcomeOf } from './auth-failure';
+import { authFailureOf, authRefusal, resetConfirmOutcomeOf, resetOutcomeOf } from './auth-failure';
 
 const network: ApiError = { kind: 'NETWORK', message: 'unreachable' };
 const timeout: ApiError = { kind: 'TIMEOUT', message: 'slow' };
@@ -58,5 +58,28 @@ describe('what the password-reset form shows', () => {
     ['a request the backend refused, which says nothing', err(refused), 'SENT'],
   ])('for %s', (_label, result, expected) => {
     expect(resetOutcomeOf(result)).toBe(expected);
+  });
+});
+
+/**
+ * F-03 — redeeming a reset link has an honest answer to give: the backend's 400
+ * means THIS link no longer works, and the customer is told to ask for another.
+ */
+describe('what the reset page shows once it has tried the new password', () => {
+  it.each<[string, Parameters<typeof resetConfirmOutcomeOf>[0], string]>([
+    ['a password that was changed', ok(null), 'DONE'],
+    ['a link the backend refuses with a 400', err(badRequest), 'EXPIRED'],
+    ['a link the backend does not know', err({ kind: 'NOT_FOUND', message: 'none' }), 'EXPIRED'],
+    ['too many attempts', err(locked), 'RATE_LIMITED'],
+    ['a store that could not be reached', err(network), 'UNREACHABLE'],
+    ['a store that failed on its own side', err(outage), 'UNREACHABLE'],
+    [
+      'a reply that broke the contract',
+      err({ kind: 'CONTRACT_VIOLATION', message: 'x', issues: [], path: '/p' }),
+      'UNREACHABLE',
+    ],
+    ['a password our own check refused', err(invalid), 'INVALID'],
+  ])('for %s', (_label, result, expected) => {
+    expect(resetConfirmOutcomeOf(result)).toBe(expected);
   });
 });

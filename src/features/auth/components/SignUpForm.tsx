@@ -14,6 +14,7 @@ import { onDemandResolver } from '@/lib/utils/on-demand-resolver';
 
 import { signUpAction } from '../actions';
 import type { SignUpInput } from '../schemas/auth.schema';
+import { signUpRefusal } from '../lib/auth-failure';
 import { AuthRefusal } from './AuthRefusal';
 import { SignUpFields } from './SignUpFields';
 
@@ -65,7 +66,7 @@ export function SignUpForm({ messages, mobileExample, returnTo }: SignUpFormProp
     const result = await signUpAction(input);
 
     if (!result.ok) {
-      setRefusal(result.error.kind === 'CONFLICT' ? t.emailTaken : t.signUpFailed);
+      setRefusal(signUpRefusal(result.error, messages));
       return;
     }
     // Registering signs you in, so the customer goes on to where they were headed.

@@ -1,6 +1,7 @@
 'use server';
 
 import { apiRequest } from '@/lib/api/client';
+import { currentClientAddressHeader } from '@/lib/api/client-address';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
 import { err, type Result } from '@/lib/result';
@@ -39,6 +40,8 @@ export async function subscribeToNewsletterAction(
     schema: newsletterSubscriptionSchema,
     method: 'POST',
     body: parsed.data,
+    // F-02: Java rate-limits by the customer's address (A-03).
+    headers: await currentClientAddressHeader(),
     // DATA-09: a write, so there is nothing to cache.
     next: { revalidate: 0 },
   });

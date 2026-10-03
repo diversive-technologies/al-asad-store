@@ -5,7 +5,7 @@ import { en } from '@/i18n/messages/en';
 import { formatPlural } from '@/lib/utils/format';
 
 import { listingCards, openCatalogue } from './support/catalogue';
-import { signInAsNewCustomer } from './support/session';
+import { signInAsNewCustomer, uniqueEmail, writeForgedSession } from './support/session';
 import { ARRIVAL } from './support/server';
 
 /** Follows one of the header's account menu links, as a signed-in customer does. */
@@ -80,5 +80,31 @@ test.describe('a signed-in customer', () => {
     await expect(
       section(en.account.measurementsHeading).getByText(en.account.measurementsEmpty),
     ).toBeVisible();
+  });
+});
+
+/**
+ * F-01 — the session is a signed token, so a cookie written by hand proves
+ * nothing. This is the attack the signature closes: anyone could write
+ * `{"displayName":…,"email":…}` into the `session` cookie and be that customer.
+ */
+test.describe('a hand-written session cookie', () => {
+  test('leaves the visitor signed out, and the account routes refuse them', async ({
+    page,
+    context,
+  }) => {
+    await writeForgedSession(context, {
+      displayName: 'Somebody Else',
+      email: uniqueEmail('forged'),
+      mobile: '03001234567',
+    });
+
+    await page.goto(ROUTES.home);
+    await expect(
+      page.getByRole('banner').getByRole('button', { name: en.auth.accountMenuLabel }),
+    ).toHaveCount(0);
+
+    const answer = await page.request.get(ROUTES.api.savedItems);
+    expect(answer.status()).toBe(401);
   });
 });

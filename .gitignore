@@ -85,3 +85,9 @@ yarn-error.log*
 # project's own agent instructions live in .claude/.
 /AGENTS.md
 /CLAUDE.md
+
+# R-02 — the media tool's working directories: source photographs (large, and the
+# client's) and the prepared output. The manifest is copied wherever the data
+# build reads it (--manifest) and committed there, not from here.
+/media-source/
+/media-out/
