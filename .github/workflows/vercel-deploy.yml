@@ -60,6 +60,8 @@ jobs:
           NEXT_PUBLIC_APP_URL: https://ci.invalid
           JAVA_API_BASE_URL: http://127.0.0.1:9
           SESSION_SECRET: ci-build-only-session-secret-0123456789
+          # Exercises the media-host paths of the build (CSP img-src and media-src, remotePatterns).
+          NEXT_PUBLIC_MEDIA_HOST: media.ci.invalid
 
   deploy:
     needs: verify
