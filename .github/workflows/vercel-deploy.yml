@@ -48,6 +48,10 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      # Production dependencies only: a high or critical advisory in what the
+      # store ships fails the run before anything reaches Vercel. Development
+      # tooling is left out on purpose; it never reaches a customer.
+      - run: npm audit --omit=dev --audit-level=high
       # F-12: the build is a gate too. It validates the environment at boot
       # (SSOT-03), so it gets the minimum to parse: build-only values that reach
       # nothing — the build makes no call that needs a live backend.
