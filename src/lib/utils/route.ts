@@ -43,3 +43,19 @@ export function declaredLength(request: Request): number | null {
   const length = Number.parseInt(raw, 10);
   return Number.isSafeInteger(length) ? length : null;
 }
+
+/**
+ * F-09 — the answer a BFF route gives when Java refused a request as one too many
+ * (429). The status and `Retry-After` go through to the browser unchanged, so the
+ * browser can tell "wait" apart from "the store is broken" and may use the figure;
+ * the body stays empty (ERR-11 — the words are the page's own).
+ */
+export function rateLimitedResponse(retryAfterSeconds: number | undefined): Response {
+  return new Response(null, {
+    status: 429,
+    headers: {
+      ...NO_STORE,
+      ...(retryAfterSeconds === undefined ? {} : { 'Retry-After': String(retryAfterSeconds) }),
+    },
+  });
+}

@@ -70,7 +70,11 @@ describe('requestBackInStock', () => {
     const request = requestFor('api.guest@example.com');
     server.use(http.post(REQUESTS, answering(received, { kind: 'RECORDED' })));
 
-    const result = await requestBackInStock(request, { accountKey: null, locale: 'ur' });
+    const result = await requestBackInStock(request, {
+      accountKey: null,
+      locale: 'ur',
+      clientAddress: {},
+    });
 
     expect(result).toEqual({ ok: true, value: { kind: 'RECORDED' } });
     expect(received).toEqual([{ locale: 'ur', account: null, body: request }]);
@@ -84,10 +88,29 @@ describe('requestBackInStock', () => {
     const result = await requestBackInStock(request, {
       accountKey: 'customer@example.com',
       locale: 'en',
+      clientAddress: {},
     });
 
     expect(result).toEqual({ ok: true, value: { kind: 'RECORDED' } });
     expect(received).toEqual([{ locale: 'en', account: 'customer@example.com', body: request }]);
+  });
+
+  it('passes on the customer’s address, which Java rate-limits by (F-02)', async () => {
+    let address: string | null = null;
+    server.use(
+      http.post(REQUESTS, ({ request }) => {
+        address = request.headers.get('x-client-ip');
+        return HttpResponse.json({ kind: 'RECORDED' });
+      }),
+    );
+
+    await requestBackInStock(requestFor('api.guest@example.com'), {
+      accountKey: null,
+      locale: 'en',
+      clientAddress: { 'x-client-ip': '203.0.113.9' },
+    });
+
+    expect(address).toBe('203.0.113.9');
   });
 
   it('answers IN_STOCK as a value, not a failure', async () => {
@@ -96,6 +119,7 @@ describe('requestBackInStock', () => {
     const result = await requestBackInStock(requestFor('api.stocked@example.com'), {
       accountKey: null,
       locale: 'en',
+      clientAddress: {},
     });
 
     expect(result).toEqual({ ok: true, value: { kind: 'IN_STOCK' } });
@@ -116,6 +140,7 @@ describe('requestBackInStock', () => {
     const result = await requestBackInStock(requestFor('api.refused@example.com'), {
       accountKey: null,
       locale: 'en',
+      clientAddress: {},
     });
 
     expect(result).toMatchObject({ ok: false, error: { kind } });
@@ -127,6 +152,7 @@ describe('requestBackInStock', () => {
     const result = await requestBackInStock(requestFor('api.offline@example.com'), {
       accountKey: null,
       locale: 'en',
+      clientAddress: {},
     });
 
     expect(result).toMatchObject({ ok: false, error: { kind: 'NETWORK' } });

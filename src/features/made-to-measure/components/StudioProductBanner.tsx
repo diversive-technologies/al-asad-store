@@ -1,6 +1,5 @@
-import type { ComponentType } from 'react';
+import { lazy, Suspense, type ComponentType } from 'react';
 
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
 import { ROUTES } from '@/config/routes';
@@ -21,24 +20,24 @@ function PhotoBox() {
  * Deliberate code split (IMP-01a, PERF-06, PERF-10): this photograph is the
  * only thing on the studio's first paint drawn with `next/image`, and it is
  * drawn only when a product sent the customer here — so a plain visit carried
- * the image component for nothing. It is still rendered on the server (`ssr`
- * stays on), so the photo is in the page's HTML and its code is preloaded with
- * it; arriving from a product by a client navigation, the photo's own box holds
- * its place until it lands, as it did while the image itself was loading.
+ * the image component for nothing. It is still rendered on the server, so the
+ * photo is in the page's HTML; its code is fetched by the client when the page
+ * hydrates, and the photo's own box holds its place until it lands, as it did
+ * while the image itself was loading.
  *
- * `next/dynamic` rather than `onDemandPart`, because only it renders on the
- * server. Its lazy component throws when the download fails, which would take
- * the studio down with it, so the loader never rejects (DATA-03): a photo that
+ * `React.lazy` rather than `onDemandPart`, because only it renders on the
+ * server, and rather than `next/dynamic`, whose loadable wrapper is ~2 kB of
+ * first-load JavaScript on its own (L-01: `/stitched` was 201.8 kB). Its lazy
+ * component throws when the download fails, which would take the studio down
+ * with it, so the loader never rejects (DATA-03): a photo that
  * cannot be downloaded leaves its box empty, and the name and the way back to
  * the garment still stand.
  */
-const StudioProductPhoto = dynamic(
-  () =>
-    import('./StudioProductPhoto').then<PhotoComponent, PhotoComponent>(
-      (module) => module.StudioProductPhoto,
-      () => PhotoBox,
-    ),
-  { loading: PhotoBox },
+const StudioProductPhoto = lazy(() =>
+  import('./StudioProductPhoto').then<{ default: PhotoComponent }, { default: PhotoComponent }>(
+    (module) => ({ default: module.StudioProductPhoto }),
+    () => ({ default: PhotoBox }),
+  ),
 );
 
 export interface StudioProductBannerProps {
@@ -68,7 +67,9 @@ export function StudioProductBanner({ product }: StudioProductBannerProps) {
 
   return (
     <Link href={ROUTES.catalogue.detail(product.slug)} className="mm-product group">
-      <StudioProductPhoto src={product.imageUrl} alt={product.imageAlt} />
+      <Suspense fallback={<PhotoBox />}>
+        <StudioProductPhoto src={product.imageUrl} alt={product.imageAlt} />
+      </Suspense>
       <span className="flex flex-col items-start gap-0.5">
         <span className="text-fg-muted text-xs">{t.productFor}</span>
         <span className="text-fg text-sm font-medium">{product.name}</span>

@@ -31,7 +31,11 @@ export interface CheckoutScreenProps {
 export function CheckoutScreen({ locale, messages }: CheckoutScreenProps) {
   const t = messages.checkout;
   const { quote, choices } = useCheckoutQuote();
-  const { form, outcome, isPlacing, onSubmit, warmUp } = usePlaceOrder(quote, t.failed);
+  const { form, outcome, isPlacing, onSubmit, warmUp } = usePlaceOrder(
+    quote,
+    t.failed,
+    t.rateLimited,
+  );
 
   if (quote.isPending) return <CheckoutSkeleton label={messages.common.loading} />;
 

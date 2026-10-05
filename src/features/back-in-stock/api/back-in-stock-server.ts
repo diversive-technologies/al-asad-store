@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { Locale } from '@/i18n/locales';
 import { apiRequest } from '@/lib/api/client';
+import type { ClientAddressHeaders } from '@/lib/api/client-address';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
 import { API_HEADERS } from '@/lib/api/headers';
@@ -18,6 +19,8 @@ export interface BackInStockAsker {
   readonly accountKey: string | null;
   /** The language the email is to be written in (§23). */
   readonly locale: Locale;
+  /** F-02 — the customer's address for Java's rate limit (A-03); empty when unknown. */
+  readonly clientAddress: ClientAddressHeaders;
 }
 
 /**
@@ -38,7 +41,10 @@ export function requestBackInStock(
     method: 'POST',
     body: request,
     searchParams: { locale: asker.locale },
-    headers: asker.accountKey === null ? {} : { [API_HEADERS.accountKey]: asker.accountKey },
+    headers: {
+      ...asker.clientAddress,
+      ...(asker.accountKey === null ? {} : { [API_HEADERS.accountKey]: asker.accountKey }),
+    },
     schema: backInStockOutcomeSchema,
     next: { revalidate: 0 },
   });

@@ -39,3 +39,13 @@ export const E2E_BASE_URL = E2E_IS_DEPLOYED
  * held to the ordinary timeout.
  */
 export const ARRIVAL = { timeout: 60_000 } as const;
+
+/**
+ * F-01 — the secret the journeys seal their session cookie with, and the one the
+ * suite's own dev server is started with (`playwright.config.ts`), so a cookie
+ * the suite writes is a genuine signed one. Against a deployment
+ * (`E2E_BASE_URL`) the deployment's own `SESSION_SECRET` must be supplied as
+ * `E2E_SESSION_SECRET`, or a signed-in journey runs as a guest.
+ */
+export const E2E_SESSION_SECRET =
+  process.env.E2E_SESSION_SECRET ?? 'e2e-session-secret-0123456789-abcdefghij';

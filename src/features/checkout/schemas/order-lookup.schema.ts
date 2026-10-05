@@ -28,6 +28,16 @@ export const orderLookupRequestSchema = z.object({
 export type OrderLookupRequest = z.infer<typeof orderLookupRequestSchema>;
 
 /**
+ * F-04: Standalone lookup form on `/order`: requires both order number and mobile.
+ */
+export const standaloneOrderLookupSchema = z.object({
+  orderNumber: z.string().trim().min(1).regex(/^[A-Za-z0-9-]{1,64}$/),
+  mobile: ADDRESS_RULES.mobile,
+});
+
+export type StandaloneOrderLookup = z.infer<typeof standaloneOrderLookupSchema>;
+
+/**
  * The backend's answer to a matching lookup: the order, and a fresh token so the
  * browser that proved it can come back without proving it again. The BFF keeps
  * the token and passes on only the order.

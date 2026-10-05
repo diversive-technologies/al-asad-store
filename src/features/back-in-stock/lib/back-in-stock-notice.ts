@@ -62,6 +62,8 @@ export function backInStockNotice(
       return status(words.inStock, values);
     case 'NOT_OFFERED':
       return { role: 'alert', text: formatTemplate(words.notOffered, values) };
+    case 'RATE_LIMITED':
+      return { role: 'alert', text: words.rateLimited };
     case 'UNREACHABLE':
       return { role: 'alert', text: words.unreachable };
     case 'EMAIL_REQUIRED':

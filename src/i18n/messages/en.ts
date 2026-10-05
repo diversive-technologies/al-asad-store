@@ -170,6 +170,8 @@ export const en = {
     inStock: 'Size {size} can be bought again. The sizes have been refreshed so you can choose it.',
     notOffered: 'Size {size} is no longer offered. Refresh the page to see the sizes there are.',
     unreachable: 'We could not take your request just now. Please try again.',
+    /* F-09 — Java's per-address limit on Notify Me requests. */
+    rateLimited: 'Please wait a few minutes and try again.',
   },
   /*
    * §28.3's saved sizes. A size is saved only when a signed-in customer asks, per
@@ -244,6 +246,8 @@ export const en = {
     subscribeCta: 'Subscribe',
     successMessage: 'You are on the list. Look out for the next launch.',
     invalidEmail: 'Enter a valid email address.',
+    /* F-09 — Java's per-address limit on subscriptions. */
+    rateLimited: 'Please wait a few minutes and try again.',
   },
   auth: {
     signInHeading: 'Sign in',
@@ -303,9 +307,18 @@ export const en = {
     resetCta: 'Send reset link',
     resetSent: 'If that address has an account, a reset link is on its way.',
     backToSignIn: 'Back to sign in',
+    /* F-03 — the page a reset link opens. Nothing here says whether an account exists. */
+    newPasswordHeading: 'Choose a new password',
+    newPasswordBody: 'Enter a new password for your account.',
+    newPasswordLabel: 'New password',
+    resetConfirmCta: 'Save new password',
+    resetDone: 'Your password has been changed. You can now sign in with it.',
+    resetLinkExpired: 'This link has expired or was already used.',
+    resetLinkExpiredCta: 'Ask for a new link',
   },
   footer: {
     helpHeading: 'Help',
+    findOrder: 'Find my order',
     shopHeading: 'Shop',
     fabricGlossary: 'Fabric glossary',
     paymentGuide: 'Payment guide',
@@ -454,6 +467,8 @@ export const en = {
     expiredBody: 'These went back on sale before you finished: {items}. Please review your bag.',
     backToBag: 'Back to the bag',
     failedTitle: 'We could not place your order',
+    /* F-09 — Java's per-address limit on placement; refused before anything was placed. */
+    rateLimited: 'Please wait a few minutes and try again.',
     failed: 'We could not place your order. Nothing has been charged. Please try again.',
     /* ERR-02 — no answer came back, which is not the same as a refusal: the order
        may exist. Nothing here claims it failed or that nothing was charged. */
@@ -488,6 +503,7 @@ export const en = {
     /* True in every state an order can be in. "Confirmed" was said of cash
        orders awaiting confirmation and transfers awaiting payment (§6.6). */
     title: 'Order placed',
+    cancelledTitle: 'This order was cancelled',
     /* Prominent, because §28.3 tracks a guest order by exactly this. */
     numberLabel: 'Order number',
     placedOn: 'Placed: {date}',
@@ -510,9 +526,13 @@ export const en = {
      */
     lookupHeading: 'Find your order',
     lookupBody: 'Enter the mobile number this order was placed with to see it.',
+    lookupStandaloneBody: 'Enter your order number and the mobile number it was placed with.',
     lookupSubmit: 'Show my order',
     lookupNotFound: 'We could not find an order with that number and mobile number.',
     lookupFailed: 'We could not check that just now. Please try again.',
+    lookupRateLimited: 'Too many attempts. Please wait a few minutes and try again.',
+    orderNumberInvalid: 'Enter a valid order number.',
+    findOrder: 'Find my order',
     /*
      * An order paid by transfer carries where to pay. Checkout promises "our
      * account", so the confirmation has to name it — and the reference is the
@@ -575,6 +595,8 @@ export const en = {
     /* I18N-06 — the whole phrase, so a translation can put the count first. */
     ordersMoreItems: { one: '{item} and {count} more', other: '{item} and {count} more' },
     ordersView: 'View',
+    ordersCancelled: 'Cancelled',
+    ordersFindOrder: 'Find my order',
     /* §28.3 — the history a page at a time, as links that work without JavaScript. */
     ordersShowMore: 'Show more orders',
     ordersShowOlder: 'Show older orders',

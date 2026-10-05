@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { orderNumberSchema } from '@/lib/domain/ids';
 
+import { orderStateSchema } from './checkout.schema';
+
 /**
  * SSOT-09 — §28.3's order history, one PAGE at a time.
  *
@@ -28,7 +30,8 @@ export const ACCOUNT_ORDERS_PAGE_MAX = 100;
  * purchase history on the wire for a summary.
  *
  * It is a LIST and not tracking. Order tracking is out of the MVP by operator
- * decision, so nothing here carries a status, and no wording implies one.
+ * decision, so nothing here carries a status, and no wording implies one, except
+ * F-05's cancelled marker.
  */
 export const accountOrderSchema = z.object({
   orderNumber: orderNumberSchema,
@@ -38,6 +41,8 @@ export const accountOrderSchema = z.object({
   lineCount: z.number().int().nonnegative(),
   /** The first line's name AS IT WAS — what makes an order recognisable. */
   firstItem: z.string(),
+  /** F-05: State of the order, used to mark cancelled orders. */
+  state: orderStateSchema.optional(),
 });
 
 /**

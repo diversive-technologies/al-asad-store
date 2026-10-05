@@ -5,8 +5,11 @@ import {
   codeIssuedSchema,
   codeRequestSchema,
   codeSignInSchema,
+  newPasswordSchema,
+  passwordResetConfirmSchema,
   passwordResetSchema,
   passwordSignInSchema,
+  resetTokenSchema,
   signUpSchema,
 } from './auth.schema';
 
@@ -79,5 +82,67 @@ describe('what issueCode may answer', () => {
     ['the demo sign-in code', { devCode: '123456' }],
   ])('accepts %s', (_label, answer) => {
     expect(codeIssuedSchema.safeParse(answer).success).toBe(true);
+  });
+});
+
+const TOKEN = 'a1'.repeat(32);
+
+/** F-03 — the token a reset email carries, and the new password chosen with it. */
+describe('the password-reset confirmation', () => {
+  it('accepts a 64-character hexadecimal token, in either case', () => {
+    expect(resetTokenSchema.safeParse(TOKEN).success).toBe(true);
+    expect(resetTokenSchema.safeParse(TOKEN.toUpperCase()).success).toBe(true);
+  });
+
+  it.each([
+    ['empty', ''],
+    ['too short', 'abc123'],
+    ['one character too long', `${TOKEN}0`],
+    ['not hexadecimal', 'g'.repeat(64)],
+    ['padded with a space', ` ${TOKEN.slice(1)}`],
+    ['absent', undefined],
+    ['a repeated query value', [TOKEN, TOKEN]],
+  ])('refuses a token that is %s', (_label, token) => {
+    expect(resetTokenSchema.safeParse(token).success).toBe(false);
+  });
+
+  it('accepts a token with two matching passwords of eight characters or more', () => {
+    const input = {
+      token: TOKEN,
+      password: 'a long passphrase',
+      confirmPassword: 'a long passphrase',
+    };
+
+    expect(passwordResetConfirmSchema.safeParse(input).success).toBe(true);
+    expect(newPasswordSchema.safeParse(input).success).toBe(true);
+  });
+
+  it('refuses a password under eight characters, and one over 200', () => {
+    for (const password of ['short', 'x'.repeat(201)]) {
+      expect(
+        passwordResetConfirmSchema.safeParse({ token: TOKEN, password, confirmPassword: password })
+          .success,
+      ).toBe(false);
+    }
+  });
+
+  it('reports a mismatch on the confirm box, beside what has to change', () => {
+    const result = newPasswordSchema.safeParse({
+      password: 'a long passphrase',
+      confirmPassword: 'another long passphrase',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path.join('.'))).toEqual(['confirmPassword']);
+  });
+
+  it('refuses a malformed token inside the action input', () => {
+    const input = {
+      token: 'nope',
+      password: 'a long passphrase',
+      confirmPassword: 'a long passphrase',
+    };
+
+    expect(passwordResetConfirmSchema.safeParse(input).success).toBe(false);
   });
 });

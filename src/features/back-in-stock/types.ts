@@ -5,13 +5,14 @@ import type { PieceId, ProductId, SizeId } from '@/lib/domain/ids';
  *
  * `INVALID` — the address was refused (a 400); it goes back on the field.
  * `NOT_OFFERED` — the store no longer sells that size (a 404), so the page is out
- * of date. `UNREACHABLE` — anything else, which the customer can only retry.
+ * of date. `RATE_LIMITED` — Java's per-address limit (a 429, F-09): wait.
+ * `UNREACHABLE` — anything else, which the customer can only retry.
  *
  * Not a wire shape, so not a schema (SSOT-09): it is what our own BFF's statuses
  * mean to the page, and the pure words module needs it without the fetch.
  */
 export interface BackInStockError {
-  readonly kind: 'INVALID' | 'NOT_OFFERED' | 'UNREACHABLE';
+  readonly kind: 'INVALID' | 'NOT_OFFERED' | 'RATE_LIMITED' | 'UNREACHABLE';
 }
 
 /** A size the overlay reported sold out, as the selector names it. */

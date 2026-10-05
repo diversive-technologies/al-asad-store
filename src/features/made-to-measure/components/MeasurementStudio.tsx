@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 
 import { useObjectUrl } from '@/hooks/use-object-url';
 import type { Locale } from '@/i18n/locales';
@@ -10,8 +10,28 @@ import type { StudioSet, StyleChoice } from '../lib/studio-set';
 import type { MeasurementProfiles } from '../schemas/profile.schema';
 import { MeasurementPanel } from './MeasurementPanel';
 import { MeasurementStage } from './MeasurementStage';
-import { SavedMeasurements } from './SavedMeasurements';
+import type { SavedOfferProps } from './SavedOffer';
 import { studioFlow } from './studio-flow';
+
+/*
+ * Deliberate code split (PERF-10, L-01): the offer to reuse saved figures — the
+ * matching of what is on file to this list, and the section that offers it — is
+ * drawn only for a signed-in customer who has saved some, yet it sat in the first
+ * load of every visit and, with the rest, put `/stitched` over its 200 kB budget.
+ * Now it is downloaded only when the page arrived with saved profiles.
+ *
+ * `lazy` rather than `onDemandPart` because the offer is still rendered on the
+ * server: it is in the page's HTML, and the form does not wait for it. A download
+ * that fails leaves the offer out (it is a convenience, never a step) rather than
+ * throwing into the route's error page, which would take every figure typed.
+ */
+type SavedOfferComponent = ComponentType<SavedOfferProps>;
+const SavedOffer = lazy(() =>
+  import('./SavedOffer').then<{ default: SavedOfferComponent }, { default: SavedOfferComponent }>(
+    (module) => ({ default: module.SavedOffer }),
+    () => ({ default: () => null }),
+  ),
+);
 
 export interface MeasurementStudioProps {
   readonly studio: StudioSet;
@@ -42,8 +62,8 @@ export function MeasurementStudio({
 }: MeasurementStudioProps) {
   // Held here, above every switch of style or path, until the page closes.
   const cardPhoto = useObjectUrl();
-  const { asked, choices, measuring, notes, saving, saved, selection, focus, ...fields } =
-    useMeasurementStudio(studio, profiles);
+  const { asked, choices, measuring, notes, saving, selection, focus, ...fields } =
+    useMeasurementStudio(studio);
   const flow = studioFlow({ measuring, focus, choices, notes, selection, check: saving.check });
 
   return (
@@ -69,15 +89,17 @@ export function MeasurementStudio({
         slots={{
           notice,
           saved:
-            saved.offer === null ? null : (
-              <SavedMeasurements
-                offer={saved.offer}
-                taken={saved.taken}
-                onTake={saved.take}
-                studio={studio}
-                styles={choice.options}
-                locale={locale}
-              />
+            profiles.length === 0 ? null : (
+              <Suspense fallback={null}>
+                <SavedOffer
+                  studio={studio}
+                  profiles={profiles}
+                  measuring={measuring}
+                  choices={choices}
+                  styles={choice.options}
+                  locale={locale}
+                />
+              </Suspense>
             ),
         }}
         onChange={fields.change}

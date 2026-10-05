@@ -44,6 +44,7 @@ export function Footer({ messages, newsletter, localeSwitcher }: FooterProps) {
   ];
 
   const helpLinks: FooterLink[] = [
+    { key: 'find-order', href: ROUTES.findOrder, label: t.findOrder },
     { key: 'delivery', href: ROUTES.help.page(STORE_PAGE_SLUGS.delivery), label: t.delivery },
     { key: 'returns', href: ROUTES.help.page(STORE_PAGE_SLUGS.returns), label: t.returns },
     { key: 'size', href: ROUTES.help.sizeGuide, label: t.sizeGuide },

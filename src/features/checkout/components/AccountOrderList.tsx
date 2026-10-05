@@ -36,6 +36,11 @@ export function AccountOrderList({ orders, locale, messages }: AccountOrderListP
             {/* I18N-04 — the number is Latin inside an Urdu line. */}
             <bdi>{order.orderNumber}</bdi>
           </p>
+          {order.state === 'CANCELLED' ? (
+            <span className="rounded bg-fill-muted px-2 py-0.5 text-xs font-medium text-fg-muted">
+              {t.ordersCancelled}
+            </span>
+          ) : null}
           <p className="text-fg-muted text-sm">{formatDate(order.placedAt, locale)}</p>
           {/*
            * I18N-06 — ONE parameterised message, not a name with a fragment

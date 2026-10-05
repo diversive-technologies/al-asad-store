@@ -18,6 +18,19 @@ import { describe, expect, it } from 'vitest';
  */
 
 const API_ROOT = fileURLToPath(new URL('../../../app/api', import.meta.url));
+/**
+ * Write routes that are NOT called by a browser and so cannot be checked for an
+ * origin: a server-to-server call carries none. Each is authorised by something
+ * stronger and each is listed here on purpose - adding a route to this list is
+ * a decision, not a way round the rule.
+ *
+ *   revalidate/route.ts - F-06, the Java worker; the shared `x-revalidate-secret`.
+ */
+const SECRET_AUTHORISED = ['revalidate/route.ts'];
+
+const isSecretAuthorised = (name: string): boolean =>
+  SECRET_AUTHORISED.some((path) => name.endsWith(path));
+
 const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'] as const;
 
 function routeFiles(): string[] {
@@ -77,11 +90,25 @@ describe('SEC-08 across app/api', () => {
     expect(writeHandlers().length).toBeGreaterThanOrEqual(15);
   });
 
-  it.each(writeHandlers())('%s refuses another origin first', (_name, body) => {
-    const check = body.indexOf('if (!isSameOrigin(request))');
-    const firstRead = body.search(/readJsonBody|readFormBody|readCartId|context\.params/);
+  it('exempts only the route that proves itself with the shared secret, before reading a body', () => {
+    const exempt = writeHandlers().filter(([name]) => isSecretAuthorised(name));
 
-    expect(check).toBeGreaterThan(-1);
-    expect(firstRead === -1 || check < firstRead).toBe(true);
+    expect(exempt).toHaveLength(SECRET_AUTHORISED.length);
+    for (const [, body] of exempt) {
+      const check = body.indexOf('secretMatches(');
+      expect(check).toBeGreaterThan(-1);
+      expect(check).toBeLessThan(body.search(/readJsonBody/));
+    }
   });
+
+  it.each(writeHandlers().filter(([name]) => !isSecretAuthorised(name)))(
+    '%s refuses another origin first',
+    (_name, body) => {
+      const check = body.indexOf('if (!isSameOrigin(request))');
+      const firstRead = body.search(/readJsonBody|readFormBody|readCartId|context\.params/);
+
+      expect(check).toBeGreaterThan(-1);
+      expect(firstRead === -1 || check < firstRead).toBe(true);
+    },
+  );
 });

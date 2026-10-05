@@ -11,6 +11,12 @@ export const CART_COOKIE_NAME = clientKey('cart');
 export const DEVICE_COOKIE_NAME = clientKey('measurements');
 
 /**
+ * M-03 — the anonymous visitor: a random UUID that lets the shop count visits. It
+ * is not linked to a name or an account, and the proxy sets it, not a component.
+ */
+export const VISITOR_COOKIE_NAME = clientKey('visitor');
+
+/**
  * SEC-01 — the options every CAPABILITY cookie carries: the cart id, a
  * measurements device token — anything whose holder holds what it names.
  *

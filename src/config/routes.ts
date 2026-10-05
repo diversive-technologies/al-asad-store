@@ -69,6 +69,8 @@ export const ROUTES = {
   signInFrom: (returnTo: string | null) => withReturnTo(SIGN_IN, returnTo),
   signUpFrom: (returnTo: string | null) => withReturnTo(SIGN_UP, returnTo),
   forgotPassword: '/forgot-password',
+  /** F-03 — the page a password-reset email links to; the one-time token is in `?token=`. */
+  resetPassword: '/reset-password',
   /** §34 — the measurement studio, usable without buying anything. */
   stitched: '/stitched',
   /**
@@ -118,6 +120,10 @@ export const ROUTES = {
    * and the two never overlap.
    */
   api: {
+    /** F-08 — GET: `200 {"status":"UP"}` while Java answers, otherwise `503 {"status":"DOWN"}`. */
+    health: '/api/health',
+    /** F-08 — POST: the browser's error boundaries report an error here, once each. Always 204. */
+    clientError: '/api/client-error',
     suggest: '/api/suggest',
     fabricCalculator: '/api/fabric-calculator',
     /** Section 24. Multipart in, one JSON image out — see app/api/try-on. */
@@ -213,6 +219,8 @@ export const ROUTES = {
   /** §28.3's address book, managed on its own page so `/account` stays a read. */
   accountAddresses: '/account/addresses',
   checkout: '/checkout',
+  /** F-04: Standalone order lookup route. */
+  findOrder: '/order',
   /** §28.3 — the order number is the address, so it can be shared and returned to. */
   orderConfirmation: (orderNumber: string) => `${ORDER_PREFIX}${encodeURIComponent(orderNumber)}`,
   /** The start every order's address shares; nothing is served at it alone. */

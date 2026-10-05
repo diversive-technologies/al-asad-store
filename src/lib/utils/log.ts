@@ -1,4 +1,5 @@
 import type { ApiError } from '@/lib/api/errors';
+import { reportToTracker } from '@/lib/observability/error-reporter';
 
 /**
  * ERR-10 — errors are logged once, at the boundary that handles them.
@@ -13,6 +14,16 @@ export function logApiError(context: string, error: ApiError): void {
   // SEC-10: the ApiError union carries no customer data, credentials or
   // response bodies — only a kind, a diagnostic message and a request path.
   console.error(`[${context}] ${error.kind}: ${error.message}`);
+  /*
+   * F-08: the tracker gets the same words, masked of any email or mobile on the
+   * way. A contract violation's failing keys go with it, so it can be grouped by
+   * the field that broke — `code` and `path` only, as below (SEC-10).
+   */
+  const issues =
+    error.kind === 'CONTRACT_VIOLATION'
+      ? ` (${error.path}: ${error.issues.map((issue) => `${issue.path.join('.') || '(root)'} ${issue.code}`).join(', ')})`
+      : '';
+  reportToTracker('error', context, `${error.kind}: ${error.message}${issues}`);
 
   /*
    * A contract violation without its issues is close to undiagnosable: the
@@ -38,6 +49,8 @@ export function logApiError(context: string, error: ApiError): void {
  */
 export function logContentIssue(context: string, detail: string): void {
   console.error(`[${context}] ${detail}`);
+  // F-08: a content problem is a warning to the tracker — the page still rendered.
+  reportToTracker('warning', context, detail);
 }
 
 /**
@@ -49,4 +62,6 @@ export function logContentIssue(context: string, detail: string): void {
  */
 export function logProviderFailure(context: string, detail: string): void {
   console.error(`[${context}] ${detail}`);
+  // F-08: a failing provider is an error to the tracker, masked on the way.
+  reportToTracker('error', context, detail);
 }

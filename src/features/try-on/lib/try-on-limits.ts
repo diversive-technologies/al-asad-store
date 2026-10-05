@@ -51,6 +51,15 @@ export const MAX_EDGE_PX = 1024;
 export const PROVIDER_TIMEOUT_MS = 30_000;
 
 /**
+ * R-04 — fetching the garment's photograph from the media CDN: how long to wait
+ * and the most it will read. The 1600-wide AVIF the catalogue carries is a few
+ * hundred kilobytes; 3 MB is generous headroom, and a larger body is not a
+ * product photograph.
+ */
+export const GARMENT_FETCH_TIMEOUT_MS = 5_000;
+export const MAX_GARMENT_BYTES = 3_000_000;
+
+/**
  * Whether the module refuses this photograph outright.
  *
  * SEC-03 — enforced here as well as in the picker, because the picker runs in

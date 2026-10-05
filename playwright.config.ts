@@ -1,6 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
-import { E2E_BASE_URL, E2E_IS_DEPLOYED, E2E_PORT } from './tests/e2e/support/server';
+import {
+  E2E_BASE_URL,
+  E2E_IS_DEPLOYED,
+  E2E_PORT,
+  E2E_SESSION_SECRET,
+} from './tests/e2e/support/server';
 
 /**
  * TEST-07 — the critical customer journeys, end to end: a real `next dev`, the
@@ -72,7 +77,7 @@ export default defineConfig({
           timeout: 180_000,
           stdout: 'ignore',
           stderr: 'pipe',
-          env: { NEXT_PUBLIC_APP_URL: E2E_BASE_URL },
+          env: { NEXT_PUBLIC_APP_URL: E2E_BASE_URL, SESSION_SECRET: E2E_SESSION_SECRET },
         },
       }),
 });

@@ -41,7 +41,7 @@ describe('what a Notify Me answer says', () => {
     expect(backInStockNotice(kind, subject, en.backInStock)).toEqual({ role: 'status', text });
   });
 
-  it.each(['NOT_OFFERED', 'UNREACHABLE'] as const)(
+  it.each(['NOT_OFFERED', 'RATE_LIMITED', 'UNREACHABLE'] as const)(
     'raises %s as an alert, because the request did not go through',
     (kind) => {
       expect(backInStockNotice(kind, PRODUCT, en.backInStock)?.role).toBe('alert');
@@ -60,6 +60,7 @@ describe('what a Notify Me answer says', () => {
     'ALREADY_RECORDED',
     'IN_STOCK',
     'NOT_OFFERED',
+    'RATE_LIMITED',
     'UNREACHABLE',
   ];
 
@@ -72,5 +73,17 @@ describe('what a Notify Me answer says', () => {
 
   it.each(EVERY_KIND)('never mentions an account in %s', (kind) => {
     expect(backInStockNotice(kind, PIECE, en.backInStock)?.text).not.toMatch(/account/i);
+  });
+});
+
+describe('Java’s limit on Notify Me requests (F-09)', () => {
+  it('says to wait, as an alert, in both languages', () => {
+    expect(backInStockNotice('RATE_LIMITED', PRODUCT, en.backInStock)).toEqual({
+      role: 'alert',
+      text: 'Please wait a few minutes and try again.',
+    });
+    expect(backInStockNotice('RATE_LIMITED', PRODUCT, ur.backInStock)?.text).toBe(
+      ur.backInStock.rateLimited,
+    );
   });
 });

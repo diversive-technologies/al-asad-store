@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 
 import { ROUTES } from '@/config/routes';
 
-import { fetchQuote, placeOrder } from './checkout-browser';
+import { fetchQuote, lookUpOrder, placeOrder } from './checkout-browser';
 
 /**
  * TEST-08 — BUG-10: with the store unreachable, `/checkout` said "There is
@@ -158,6 +158,20 @@ describe('placeOrder', () => {
     });
   });
 
+  it('says RATE_LIMITED for Java’s limit on placement (F-09): nothing was placed, wait', async () => {
+    server.use(
+      http.post(
+        PLACE_URL,
+        () => new HttpResponse(null, { status: 429, headers: { 'Retry-After': '120' } }),
+      ),
+    );
+
+    await expect(placeOrder(REQUEST)).resolves.toEqual({
+      ok: false,
+      error: { kind: 'RATE_LIMITED' },
+    });
+  });
+
   it.each([
     { label: 'the store not answering', respond: () => new HttpResponse(null, { status: 502 }) },
     { label: 'a request that never completed', respond: () => HttpResponse.error() },
@@ -168,6 +182,33 @@ describe('placeOrder', () => {
     await expect(placeOrder(REQUEST)).resolves.toEqual({
       ok: false,
       error: { kind: 'UNCONFIRMED' },
+    });
+  });
+});
+
+/**
+ * F-09 — the order lookup (an order's own page, and the find-my-order page, which
+ * share this call) says to wait when Java's limit refuses it, rather than that no
+ * order matched.
+ */
+describe('lookUpOrder', () => {
+  const LOOKUP_URL = `${ORIGIN}${ROUTES.api.checkoutOrderLookup('AA100001')}`;
+
+  it('reports Java’s limit as RATE_LIMITED, not as an order that was not found', async () => {
+    server.use(http.post(LOOKUP_URL, () => new HttpResponse(null, { status: 429 })));
+
+    await expect(lookUpOrder('AA100001', { mobile: '03001234567' })).resolves.toEqual({
+      ok: false,
+      error: { kind: 'RATE_LIMITED' },
+    });
+  });
+
+  it('still reads a miss as no order', async () => {
+    server.use(http.post(LOOKUP_URL, () => new HttpResponse(null, { status: 404 })));
+
+    await expect(lookUpOrder('AA100001', { mobile: '03001234567' })).resolves.toEqual({
+      ok: true,
+      value: null,
     });
   });
 });

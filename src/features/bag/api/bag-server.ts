@@ -97,14 +97,20 @@ export function addItem(
    * add, which names no profile.
    */
   measurementOwner?: string,
+  /** M-03 — the anonymous visitor, so Java can attach it to the `add_to_bag` event it records. */
+  visitor: Readonly<Record<string, string>> = {},
 ): Promise<Result<AddToBagResult, ApiError>> {
   return apiRequest({
     path: ENDPOINTS.bag.items(cartId),
     schema: addToBagResultSchema,
     method: 'POST',
     body: request,
-    headers:
-      measurementOwner === undefined ? {} : { [API_HEADERS.measurementOwner]: measurementOwner },
+    headers: {
+      ...visitor,
+      ...(measurementOwner === undefined
+        ? {}
+        : { [API_HEADERS.measurementOwner]: measurementOwner }),
+    },
     searchParams: { locale },
     next: { revalidate: 0 },
   });

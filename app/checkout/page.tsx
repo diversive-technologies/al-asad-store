@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 
+import { ROUTES } from '@/config/routes';
+import { fetchBagSummary, readCartId } from '@/features/bag';
 import { CheckoutScreen } from '@/features/checkout/contract';
 import { getLocale, getMessages } from '@/i18n';
+import { recordPageEventsIf } from '@/lib/analytics';
 
 export async function generateMetadata(): Promise<Metadata> {
   const messages = await getMessages();
@@ -20,6 +23,19 @@ export async function generateMetadata(): Promise<Metadata> {
  * form with per-field validation is client work (FORM-02).
  */
 export default async function CheckoutPage() {
-  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  const [locale, messages, cartId] = await Promise.all([getLocale(), getMessages(), readCartId()]);
+
+  /* M-03 — "checkout started" means a bag with something in it. The bag is read
+     after the response has gone, so the page does not wait for the count. */
+  if (cartId !== null) {
+    await recordPageEventsIf(
+      async () => {
+        const bag = await fetchBagSummary(cartId, locale);
+        return bag.ok && bag.value.itemCount > 0;
+      },
+      { type: 'checkout_started', path: ROUTES.checkout },
+    );
+  }
+
   return <CheckoutScreen locale={locale} messages={messages} />;
 }

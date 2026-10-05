@@ -47,14 +47,25 @@ export function afterRefusal(refusal: PlacementRefusal): PlacementFollowUp {
  * "nothing to check out" over an order that went through would be the wrong
  * thing to say.
  *
+ * `RATE_LIMITED` (F-09) is answered too: the limit is checked before §7.2 runs,
+ * so nothing was placed, and what the customer needs is to be told to wait.
+ *
  * @param failedReason The words for a placement refused with no reason of its own.
+ * @param rateLimitedReason The words for a placement refused as one too many.
  */
-export function afterFailure(error: PlaceOrderError, failedReason: string): PlacementFollowUp {
-  return error.kind === 'NOT_PLACED'
-    ? {
-        outcome: { kind: 'PAYMENT_FAILED', reason: failedReason },
-        rereadQuote: false,
-        rereadBag: false,
-      }
-    : { outcome: { kind: 'UNCONFIRMED' }, rereadQuote: false, rereadBag: true };
+export function afterFailure(
+  error: PlaceOrderError,
+  failedReason: string,
+  rateLimitedReason: string,
+): PlacementFollowUp {
+  if (error.kind === 'UNCONFIRMED') {
+    return { outcome: { kind: 'UNCONFIRMED' }, rereadQuote: false, rereadBag: true };
+  }
+
+  const reason = error.kind === 'RATE_LIMITED' ? rateLimitedReason : failedReason;
+  return {
+    outcome: { kind: 'PAYMENT_FAILED', reason },
+    rereadQuote: false,
+    rereadBag: false,
+  };
 }

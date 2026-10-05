@@ -115,11 +115,44 @@ function kindOf(result: { ok: boolean; error?: { kind: string } }): string {
   return result.ok ? 'OK' : (result.error?.kind ?? 'UNKNOWN');
 }
 
+/** F-02 — placement and the lookup are rate-limited per address (A-03), so the address goes with them. */
+describe('the customer’s address on placement and lookup', () => {
+  const ADDRESS = { 'x-client-ip': '203.0.113.9' };
+
+  it('goes with an order being placed', async () => {
+    let seen: string | null = null;
+    server.use(
+      http.post(`*${ENDPOINTS.checkout.place(CART_ID)}`, ({ request }) => {
+        seen = request.headers.get('x-client-ip');
+        return HttpResponse.json({ kind: 'PLACED', order: ORDER, accessToken: PLACEMENT_TOKEN });
+      }),
+    );
+
+    await placeForCustomer(CART_ID, PLACEMENT, 'en', null, ADDRESS);
+
+    expect(seen).toBe('203.0.113.9');
+  });
+
+  it('goes with a lookup by mobile', async () => {
+    let seen: string | null = null;
+    server.use(
+      http.post(`*${ENDPOINTS.checkout.orderLookup(ORDER_NUMBER)}`, ({ request }) => {
+        seen = request.headers.get('x-client-ip');
+        return HttpResponse.json({ order: ORDER, accessToken: LOOKUP_TOKEN });
+      }),
+    );
+
+    await lookUpOrderFor(ORDER_NUMBER, { mobile: MOBILE }, ADDRESS);
+
+    expect(seen).toBe('203.0.113.9');
+  });
+});
+
 describe('reading an order back', () => {
   it('opens the confirmation for the browser that placed it, with no token in the answer', async () => {
     server.use(placing, ...readableBy({ token: PLACEMENT_TOKEN }, ORDER_NUMBER));
 
-    const placed = await placeForCustomer(CART_ID, PLACEMENT, 'en', null);
+    const placed = await placeForCustomer(CART_ID, PLACEMENT, 'en', null, {});
 
     expect(placed).toEqual({ ok: true, value: { kind: 'PLACED', order: ORDER } });
     expect(JSON.stringify(placed)).not.toContain(PLACEMENT_TOKEN);
@@ -128,7 +161,7 @@ describe('reading an order back', () => {
 
   it('refuses a browser holding no token: the number alone reads nothing', async () => {
     server.use(placing, ...readableBy({ token: PLACEMENT_TOKEN }, ORDER_NUMBER));
-    await placeForCustomer(CART_ID, PLACEMENT, 'en', null);
+    await placeForCustomer(CART_ID, PLACEMENT, 'en', null, {});
     jar.values.clear();
 
     expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('NOT_FOUND');
@@ -155,14 +188,16 @@ describe('§28.3 finding an order again by its mobile number', () => {
   it('passes a wrong mobile on as NOT_FOUND, and keeps nothing for this browser', async () => {
     server.use(lookupAt(ORDER_NUMBER), ...readableBy({ token: LOOKUP_TOKEN }, ORDER_NUMBER));
 
-    expect(kindOf(await lookUpOrderFor(ORDER_NUMBER, { mobile: '03119876543' }))).toBe('NOT_FOUND');
+    expect(kindOf(await lookUpOrderFor(ORDER_NUMBER, { mobile: '03119876543' }, {}))).toBe(
+      'NOT_FOUND',
+    );
     expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('NOT_FOUND');
   });
 
   it('opens the order for the right mobile, and keeps it open for this browser', async () => {
     server.use(lookupAt(ORDER_NUMBER), ...readableBy({ token: LOOKUP_TOKEN }, ORDER_NUMBER));
 
-    expect(kindOf(await lookUpOrderFor(ORDER_NUMBER, { mobile: MOBILE }))).toBe('OK');
+    expect(kindOf(await lookUpOrderFor(ORDER_NUMBER, { mobile: MOBILE }, {}))).toBe('OK');
     expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('OK');
   });
 
@@ -175,7 +210,7 @@ describe('§28.3 finding an order again by its mobile number', () => {
     const typed = orderNumberSchema.parse(ORDER_NUMBER.toLowerCase());
     server.use(lookupAt(typed), ...readableBy({ token: LOOKUP_TOKEN }, typed, ORDER_NUMBER));
 
-    expect(kindOf(await lookUpOrderFor(typed, { mobile: MOBILE }))).toBe('OK');
+    expect(kindOf(await lookUpOrderFor(typed, { mobile: MOBILE }, {}))).toBe('OK');
     expect(kindOf(await readOrderFor(typed, null))).toBe('OK');
     expect(kindOf(await readOrderFor(ORDER_NUMBER, null))).toBe('OK');
   });

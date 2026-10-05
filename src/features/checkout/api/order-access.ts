@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { Locale } from '@/i18n/locales';
+import type { ClientAddressHeaders } from '@/lib/api/client-address';
 import type { ApiError } from '@/lib/api/errors';
 import type { CartId, OrderNumber } from '@/lib/domain/ids';
 import { ok, type Result } from '@/lib/result';
@@ -31,8 +32,9 @@ export async function placeForCustomer(
   request: PlaceOrderRequest,
   locale: Locale,
   accountKey: string | null,
+  clientAddress: ClientAddressHeaders,
 ): Promise<Result<PlaceOrderResult, ApiError>> {
-  const result = await placeOrder(cartId, request, locale, accountKey);
+  const result = await placeOrder(cartId, request, locale, accountKey, clientAddress);
   if (!result.ok || result.value.kind !== 'PLACED') return result;
 
   const { accessToken, ...placed } = result.value;
@@ -61,8 +63,9 @@ export async function readOrderFor(
 export async function lookUpOrderFor(
   orderNumber: OrderNumber,
   request: OrderLookupRequest,
+  clientAddress: ClientAddressHeaders,
 ): Promise<Result<Order, ApiError>> {
-  const result = await lookupOrder(orderNumber, request);
+  const result = await lookupOrder(orderNumber, request, clientAddress);
   if (!result.ok) return result;
 
   const { order, accessToken } = result.value;

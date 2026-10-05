@@ -5,9 +5,11 @@ import {
   requestBackInStock,
 } from '@/features/back-in-stock';
 import { getLocale } from '@/i18n';
+import { visitorHeaders } from '@/lib/analytics';
+import { clientAddressHeader } from '@/lib/api/client-address';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
-import { NO_STORE, readJsonBody } from '@/lib/utils/route';
+import { NO_STORE, rateLimitedResponse, readJsonBody } from '@/lib/utils/route';
 
 /**
  * DATA-08 — §28.2's Notify Me, for the browser.
@@ -31,9 +33,19 @@ export async function POST(request: Request): Promise<Response> {
   if (!body.success) return new Response(null, { status: 400, headers: NO_STORE });
 
   const [accountKey, locale] = await Promise.all([currentAccountKey(), getLocale()]); // PERF-02
-  const answer = await requestBackInStock(body.data, { accountKey, locale });
+  const answer = await requestBackInStock(body.data, {
+    accountKey,
+    locale,
+    // F-02 the customer's address, and M-03 the visitor Java records `notify_me_requested` against.
+    clientAddress: { ...clientAddressHeader(request), ...(await visitorHeaders(request)) },
+  });
 
   if (!answer.ok) {
+    // F-09 — Java's per-address limit (A-03): wait, passed through with its Retry-After.
+    if (answer.error.kind === 'RATE_LIMITED') {
+      return rateLimitedResponse(answer.error.retryAfterSeconds);
+    }
+
     // A refused address goes back on the field; an unknown size means a stale page.
     const status = backInStockFailureStatus(answer.error);
     if (status === 502) logApiError('api:back-in-stock', answer.error); // ERR-10, at the boundary

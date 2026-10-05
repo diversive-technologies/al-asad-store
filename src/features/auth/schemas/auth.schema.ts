@@ -126,6 +126,35 @@ export const passwordResetSchema = z.object({ email: z.email() });
 export type PasswordResetInput = z.infer<typeof passwordResetSchema>;
 
 /**
+ * F-03 — the token a reset email carries: 64 hexadecimal characters, which is the
+ * backend's own rule for it. A link that does not carry one is treated exactly
+ * like an expired one — nothing is sent, and nothing is said about why.
+ */
+export const resetTokenSchema = z.string().regex(/^[0-9a-fA-F]{64}$/);
+
+const newPasswordFields = z.object({ password, confirmPassword: z.string() });
+
+/** FORM-04: the mismatch is reported ON the confirm box, beside what has to change. */
+const passwordsMatch = (values: { password: string; confirmPassword: string }): boolean =>
+  values.password === values.confirmPassword;
+const mismatch = { error: 'Passwords do not match.', path: ['confirmPassword'] };
+
+/** F-03 — what the reset page's form holds: the new password, twice. */
+export const newPasswordSchema = newPasswordFields.refine(passwordsMatch, mismatch);
+
+export type NewPasswordInput = z.infer<typeof newPasswordSchema>;
+
+/**
+ * F-03 — `confirmPasswordResetAction`'s input: the form's two fields and the
+ * token from the link. The confirmation never leaves the server (SEC-01).
+ */
+export const passwordResetConfirmSchema = newPasswordFields
+  .extend({ token: resetTokenSchema })
+  .refine(passwordsMatch, mismatch);
+
+export type PasswordResetConfirmInput = z.infer<typeof passwordResetConfirmSchema>;
+
+/**
  * The session an authenticated caller holds.
  *
  * Carries no token: §11 owns sessions, and the credential that proves this one

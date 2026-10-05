@@ -91,6 +91,32 @@ describe('addForCustomer', () => {
     expect(trail(received)).toEqual([`POST ${ENDPOINTS.bag.items(CART_ID)}`]);
   });
 
+  it('forwards the visitor headers on the add, and on the retry after a replaced cart (M-03)', async () => {
+    const seen: Array<string | null> = [];
+    const visitor = {
+      'x-visitor-id': '00000000-0000-4000-8000-0000000000aa',
+      'x-visitor-device': 'mobile',
+    };
+    const note = (request: Request) => seen.push(request.headers.get('x-visitor-id'));
+    jar.values.set(CART_COOKIE_NAME, CART_ID);
+    server.use(
+      http.post(`*${ENDPOINTS.bag.items(CART_ID)}`, ({ request }) => {
+        note(request);
+        return noSuchCart();
+      }),
+      http.head(`*${ENDPOINTS.bag.cart(CART_ID)}`, noSuchCart),
+      http.post(`*${ENDPOINTS.bag.summary}`, created),
+      http.post(`*${ENDPOINTS.bag.items(FRESH_CART)}`, ({ request }) => {
+        note(request);
+        return added();
+      }),
+    );
+
+    await addForCustomer(STOCK_ADD, 'en', undefined, visitor);
+
+    expect(seen).toEqual([visitor['x-visitor-id'], visitor['x-visitor-id']]);
+  });
+
   it('replaces a cookie naming a cart the backend no longer has, once it says so, and adds', async () => {
     const received: Sent[] = [];
     jar.values.set(CART_COOKIE_NAME, CART_ID);

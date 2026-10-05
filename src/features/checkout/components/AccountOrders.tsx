@@ -53,7 +53,14 @@ export async function AccountOrders({ searchParams }: AccountOrdersProps) {
         {t.ordersHeading}
       </h2>
 
-      {history === null ? <p className="text-fg-muted mt-2">{t.ordersGuestBody}</p> : null}
+      {history === null ? (
+        <div className="mt-2 flex flex-col items-start gap-3">
+          <p className="text-fg-muted">{t.ordersGuestBody}</p>
+          <ButtonLink href={ROUTES.findOrder} variant="secondary">
+            {t.ordersFindOrder}
+          </ButtonLink>
+        </div>
+      ) : null}
 
       {/* On file and could not be READ — said as such, because reporting a
           customer's own orders as none would be a lie about their record. */}

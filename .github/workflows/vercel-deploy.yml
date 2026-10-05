@@ -48,6 +48,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      # Production dependencies only: a high or critical advisory in what the
+      # store ships fails the run before anything reaches Vercel. Development
+      # tooling is left out on purpose; it never reaches a customer.
+      - run: npm audit --omit=dev --audit-level=high
+      # F-12: the build is a gate too. It validates the environment at boot
+      # (SSOT-03), so it gets the minimum to parse: build-only values that reach
+      # nothing — the build makes no call that needs a live backend.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_APP_URL: https://ci.invalid
+          JAVA_API_BASE_URL: http://127.0.0.1:9
+          SESSION_SECRET: ci-build-only-session-secret-0123456789
+          # Exercises the media-host paths of the build (CSP img-src and media-src, remotePatterns).
+          NEXT_PUBLIC_MEDIA_HOST: media.ci.invalid
 
   deploy:
     needs: verify
@@ -85,3 +99,24 @@ jobs:
       #
       - name: Deploy to Vercel
         run: vercel deploy ${{ steps.cfg.outputs.flag }} --yes --token=${{ secrets.VERCEL_TOKEN }}
+      #
+      # F-12 — after a PRODUCTION deploy, prove the live store answers: health
+      # reaches Java, the catalogue and a product page render, the security headers
+      # are on. Read-only; places no order. A failure fails the run, which is how a
+      # bad release is noticed. `--wait=90` keeps retrying the health check while the
+      # new deployment takes over the production address.
+      #
+      # STORE_URL is a repository VARIABLE (https://<store domain>), set by the
+      # operator at I-08. While it is unset the check is skipped with a warning
+      # rather than failing a deploy that is otherwise fine.
+      #
+      - name: Smoke check production
+        if: steps.cfg.outputs.flag == '--prod'
+        env:
+          STORE_URL: ${{ vars.STORE_URL }}
+        run: |
+          if [ -z "$STORE_URL" ]; then
+            echo "::warning::Repository variable STORE_URL is not set; the post-deploy smoke check was skipped."
+            exit 0
+          fi
+          node scripts/smoke.mjs "$STORE_URL" --wait=90

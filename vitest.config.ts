@@ -41,6 +41,8 @@ export default defineConfig({
     env: {
       JAVA_API_BASE_URL: 'http://localhost:8080',
       NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      // F-01: signs the session cookie. A test value, not a secret.
+      SESSION_SECRET: 'vitest-session-secret-0123456789-abcdef',
     },
   },
 });

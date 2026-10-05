@@ -9,6 +9,7 @@ import {
   searchProducts,
 } from '@/features/catalogue';
 import { getLocale, getMessages } from '@/i18n';
+import { recordPageEvents } from '@/lib/analytics';
 import { localeAlternates } from '@/lib/utils/locale-alternates';
 import { logApiError } from '@/lib/utils/log';
 
@@ -44,6 +45,16 @@ export default async function CataloguePage({ searchParams }: CataloguePageProps
   if (!results.ok) {
     logApiError('catalogue', results.error); // ERR-10
     return <ErrorState className="m-gutter" message={messages.errors.network} />;
+  }
+
+  // M-03 — a term typed into the listing's own search is a search too.
+  if (query.term.length > 0) {
+    await recordPageEvents({
+      type: 'search',
+      path: ROUTES.catalogue.list,
+      term: query.term,
+      resultCount: results.value.totalCount,
+    });
   }
 
   // §30.2: a degraded overlay costs the stock badges, not the page.

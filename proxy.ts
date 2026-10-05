@@ -1,6 +1,12 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
 
 import { LOCALE_COOKIE, LOCALE_QUERY_PARAM, localeToRemember } from '@/i18n/locales';
+import { pageViewFor, postPageView } from '@/lib/analytics/page-view';
+import { newVisitorId, parseVisitorId } from '@/lib/analytics/visitor';
+import { capabilityCookieOptions, VISITOR_COOKIE_NAME } from '@/lib/utils/cookies';
+
+/** M-03 — one year, so a returning visitor is recognised as one. */
+const VISITOR_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 /**
  * NEXT-05 — `middleware.ts` is deprecated in Next.js 16; the replacement is
@@ -15,8 +21,13 @@ import { LOCALE_COOKIE, LOCALE_QUERY_PARAM, localeToRemember } from '@/i18n/loca
  * A cookie set on this response is also visible to `cookies()` for the SAME
  * request — Next merges it into the render — so `/?locale=ur` renders Urdu on
  * its first load rather than on the next one.
+ *
+ * M-03 — the same holds for the visitor cookie (`aa_visitor`): a random UUID,
+ * set only when absent or unreadable, that lets the shop count visits without
+ * knowing who they were. The proxy also reports the page view, after the response,
+ * because it is the one place every navigation — full or soft — passes through.
  */
-export function proxy(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest, event: NextFetchEvent): NextResponse {
   const response = NextResponse.next();
   const chosen = localeToRemember(
     request.nextUrl.searchParams.get(LOCALE_QUERY_PARAM),
@@ -30,6 +41,23 @@ export function proxy(request: NextRequest): NextResponse {
       maxAge: 60 * 60 * 24 * 365,
     });
   }
+
+  const known = parseVisitorId(request.cookies.get(VISITOR_COOKIE_NAME)?.value);
+  const visitorId = known ?? newVisitorId();
+  if (known === null) {
+    response.cookies.set(
+      VISITOR_COOKIE_NAME,
+      visitorId,
+      capabilityCookieOptions(VISITOR_MAX_AGE_SECONDS),
+    );
+  }
+
+  const view = pageViewFor(
+    { method: request.method, pathname: request.nextUrl.pathname, headers: request.headers },
+    visitorId,
+  );
+  // `waitUntil`, not an awaited call: the page never waits on a count (M-03).
+  if (view !== null) event.waitUntil(postPageView(view, request));
 
   return response;
 }

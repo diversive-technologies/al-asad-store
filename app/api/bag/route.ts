@@ -2,6 +2,7 @@ import { addForCustomer, fetchBagSummary, readCartId } from '@/features/bag';
 import { addToBagRequestSchema } from '@/features/bag/contract';
 import { readProfileOwner } from '@/features/made-to-measure';
 import { getLocale } from '@/i18n';
+import { visitorHeaders } from '@/lib/analytics';
 import { logApiError } from '@/lib/utils/log';
 import { isSameOrigin } from '@/lib/utils/request';
 import { NO_STORE, readJsonBody } from '@/lib/utils/route';
@@ -77,7 +78,12 @@ export async function POST(request: Request): Promise<Response> {
   const ownerHeader = owner === null ? undefined : `${owner.keptWith}:${owner.key}`;
 
   // A cart the backend lost is replaced inside, once it is confirmed gone.
-  const result = await addForCustomer(parsed.data, await getLocale(), ownerHeader);
+  const result = await addForCustomer(
+    parsed.data,
+    await getLocale(),
+    ownerHeader,
+    await visitorHeaders(request), // M-03 — Java records `add_to_bag` with the visitor
+  );
 
   if (!result.ok) {
     logApiError('api:bag:post', result.error); // ERR-10

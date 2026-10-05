@@ -1,14 +1,26 @@
+import { useEffect } from 'react';
+
+import { OnDemand } from '@/components/shared/OnDemand';
+import { onDemandPart } from '@/hooks/use-on-demand';
 import { useMessages } from '@/i18n/use-messages';
 import type { MeasurementPointId } from '@/lib/domain/ids';
 
 import type { FormView } from '../lib/form-view';
 import { pointsOf } from '../lib/measurement-set';
 import type { StudioSet } from '../lib/studio-set';
-import { FieldNote } from './FieldNote';
 import { GarmentFieldset } from './GarmentFieldset';
 import type { FieldStatus } from './MeasurementField';
 import { PieceOptions } from './PieceOptions';
 import type { StudioFlow } from './studio-flow';
+
+/*
+ * Deliberate code split (PERF-10, L-01): a figure's note exists only after the
+ * server's check has asked about it, so a page can never open on one. It is
+ * fetched as soon as the studio is on screen, long before a check can answer, and
+ * drawn when it arrives; a download that fails says so in its place with Try
+ * again (`useOnDemand`), and the fields stay as they were.
+ */
+const fieldNote = onDemandPart(() => import('./FieldNote'));
 
 export interface MeasurementFieldsetsProps {
   /** The studio as asked: only the garments and points the choices ask for. */
@@ -27,6 +39,9 @@ export interface MeasurementFieldsetsProps {
  */
 export function MeasurementFieldsets({ studio, flow, view }: MeasurementFieldsetsProps) {
   const t = useMessages().madeToMeasure;
+  useEffect(() => {
+    fieldNote.warm();
+  }, []);
   const hint = studio.source === 'TAILOR_CARD' ? t.choicesHintCard : t.choicesHint;
 
   function statusOf(id: MeasurementPointId): FieldStatus {
@@ -35,17 +50,21 @@ export function MeasurementFieldsets({ studio, flow, view }: MeasurementFieldset
       error: view.problems.get(id),
       note:
         note === undefined ? undefined : (
-          <FieldNote
-            id={id}
-            view={note}
-            actions={{
-              isKept: flow.notes.isKept,
-              onKeep: flow.notes.toggleKeep,
-              onAgain: () => {
-                flow.measureAgain(id);
-              },
-            }}
-          />
+          <OnDemand part={fieldNote}>
+            {(loaded) => (
+              <loaded.FieldNote
+                id={id}
+                view={note}
+                actions={{
+                  isKept: flow.notes.isKept,
+                  onKeep: flow.notes.toggleKeep,
+                  onAgain: () => {
+                    flow.measureAgain(id);
+                  },
+                }}
+              />
+            )}
+          </OnDemand>
         ),
     };
   }

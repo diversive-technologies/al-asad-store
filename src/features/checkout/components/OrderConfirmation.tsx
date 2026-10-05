@@ -36,15 +36,17 @@ export interface OrderConfirmationProps {
  */
 export function OrderConfirmation({ order, locale, messages, headingRef }: OrderConfirmationProps) {
   const t = messages.order;
+  const isCancelled = order.state === 'CANCELLED';
 
   return (
     <section className="page-shell max-w-3xl py-12">
       <OrderPlacedHero
-        title={t.title}
+        title={isCancelled ? t.cancelledTitle : t.title}
         orderNumberLabel={t.numberLabel}
         orderNumber={order.orderNumber}
         placedLine={formatTemplate(t.placedOn, { date: formatDate(order.placedAt, locale) })}
         headingRef={headingRef}
+        showCelebrationMark={!isCancelled}
       />
 
       <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
